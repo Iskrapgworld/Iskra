@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ИСКРА: Кристаллы</title>
+  <style>
+    body {
+      margin: 0;
+      background: #000;
+      color: #fff;
+      font-family: sans-serif;
+      text-align: center;
+    }
+    canvas {
+      display: block;
+      margin: 0 auto;
+      image-rendering: pixelated;
+    }
+  </style>
+</head>
+<body>
+  <h1>ИСКРА: Кристаллы</h1>
+  <p>Загрузка игры...</p>
+  <canvas id="gameCanvas" width="360" height="640"></canvas>
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    ctx.fillStyle = "#222";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#fff";
+    ctx.font = "20px sans-serif";
+    ctx.fillText("Добро пожаловать в PG", 50, 100);
+    ctx.fillText("Разработка начата!", 70, 140);
+  </script>
+</body>
+</html>
