@@ -1,296 +1,267 @@
-<!DOCTYPE html>
-<html lang="ru">
+<!DOCTYPE html><html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>ИСКРА: PvP-Кристаллы</title>
+  <title>ИСКРА: Битва</title>
   <style>
     body {
-      background-color: #1a1a1a;
-      color: #ffcc66;
-      font-family: 'Verdana', sans-serif;
-      text-align: center;
+      background-color: #1e1e1e;
+      font-family: sans-serif;
+      color: #fff;
       margin: 0;
       padding: 0;
+      text-align: center;
+    }
+    h1 {
+      margin: 20px 0;
+      color: #ffcc66;
     }
     #scoreboard {
       display: flex;
       justify-content: space-around;
       font-size: 18px;
-      margin-top: 10px;
+      margin-bottom: 10px;
+    }
+    #timerBar {
+      width: 80%;
+      height: 10px;
+      background: #555;
+      margin: 0 auto 10px;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+    #timerProgress {
+      height: 100%;
+      background: #ffcc66;
+      transition: width 0.1s;
     }
     #board {
-      width: 360px;
-      height: 360px;
-      margin: 20px auto;
       display: grid;
       grid-template-columns: repeat(6, 1fr);
       grid-template-rows: repeat(6, 1fr);
       gap: 2px;
-      background-color: #333;
-      position: relative;
-      z-index: 1;
+      width: 360px;
+      height: 360px;
+      margin: 0 auto;
     }
     .cell {
       width: 58px;
       height: 58px;
-      background-color: #999;
+      background-color: gray;
       border-radius: 8px;
-      cursor: pointer;
       transition: transform 0.2s;
+      touch-action: none;
     }
     .highlight {
       border: 3px solid yellow;
-      box-sizing: border-box;
     }
     #overlay {
       position: absolute;
       top: 0; left: 0;
       width: 100%; height: 100%;
       background: rgba(0,0,0,0.9);
-      color: white;
-      font-size: 28px;
       display: flex;
+      flex-direction: column;
       justify-content: center;
       align-items: center;
       z-index: 2;
-      flex-direction: column;
     }
-    #startTurnBtn {
+    #overlay button {
       padding: 10px 20px;
-      font-size: 16px;
+      font-size: 18px;
       background: #6622cc;
       color: white;
       border: none;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-    #progressBar {
-      width: 80%;
-      height: 10px;
-      background: #444;
-      border-radius: 5px;
-      margin-top: 10px;
-      overflow: hidden;
-    }
-    #progressFill {
-      height: 100%;
-      width: 100%;
-      background: #ffcc66;
-      transition: width 0.1s linear;
+      border-radius: 10px;
+      margin-top: 20px;
     }
   </style>
 </head>
 <body>
-  <h1>🔥 ИСКРА: Кристаллы PvP 🔥</h1>
+  <h1>🔥 ИСКРА: Битва 🔥</h1>
   <div id="scoreboard">
     <div>Игрок 1: <span id="hp1">1000</span> ❤️</div>
     <div>Игрок 2: <span id="hp2">1000</span> ❤️</div>
   </div>
+  <div id="timerBar"><div id="timerProgress"></div></div>
   <div id="board"></div>
-
   <div id="overlay">
-    <div id="turnText">Ход Игрока</div>
-    <button id="startTurnBtn">Начать ход</button>
-    <div id="progressBar"><div id="progressFill"></div></div>
+    <div id="turnInfo">Ход игрока 1</div>
+    <button id="startBtn">Начать ход</button>
   </div>
-
   <script>
-    const colors = ['#ff4d4d', '#4dd2ff', '#66ff66', '#ffff66', '#d580ff'];
+    const colors = ['#ff4d4d','#4dd2ff','#66ff66','#ffff66','#d580ff'];
     const board = document.getElementById('board');
     const hp1El = document.getElementById('hp1');
     const hp2El = document.getElementById('hp2');
     const overlay = document.getElementById('overlay');
-    const turnText = document.getElementById('turnText');
-    const startTurnBtn = document.getElementById('startTurnBtn');
-    const progressFill = document.getElementById('progressFill');
+    const turnInfo = document.getElementById('turnInfo');
+    const startBtn = document.getElementById('startBtn');
+    const timerProgress = document.getElementById('timerProgress');let grid = [], hp = {1:1000,2:1000}, currentPlayer = 1;
+let dragging = null, turnActive = false, timer, timeLeft;
 
-    let grid = [];
-    let currentPlayer = 1;
-    let hp = {1: 1000, 2: 1000};
-    let dragging = null;
-    let timer = null;
-    let turnActive = false;
-    let progressInterval = null;
+function coords(i){return [Math.floor(i/6), i%6]}
+function index(r,c){return r*6 + c}
 
-    function coords(i) {
-      return [Math.floor(i / 6), i % 6];
-    }
+function createGrid() {
+  board.innerHTML = ''; grid = []
+  for(let i=0;i<36;i++){
+    const cell = document.createElement('div')
+    cell.className = 'cell'
+    cell.style.background = colors[Math.floor(Math.random()*colors.length)]
+    board.appendChild(cell)
+    grid.push(cell)
+  }
+}
 
-    function index(row, col) {
-      return row * 6 + col;
-    }
-
-    function createGrid() {
-      grid = [];
-      board.innerHTML = '';
-      for (let i = 0; i < 36; i++) {
-        const cell = document.createElement('div');
-        cell.classList.add('cell');
-        const color = colors[Math.floor(Math.random() * colors.length)];
-        cell.style.backgroundColor = color;
-        board.appendChild(cell);
-        grid.push(cell);
+function checkMatches() {
+  const matched = new Set()
+  for(let r=0;r<6;r++){
+    for(let c=0;c<4;c++){
+      let i = index(r,c)
+      let c1=grid[i],c2=grid[i+1],c3=grid[i+2]
+      if(c1&&c2&&c3 && c1.style.background===c2.style.background && c2.style.background===c3.style.background){
+        matched.add(i); matched.add(i+1); matched.add(i+2)
       }
-      while (checkMatches().length > 0) refillMatches();
     }
-
-    function checkMatches() {
-      const matched = new Set();
-      for (let row = 0; row < 6; row++) {
-        for (let col = 0; col < 4; col++) {
-          const i = index(row, col);
-          const c1 = grid[i].style.backgroundColor;
-          const c2 = grid[i+1].style.backgroundColor;
-          const c3 = grid[i+2].style.backgroundColor;
-          if (c1 === c2 && c2 === c3) {
-            matched.add(i); matched.add(i+1); matched.add(i+2);
-          }
-        }
+  }
+  for(let c=0;c<6;c++){
+    for(let r=0;r<4;r++){
+      let i = index(r,c)
+      let c1=grid[i],c2=grid[i+6],c3=grid[i+12]
+      if(c1&&c2&&c3 && c1.style.background===c2.style.background && c2.style.background===c3.style.background){
+        matched.add(i); matched.add(i+6); matched.add(i+12)
       }
-      for (let col = 0; col < 6; col++) {
-        for (let row = 0; row < 4; row++) {
-          const i = index(row, col);
-          const c1 = grid[i].style.backgroundColor;
-          const c2 = grid[i+6].style.backgroundColor;
-          const c3 = grid[i+12].style.backgroundColor;
-          if (c1 === c2 && c2 === c3) {
-            matched.add(i); matched.add(i+6); matched.add(i+12);
-          }
-        }
-      }
-      return [...matched];
     }
+  }
+  return [...matched]
+}
 
-    function highlightMatches(matches) {
-      grid.forEach(cell => cell.classList.remove('highlight'));
-      matches.forEach(i => grid[i].classList.add('highlight'));
-    }
+function highlight(matches){
+  grid.forEach(c=>c.classList.remove('highlight'))
+  matches.forEach(i=>grid[i].classList.add('highlight'))
+}
 
-    function removeMatches(matches) {
-      matches.forEach(i => {
-        grid[i].style.backgroundColor = '';
-      });
-    }
+function removeMatches(matches){
+  matches.forEach(i=>grid[i].style.background='')
+}
 
-    function dropDown() {
-      for (let col = 0; col < 6; col++) {
-        for (let row = 5; row > 0; row--) {
-          let i = index(row, col);
-          if (!grid[i].style.backgroundColor) {
-            for (let k = row - 1; k >= 0; k--) {
-              let above = index(k, col);
-              if (grid[above].style.backgroundColor) {
-                grid[i].style.backgroundColor = grid[above].style.backgroundColor;
-                grid[above].style.backgroundColor = '';
-                break;
-              }
-            }
-          }
-        }
-        for (let row = 0; row < 6; row++) {
-          let i = index(row, col);
-          if (!grid[i].style.backgroundColor) {
-            grid[i].style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+function dropDown(){
+  for(let c=0;c<6;c++){
+    for(let r=5;r>0;r--){
+      let i = index(r,c)
+      if(!grid[i].style.background){
+        for(let k=r-1;k>=0;k--){
+          let up = index(k,c)
+          if(grid[up].style.background){
+            grid[i].style.background = grid[up].style.background
+            grid[up].style.background = ''
+            break
           }
         }
       }
     }
-
-    function processTurn() {
-      let totalMatches = 0;
-      function handleMatches() {
-        let matches = checkMatches();
-        if (matches.length === 0) {
-          finishTurn(totalMatches);
-          return;
-        }
-        highlightMatches(matches);
-        totalMatches += matches.length;
-        setTimeout(() => {
-          removeMatches(matches);
-          dropDown();
-          handleMatches();
-        }, 1000);
-      }
-      handleMatches();
-    }
-
-    function finishTurn(totalMatches) {
-      const damage = totalMatches * 10;
-      const target = currentPlayer === 1 ? 2 : 1;
-      hp[target] -= damage;
-      if (hp[target] < 0) hp[target] = 0;
-      hp1El.textContent = hp[1];
-      hp2El.textContent = hp[2];
-
-      if (hp[1] === 0 || hp[2] === 0) {
-        setTimeout(() => {
-          alert(`Победил Игрок ${hp[1] === 0 ? 2 : 1}!`);
-          createGrid();
-          hp = {1: 1000, 2: 1000};
-          hp1El.textContent = 1000;
-          hp2El.textContent = 1000;
-          showOverlay();
-        }, 500);
-      } else {
-        currentPlayer = target;
-        showOverlay();
+    for(let r=0;r<6;r++){
+      let i = index(r,c)
+      if(!grid[i].style.background){
+        grid[i].style.background = colors[Math.floor(Math.random()*colors.length)]
       }
     }
+  }
+}
 
-    function showOverlay() {
-      turnText.textContent = `Ход Игрока ${currentPlayer}`;
-      overlay.style.display = 'flex';
-      startTurnBtn.disabled = false;
-      clearInterval(progressInterval);
-      progressFill.style.width = '100%';
-      turnActive = false;
+function startTurn(){
+  turnActive = true; timeLeft = 200
+  timer = setInterval(()=>{
+    timeLeft--;
+    timerProgress.style.width = (timeLeft/200*100)+"%";
+    if(timeLeft<=0){
+      clearInterval(timer)
+      finishTurn()
     }
+  },50)
+}
 
-    startTurnBtn.addEventListener('click', () => {
-      overlay.style.display = 'none';
-      turnActive = true;
-      let timeLeft = 20;
-      progressFill.style.width = '100%';
-      progressInterval = setInterval(() => {
-        timeLeft--;
-        progressFill.style.width = `${(timeLeft / 20) * 100}%`;
-        if (timeLeft <= 0) {
-          clearInterval(progressInterval);
-          turnActive = false;
-          processTurn();
-        }
-      }, 1000);
-    });
+function finishTurn(){
+  turnActive = false
+  let matches = checkMatches()
+  let total = 0
+  function cascade(){
+    matches = checkMatches()
+    if(matches.length>0){
+      highlight(matches)
+      total += matches.length
+      setTimeout(()=>{
+        removeMatches(matches)
+        dropDown()
+        setTimeout(cascade, 300)
+      },300)
+    } else {
+      applyDamage(total)
+    }
+  }
+  cascade()
+}
 
-    board.addEventListener('mousedown', e => {
-      if (!turnActive) return;
-      const cell = e.target.closest('.cell');
-      if (!cell) return;
-      dragging = cell;
-    });
+function applyDamage(total){
+  let dmg = total * 10
+  let target = currentPlayer===1 ? 2 : 1
+  hp[target] -= dmg
+  if(hp[target]<0) hp[target]=0
+  hp1El.textContent = hp[1]
+  hp2El.textContent = hp[2]
+  if(hp[1]===0||hp[2]===0){
+    turnInfo.textContent = `Победа игрока ${hp[1]===0?2:1}!`
+    startBtn.textContent = 'Новая игра'
+  } else {
+    currentPlayer = target
+    turnInfo.textContent = `Ход игрока ${currentPlayer}`
+    startBtn.textContent = 'Начать ход'
+  }
+  overlay.style.display = 'flex'
+}
 
-    board.addEventListener('mousemove', e => {
-      if (!dragging || !turnActive) return;
-      const cell = document.elementFromPoint(e.clientX, e.clientY);
-      if (!cell || !cell.classList.contains('cell') || cell === dragging) return;
-      const tmp = cell.style.backgroundColor;
-      cell.style.backgroundColor = dragging.style.backgroundColor;
-      dragging.style.backgroundColor = tmp;
-      dragging = cell;
-    });
+board.addEventListener('touchstart',e=>{
+  if(!turnActive)return
+  const t = e.touches[0]
+  const el = document.elementFromPoint(t.clientX, t.clientY)
+  if(el && el.classList.contains('cell')) dragging = el
+})
 
-    board.addEventListener('mouseup', () => {
-      if (turnActive) {
-        dragging = null;
-        turnActive = false;
-        clearInterval(progressInterval);
-        processTurn();
-      }
-    });
+board.addEventListener('touchmove',e=>{
+  if(!dragging)return
+  const t = e.touches[0]
+  const el = document.elementFromPoint(t.clientX, t.clientY)
+  if(el && el.classList.contains('cell') && el!==dragging){
+    let tmp = el.style.background
+    el.style.background = dragging.style.background
+    dragging.style.background = tmp
+    dragging = el
+  }
+})
 
-    createGrid();
-    showOverlay();
+board.addEventListener('touchend',()=>{
+  if(turnActive){
+    turnActive = false
+    clearInterval(timer)
+    finishTurn()
+  }
+})
+
+startBtn.onclick = ()=>{
+  if(startBtn.textContent==='Новая игра'){
+    hp={1:1000,2:1000}; currentPlayer=1
+    hp1El.textContent = '1000'; hp2El.textContent = '1000'
+    createGrid()
+    turnInfo.textContent = 'Ход игрока 1'
+    startBtn.textContent = 'Начать ход'
+  }
+  overlay.style.display = 'none'
+  startTurn()
+}
+
+createGrid()
+overlay.style.display = 'flex'
+
   </script>
 </body>
 </html>
