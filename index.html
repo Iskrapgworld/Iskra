@@ -4,6 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>ИСКРА: Битва</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
       background-color: #1e1e1e;
@@ -12,39 +13,32 @@
       margin: 0;
       padding: 0;
       text-align: center;
+      overflow-x: hidden;
     }
     h1 {
       margin: 10px 0;
       color: #ffcc66;
     }
-    #infoPanel {
+    #topPanel {
       display: flex;
       justify-content: space-around;
-      align-items: flex-start;
-      margin: 10px auto;
-      width: 90%;
-      max-width: 600px;
-      font-size: 14px;
-      text-align: left;
+      flex-wrap: wrap;
+      background-color: #2b2b2b;
+      padding: 10px;
+      border-bottom: 2px solid #444;
     }
-    .playerStats {
-      width: 45%;
-      background: #2e2e2e;
+    .playerBox {
+      background-color: #333;
+      padding: 10px 20px;
       border-radius: 10px;
-      padding: 10px;
     }
-    .logBox {
-      width: 100%;
-      margin: 10px auto;
-      background: #2b2b2b;
-      border-radius: 8px;
+    #effectsPanel {
+      background-color: #222;
       padding: 10px;
-      font-size: 14px;
       text-align: left;
-      max-width: 600px;
-    }
-    .logBox div {
-      margin: 4px 0;
+      font-size: 16px;
+      line-height: 1.6;
+      border-bottom: 2px solid #444;
     }
     #board {
       display: grid;
@@ -53,12 +47,14 @@
       gap: 2px;
       width: 360px;
       height: 360px;
-      margin: 30px auto;
+      margin: 20px auto;
     }
     .cell {
       width: 58px;
       height: 58px;
       border-radius: 50%;
+      transition: transform 0.2s, opacity 2s ease;
+      touch-action: none;
       background-size: cover;
       background-repeat: no-repeat;
       background-position: center;
@@ -66,50 +62,105 @@
     .red    { background-color: #ff4d4d; }
     .green  { background-color: #66ff66; }
     .blue   { background-color: #4dd2ff; }
-    .yellow { background-color: #ffff66; }
-    .purple { background-color: #d580ff; }
     .orange { background-color: #ffaa33; }
-    #startGameBtn {
-      background-color: #6622cc;
-      color: white;
+    .purple { background-color: #cc66ff; }
+
+    .highlight { border: 3px solid yellow; }
+    .fade { opacity: 0; }
+
+    #overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.9);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
+    }
+    #overlay button {
       padding: 10px 20px;
+      font-size: 18px;
+      background: #6622cc;
+      color: white;
       border: none;
-      border-radius: 12px;
-      font-size: 16px;
-      margin-top: 10px;
+      border-radius: 10px;
+      margin-top: 20px;
     }
   </style>
 </head>
 <body>
-  <h1>🔥 ИСКРА: Битва 🔥</h1>
-  <button id="startGameBtn">Начать бой</button>
-  <div id="infoPanel" style="display:none">
-    <div class="playerStats" id="player1Stats">
+  <div id="topPanel">
+    <div class="playerBox" id="player1Stats">
       <strong>Игрок 1</strong><br>
       ❤️ Жизни: <span id="hp1">200</span><br>
-      🛡️ Щит: <span id="shield1">150</span>
+      🛡 Щит: <span id="shield1">150</span>
     </div>
-    <div class="playerStats" id="player2Stats">
+    <h1>🔥 ИСКРА: Битва 🔥</h1>
+    <div class="playerBox" id="player2Stats">
       <strong>Игрок 2</strong><br>
       ❤️ Жизни: <span id="hp2">200</span><br>
-      🛡️ Щит: <span id="shield2">150</span>
+      🛡 Щит: <span id="shield2">150</span>
     </div>
   </div>
-  <div class="logBox" id="logBox" style="display:none">
-    <div>🔥 Урон: <span id="logDamage">0</span></div>
-    <div>💚 Лечение: <span id="logHeal">0</span></div>
-    <div>🛡️ Восстановление щита: <span id="logShield">0</span></div>
-    <div>✨ Крит: <span id="logCrit">—</span></div>
+
+  <div id="effectsPanel">
+    🔥 Урон: <span id="damage">0</span><br>
+    💚 Лечение: <span id="heal">0</span><br>
+    🛡 Восстановление щита: <span id="shieldRegen">0</span><br>
+    ✨ Крит: <span id="crit">—</span>
   </div>
-  <div id="board" style="display:none"></div>
+
+  <div id="board"></div>
+
+  <div id="overlay">
+    <div id="turnInfo">Ход игрока 1</div>
+    <button onclick="startTurn()">Начать ход</button>
+  </div>
+
   <script>
-    document.getElementById("startGameBtn").onclick = function() {
-      document.getElementById("startGameBtn").style.display = "none";
-      document.getElementById("infoPanel").style.display = "flex";
-      document.getElementById("board").style.display = "grid";
-      document.getElementById("logBox").style.display = "block";
-      // Здесь должна быть логика инициализации поля и боя
-    };
+    const board = document.getElementById("board");
+    const colors = ['red', 'green', 'blue', 'orange', 'purple'];
+    let grid = [], dragging = null;
+
+    function createGrid() {
+      board.innerHTML = '';
+      grid = [];
+      for (let i = 0; i < 36; i++) {
+        const div = document.createElement("div");
+        div.className = "cell " + colors[Math.floor(Math.random() * colors.length)];
+        board.appendChild(div);
+        grid.push(div);
+      }
+    }
+
+    function startTurn() {
+      document.getElementById("overlay").style.display = "none";
+    }
+
+    board.addEventListener('touchstart', e => {
+      const t = e.touches[0];
+      const el = document.elementFromPoint(t.clientX, t.clientY);
+      if (el && el.classList.contains("cell")) dragging = el;
+    });
+
+    board.addEventListener('touchmove', e => {
+      const t = e.touches[0];
+      const el = document.elementFromPoint(t.clientX, t.clientY);
+      if (dragging && el && el.classList.contains("cell") && el !== dragging) {
+        const tmp = dragging.className;
+        dragging.className = el.className;
+        el.className = tmp;
+        dragging = el;
+      }
+    });
+
+    board.addEventListener('touchend', () => {
+      document.getElementById("overlay").style.display = "flex";
+    });
+
+    createGrid();
   </script>
 </body>
 </html>
