@@ -40,6 +40,7 @@
       background-color: gray;
       border-radius: 50%;
       touch-action: none;
+      transition: opacity 2s ease;
     }
     .red { background-color: #ff4d4d; }
     .blue { background-color: #4dd2ff; }
@@ -82,7 +83,7 @@
   </div> <script>
     const colorClasses = ['red', 'blue', 'green', 'yellow', 'purple'];
     let grid = [], hp = {1: 1000, 2: 500}, dragging = null;
-    let currentEnemy = 0;
+    let currentEnemy = 0, turnTimer, timeLeft = 200;
     const enemies = [
       { name: 'Багнутый Грызун', hp: 500 },
       { name: 'Сборщик Искры', hp: 750 },
@@ -135,9 +136,7 @@
     }
 
     function removeMatches(matches) {
-      matches.forEach(i => {
-        grid[i].className = 'cell';
-      });
+      matches.forEach(i => grid[i].className = 'cell');
       dropDown();
     }
 
@@ -168,23 +167,31 @@
 
     function startTurn() {
       overlay.style.display = 'none';
-      setTimeout(() => {
-        let matches = checkMatches();
-        let dmg = matches.length >= 5 ? 20 : matches.length >= 3 ? 10 : 0;
-        hp[2] -= dmg;
-        if(hp[2] < 0) hp[2] = 0;
-        hp2El.textContent = hp[2];
-        removeMatches(matches);
-        if(hp[2] === 0) {
-          nextEnemy();
-        } else {
-          setTimeout(enemyTurn, 1500);
+      timeLeft = 200;
+      turnTimer = setInterval(() => {
+        timeLeft--;
+        if (timeLeft <= 0) {
+          clearInterval(turnTimer);
+          finishTurn();
         }
-      }, 500);
+      }, 50);
+    }
+
+    function finishTurn() {
+      let matches = checkMatches();
+      let dmg = matches.length >= 5 ? 20 : matches.length >= 3 ? 10 : 0;
+      hp[2] -= dmg;
+      if(hp[2] < 0) hp[2] = 0;
+      hp2El.textContent = hp[2];
+      removeMatches(matches);
+      if(hp[2] === 0) {
+        nextEnemy();
+      } else {
+        setTimeout(enemyTurn, 1000);
+      }
     }
 
     function enemyTurn() {
-      // простейший ИИ
       let matches = checkMatches();
       let dmg = matches.length >= 5 ? 20 : matches.length >= 3 ? 10 : 0;
       hp[1] -= dmg;
@@ -193,11 +200,10 @@
       removeMatches(matches);
       if(hp[1] === 0) {
         message.textContent = 'Ты проиграл';
-        overlay.style.display = 'flex';
       } else {
         message.textContent = 'Твой ход';
-        overlay.style.display = 'flex';
       }
+      overlay.style.display = 'flex';
     }
 
     function nextEnemy() {
@@ -215,6 +221,29 @@
       message.textContent = `Следующий враг: ${e.name}`;
       overlay.style.display = 'flex';
     }
+
+    board.addEventListener('touchstart', e => {
+      const t = e.touches[0];
+      const el = document.elementFromPoint(t.clientX, t.clientY);
+      if (el && el.classList.contains('cell')) dragging = el;
+    });
+
+    board.addEventListener('touchmove', e => {
+      if (!dragging) return;
+      const t = e.touches[0];
+      const el = document.elementFromPoint(t.clientX, t.clientY);
+      if (el && el.classList.contains('cell') && el !== dragging) {
+        const tmp = dragging.className;
+        dragging.className = el.className;
+        el.className = tmp;
+        dragging = el;
+      }
+    });
+
+    board.addEventListener('touchend', () => {
+      clearInterval(turnTimer);
+      finishTurn();
+    });
 
     function initGame() {
       currentEnemy = 0;
