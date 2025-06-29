@@ -78,6 +78,11 @@
       border-radius: 10px;
       margin-top: 20px;
     }
+    #damageInfo {
+      margin-top: 10px;
+      font-size: 16px;
+      color: #88f;
+    }
   </style>
 </head>
 <body>
@@ -90,6 +95,7 @@
   <div id="board"></div>
   <div id="overlay">
     <div id="turnInfo">Ход игрока 1</div>
+    <div id="damageInfo"></div>
     <button id="startBtn">Начать ход</button>
   </div>
   <script>
@@ -99,13 +105,13 @@
     const hp2El = document.getElementById('hp2');
     const overlay = document.getElementById('overlay');
     const turnInfo = document.getElementById('turnInfo');
+    const damageInfo = document.getElementById('damageInfo');
     const startBtn = document.getElementById('startBtn');
     const timerProgress = document.getElementById('timerProgress');
-    
+
     let grid = [], hp = {1:1000,2:1000}, currentPlayer = 1;
     let dragging = null, turnActive = false, timer, timeLeft;
 
-    function coords(i){return [Math.floor(i/6), i%6]}
     function index(r,c){return r*6 + c}
 
     function createGrid() {
@@ -120,13 +126,13 @@
     }
 
     function checkMatches() {
-      const matched = new Set()
+      const matched = []
       for(let r=0;r<6;r++){
         for(let c=0;c<4;c++){
           let i = index(r,c)
           let c1=grid[i],c2=grid[i+1],c3=grid[i+2]
           if(c1&&c2&&c3 && c1.style.background===c2.style.background && c2.style.background===c3.style.background){
-            matched.add(i); matched.add(i+1); matched.add(i+2)
+            matched.push([i, i+1, i+2])
           }
         }
       }
@@ -135,24 +141,24 @@
           let i = index(r,c)
           let c1=grid[i],c2=grid[i+6],c3=grid[i+12]
           if(c1&&c2&&c3 && c1.style.background===c2.style.background && c2.style.background===c3.style.background){
-            matched.add(i); matched.add(i+6); matched.add(i+12)
+            matched.push([i, i+6, i+12])
           }
         }
       }
-      return [...matched]
+      return matched
     }
 
     function highlight(matches){
       grid.forEach(c=>c.classList.remove('highlight'))
-      matches.forEach(i=>grid[i].classList.add('highlight'))
+      matches.flat().forEach(i=>grid[i].classList.add('highlight'))
     }
 
     function removeMatches(matches, callback){
-      matches.forEach(i => {
+      matches.flat().forEach(i => {
         grid[i].classList.add('fade');
       });
       setTimeout(() => {
-        matches.forEach(i => {
+        matches.flat().forEach(i => {
           grid[i].classList.remove('fade');
           grid[i].style.background = '';
         });
@@ -200,35 +206,63 @@
     function finishTurn(){
       turnActive = false
       let matches = checkMatches()
-      let total = 0
+      let redCount = 0
+      let greenCount = 0
+
+      matches.forEach(group => {
+        let color = grid[group[0]].style.background
+        if(color === 'rgb(255, 77, 77)') redCount += group.length
+        if(color === 'rgb(102, 255, 102)') greenCount += group.length
+      })
+
       function cascade(){
         matches = checkMatches()
         if(matches.length > 0){
           highlight(matches)
-          total += matches.length
+          matches.forEach(group => {
+            let color = grid[group[0]].style.background
+            if(color === 'rgb(255, 77, 77)') redCount += group.length
+            if(color === 'rgb(102, 255, 102)') greenCount += group.length
+          })
           removeMatches(matches, cascade)
         } else {
-          applyDamage(total)
+          applyEffects(redCount, greenCount)
         }
       }
       cascade()
     }
 
-    function applyDamage(total){
-      let dmg = total * 10
-      let target = currentPlayer===1 ? 2 : 1
+    function applyEffects(red, green){
+      let dmg = 0, heal = 0
+
+      if(red >= 5) dmg = 20
+      else if(red >= 3) dmg = 10
+
+      if(green >= 5) heal = 20
+      else if(green >= 3) heal = 10
+
+      let target = currentPlayer === 1 ? 2 : 1
+
       hp[target] -= dmg
-      if(hp[target]<0) hp[target]=0
+      if(hp[target] < 0) hp[target] = 0
+
+      hp[currentPlayer] += heal
+      if(hp[currentPlayer] > 1000) hp[currentPlayer] = 1000
+
       hp1El.textContent = hp[1]
       hp2El.textContent = hp[2]
-      if(hp[1]===0||hp[2]===0){
-        turnInfo.textContent = `Победа игрока ${hp[1]===0?2:1}!`
+
+      damageInfo.innerHTML = `${dmg ? `Урон: ${dmg}` : ''} ${heal ? `Лечение: ${heal}` : ''}`.trim()
+
+      if(hp[1] === 0 || hp[2] === 0){
+        turnInfo.textContent = `Победа игрока ${hp[1]===0 ? 2 : 1}!`
         startBtn.textContent = 'Новая игра'
       } else {
         currentPlayer = target
         turnInfo.textContent = `Ход игрока ${currentPlayer}`
         startBtn.textContent = 'Начать ход'
       }
+
       overlay.style.display = 'flex'
     }
 
@@ -261,10 +295,13 @@
 
     startBtn.onclick = ()=>{
       if(startBtn.textContent==='Новая игра'){
-        hp={1:1000,2:1000}; currentPlayer=1
-        hp1El.textContent = '1000'; hp2El.textContent = '1000'
+        hp = {1: 1000, 2: 1000}
+        currentPlayer = 1
+        hp1El.textContent = '1000'
+        hp2El.textContent = '1000'
         createGrid()
         turnInfo.textContent = 'Ход игрока 1'
+        damageInfo.textContent = ''
         startBtn.textContent = 'Начать ход'
       }
       overlay.style.display = 'none'
