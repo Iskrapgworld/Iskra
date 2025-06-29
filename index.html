@@ -1,46 +1,299 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ИСКРА: Кристаллы</title>
+  <meta charset="UTF-8" />
+  <title>Искра: PvP-Кристаллы</title>
   <style>
     body {
-      margin: 0;
-      background: #000;
-      color: #fff;
-      font-family: sans-serif;
+      background-color: #1a1a1a;
+      color: #ffcc66;
+      font-family: 'Verdana', sans-serif;
       text-align: center;
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
     }
-    canvas {
-      display: block;
-      margin: 0 auto;
-      image-rendering: pixelated;
+    h1 {
+      padding-top: 20px;
+      font-size: 32px;
+    }
+    #scoreboard {
+      display: flex;
+      justify-content: space-around;
+      font-size: 18px;
+      margin-top: 10px;
+    }
+    #board {
+      width: 360px;
+      height: 360px;
+      margin: 20px auto;
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      grid-template-rows: repeat(6, 1fr);
+      gap: 2px;
+      background-color: #333;
+      position: relative;
+    }
+    .cell {
+      width: 58px;
+      height: 58px;
+      background-color: #999;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.3s, transform 0.2s;
+    }
+    .highlight {
+      border: 3px solid yellow;
+      box-sizing: border-box;
+    }
+    #overlay {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.95);
+      color: white;
+      font-size: 28px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 2;
+      flex-direction: column;
+    }
+    #startTurnBtn {
+      padding: 12px 24px;
+      font-size: 18px;
+      background: #6622cc;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+    #damageText {
+      font-size: 20px;
+      margin-top: 10px;
+    }
+    #newGame {
+      padding: 10px 20px;
+      font-size: 16px;
+      background: #6622cc;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    #timerBar {
+      width: 100%;
+      height: 10px;
+      background: #555;
+      margin-top: 5px;
+      position: relative;
+    }
+    #timerFill {
+      height: 100%;
+      width: 100%;
+      background: #44ff88;
+      transition: width 0.1s linear;
     }
   </style>
-
-  <!-- Telegram WebApp API -->
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script>
-    const tg = window.Telegram.WebApp;
-    tg.expand();
-  </script>
 </head>
 <body>
-  <h1>ИСКРА: Кристаллы</h1>
-  <p>Загрузка игры...</p>
-  <canvas id="gameCanvas" width="360" height="640"></canvas>
+  <h1>🔥 Искра: Кристаллы 🔥</h1>
+  <div id="scoreboard">
+    <div>Игрок 1: <span id="hp1">1000</span> ❤️</div>
+    <div>Игрок 2: <span id="hp2">1000</span> ❤️</div>
+  </div>
+  <div id="timerBar"><div id="timerFill"></div></div>
+  <div id="board"></div>
+  <button id="newGame">Новая игра</button>
+  <div id="overlay">
+    <div id="turnText">Ход игрока</div>
+    <div id="damageText"></div>
+    <button id="startTurnBtn">Начать ход</button>
+  </div>
 
   <script>
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
+    const colors = ['#ff4d4d', '#4dd2ff', '#66ff66', '#ffff66', '#d580ff'];
+    const board = document.getElementById('board');
+    const hp1El = document.getElementById('hp1');
+    const hp2El = document.getElementById('hp2');
+    const overlay = document.getElementById('overlay');
+    const turnText = document.getElementById('turnText');
+    const damageText = document.getElementById('damageText');
+    const newGameBtn = document.getElementById('newGame');
+    const startTurnBtn = document.getElementById('startTurnBtn');
+    const timerFill = document.getElementById('timerFill');
 
-    ctx.fillStyle = "#222";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    let grid = [];
+    let currentPlayer = 1;
+    let hp = {1: 1000, 2: 1000};
+    let dragging = null;
+    let timer = null;
+    let turnStart = false;
+    let timerInterval;
 
-    ctx.fillStyle = "#fff";
-    ctx.font = "20px sans-serif";
-    ctx.fillText("Игра готова к старту!", 80, 320);
+    function createGrid() {
+      grid = [];
+      board.innerHTML = '';
+      for (let i = 0; i < 36; i++) {
+        const cell = document.createElement('div');
+        cell.classList.add('cell');
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        cell.style.backgroundColor = color;
+        board.appendChild(cell);
+        grid.push(cell);
+      }
+      while (checkMatches().length > 0) refillMatches();
+    }
+
+    function coords(i) {
+      return [Math.floor(i / 6), i % 6];
+    }
+
+    function index(row, col) {
+      return row * 6 + col;
+    }
+
+    function checkMatches() {
+      const matched = new Set();
+      for (let row = 0; row < 6; row++) {
+        for (let col = 0; col < 4; col++) {
+          let i = index(row, col);
+          let c1 = grid[i].style.backgroundColor;
+          let c2 = grid[i+1].style.backgroundColor;
+          let c3 = grid[i+2].style.backgroundColor;
+          if (c1 === c2 && c2 === c3) {
+            matched.add(i); matched.add(i+1); matched.add(i+2);
+          }
+        }
+      }
+      for (let col = 0; col < 6; col++) {
+        for (let row = 0; row < 4; row++) {
+          let i = index(row, col);
+          let c1 = grid[i].style.backgroundColor;
+          let c2 = grid[i+6].style.backgroundColor;
+          let c3 = grid[i+12].style.backgroundColor;
+          if (c1 === c2 && c2 === c3) {
+            matched.add(i); matched.add(i+6); matched.add(i+12);
+          }
+        }
+      }
+      return [...matched];
+    }
+
+    function removeMatches(matches) {
+      matches.forEach(i => {
+        grid[i].style.backgroundColor = '';
+      });
+    }
+
+    function dropDown() {
+      for (let col = 0; col < 6; col++) {
+        for (let row = 5; row > 0; row--) {
+          let i = index(row, col);
+          if (!grid[i].style.backgroundColor) {
+            for (let k = row - 1; k >= 0; k--) {
+              let above = index(k, col);
+              if (grid[above].style.backgroundColor) {
+                grid[i].style.backgroundColor = grid[above].style.backgroundColor;
+                grid[above].style.backgroundColor = '';
+                break;
+              }
+            }
+          }
+        }
+        // Fill top
+        for (let row = 0; row < 6; row++) {
+          let i = index(row, col);
+          if (!grid[i].style.backgroundColor) {
+            grid[i].style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+          }
+        }
+      }
+    }
+
+    function highlightMatches(matches) {
+      grid.forEach(cell => cell.classList.remove('highlight'));
+      matches.forEach(i => grid[i].classList.add('highlight'));
+    }
+
+    function endTurn(matches) {
+      clearInterval(timerInterval);
+      const damage = matches.length * 10;
+      const target = currentPlayer === 1 ? 2 : 1;
+      hp[target] -= damage;
+      if (hp[target] < 0) hp[target] = 0;
+      hp1El.textContent = hp[1];
+      hp2El.textContent = hp[2];
+      showOverlay(`Ход Игрока ${target}`, `Нанесено: ${damage}`);
+      currentPlayer = target;
+    }
+
+    function showOverlay(text, dmgText) {
+      turnText.textContent = text;
+      damageText.textContent = dmgText;
+      overlay.style.display = 'flex';
+    }
+
+    function startTurn() {
+      highlightMatches([]);
+      turnStart = true;
+      let timeLeft = 7;
+      timerFill.style.width = '100%';
+      timerInterval = setInterval(() => {
+        timeLeft -= 0.1;
+        timerFill.style.width = `${(timeLeft / 7) * 100}%`;
+        if (timeLeft <= 0) {
+          clearInterval(timerInterval);
+          const matches = checkMatches();
+          highlightMatches(matches);
+          setTimeout(() => {
+            removeMatches(matches);
+            setTimeout(() => {
+              dropDown();
+              endTurn(matches);
+            }, 300);
+          }, 300);
+        }
+      }, 100);
+    }
+
+    newGameBtn.addEventListener('click', () => {
+      createGrid();
+      hp = {1: 1000, 2: 1000};
+      hp1El.textContent = 1000;
+      hp2El.textContent = 1000;
+      showOverlay('Ход Игрока 1', '');
+    });
+
+    startTurnBtn.addEventListener('click', () => {
+      overlay.style.display = 'none';
+      startTurn();
+    });
+
+    board.addEventListener('mousedown', e => {
+      if (!turnStart) return;
+      const cell = e.target.closest('.cell');
+      if (!cell) return;
+      dragging = cell;
+    });
+
+    board.addEventListener('mousemove', e => {
+      if (!dragging) return;
+      const cell = document.elementFromPoint(e.clientX, e.clientY);
+      if (!cell || !cell.classList.contains('cell') || cell === dragging) return;
+      const tmp = cell.style.backgroundColor;
+      cell.style.backgroundColor = dragging.style.backgroundColor;
+      dragging.style.backgroundColor = tmp;
+      dragging = cell;
+    });
+
+    board.addEventListener('mouseup', () => {
+      dragging = null;
+    });
+
+    createGrid();
+    showOverlay('Ход Игрока 1', '');
   </script>
 </body>
 </html>
