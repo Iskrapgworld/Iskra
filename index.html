@@ -47,17 +47,48 @@
     .cell {
       width: 58px;
       height: 58px;
-      background-color: gray;
-      border-radius: 8px;
+      border-radius: 50%;
       transition: transform 0.2s, opacity 2s ease;
       touch-action: none;
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-position: center;
     }
+
+    /* Разные формы через SVG-фоны */
+    .red {
+      background-color: #ff4d4d;
+      background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'><polygon points='50,5 95,50 50,95 5,50' fill='white' /></svg>");
+    }
+
+    .blue {
+      background-color: #4dd2ff;
+      background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'><rect x='20' y='20' width='60' height='60' rx='20' fill='white'/></svg>");
+    }
+
+    .green {
+      background-color: #66ff66;
+      background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'><circle cx='50' cy='50' r='30' fill='white' /><rect x='45' y='20' width='10' height='60' fill='white'/><rect x='20' y='45' width='60' height='10' fill='white'/></svg>");
+    }
+
+    .yellow {
+      background-color: #ffff66;
+      background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'><path d='M50,5 C65,30 35,70 50,95 C65,70 35,30 50,5 Z' fill='white'/></svg>");
+    }
+
+    .purple {
+      background-color: #d580ff;
+      background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'><polygon points='50,10 90,30 75,90 25,90 10,30' fill='white'/></svg>");
+    }
+
     .highlight {
       border: 3px solid yellow;
     }
+
     .fade {
       opacity: 0;
     }
+
     #overlay {
       position: absolute;
       top: 0; left: 0;
@@ -69,6 +100,7 @@
       align-items: center;
       z-index: 2;
     }
+
     #overlay button {
       padding: 10px 20px;
       font-size: 18px;
@@ -78,6 +110,7 @@
       border-radius: 10px;
       margin-top: 20px;
     }
+
     #damageInfo {
       margin-top: 10px;
       font-size: 16px;
@@ -99,7 +132,7 @@
     <button id="startBtn">Начать ход</button>
   </div>
   <script>
-    const colors = ['#ff4d4d','#4dd2ff','#66ff66','#ffff66','#d580ff'];
+    const colorClasses = ['red','blue','green','yellow','purple'];
     const board = document.getElementById('board');
     const hp1El = document.getElementById('hp1');
     const hp2El = document.getElementById('hp2');
@@ -119,10 +152,15 @@
       for(let i=0;i<36;i++){
         const cell = document.createElement('div')
         cell.className = 'cell'
-        cell.style.background = colors[Math.floor(Math.random()*colors.length)]
+        let cls = colorClasses[Math.floor(Math.random()*colorClasses.length)]
+        cell.classList.add(cls)
         board.appendChild(cell)
         grid.push(cell)
       }
+    }
+
+    function getColorClass(el){
+      return colorClasses.find(cls => el.classList.contains(cls))
     }
 
     function checkMatches() {
@@ -130,8 +168,8 @@
       for(let r=0;r<6;r++){
         for(let c=0;c<4;c++){
           let i = index(r,c)
-          let c1=grid[i],c2=grid[i+1],c3=grid[i+2]
-          if(c1&&c2&&c3 && c1.style.background===c2.style.background && c2.style.background===c3.style.background){
+          let a=grid[i],b=grid[i+1],c_=grid[i+2]
+          if(getColorClass(a) === getColorClass(b) && getColorClass(b) === getColorClass(c_)){
             matched.push([i, i+1, i+2])
           }
         }
@@ -139,8 +177,8 @@
       for(let c=0;c<6;c++){
         for(let r=0;r<4;r++){
           let i = index(r,c)
-          let c1=grid[i],c2=grid[i+6],c3=grid[i+12]
-          if(c1&&c2&&c3 && c1.style.background===c2.style.background && c2.style.background===c3.style.background){
+          let a=grid[i],b=grid[i+6],c_=grid[i+12]
+          if(getColorClass(a) === getColorClass(b) && getColorClass(b) === getColorClass(c_)){
             matched.push([i, i+6, i+12])
           }
         }
@@ -154,13 +192,10 @@
     }
 
     function removeMatches(matches, callback){
-      matches.flat().forEach(i => {
-        grid[i].classList.add('fade');
-      });
+      matches.flat().forEach(i => grid[i].classList.add('fade'))
       setTimeout(() => {
         matches.flat().forEach(i => {
-          grid[i].classList.remove('fade');
-          grid[i].style.background = '';
+          grid[i].className = 'cell'
         });
         dropDown();
         setTimeout(callback, 300);
@@ -171,12 +206,12 @@
       for(let c=0;c<6;c++){
         for(let r=5;r>0;r--){
           let i = index(r,c)
-          if(!grid[i].style.background){
+          if(!getColorClass(grid[i])){
             for(let k=r-1;k>=0;k--){
               let up = index(k,c)
-              if(grid[up].style.background){
-                grid[i].style.background = grid[up].style.background
-                grid[up].style.background = ''
+              if(getColorClass(grid[up])){
+                grid[i].className = grid[up].className
+                grid[up].className = 'cell'
                 break
               }
             }
@@ -184,8 +219,9 @@
         }
         for(let r=0;r<6;r++){
           let i = index(r,c)
-          if(!grid[i].style.background){
-            grid[i].style.background = colors[Math.floor(Math.random()*colors.length)]
+          if(!getColorClass(grid[i])){
+            let cls = colorClasses[Math.floor(Math.random()*colorClasses.length)]
+            grid[i].className = 'cell ' + cls
           }
         }
       }
@@ -210,9 +246,9 @@
       let greenCount = 0
 
       matches.forEach(group => {
-        let color = grid[group[0]].style.background
-        if(color === 'rgb(255, 77, 77)') redCount += group.length
-        if(color === 'rgb(102, 255, 102)') greenCount += group.length
+        let color = getColorClass(grid[group[0]])
+        if(color === 'red') redCount += group.length
+        if(color === 'green') greenCount += group.length
       })
 
       function cascade(){
@@ -220,9 +256,9 @@
         if(matches.length > 0){
           highlight(matches)
           matches.forEach(group => {
-            let color = grid[group[0]].style.background
-            if(color === 'rgb(255, 77, 77)') redCount += group.length
-            if(color === 'rgb(102, 255, 102)') greenCount += group.length
+            let color = getColorClass(grid[group[0]])
+            if(color === 'red') redCount += group.length
+            if(color === 'green') greenCount += group.length
           })
           removeMatches(matches, cascade)
         } else {
@@ -234,18 +270,14 @@
 
     function applyEffects(red, green){
       let dmg = 0, heal = 0
-
       if(red >= 5) dmg = 20
       else if(red >= 3) dmg = 10
-
       if(green >= 5) heal = 20
       else if(green >= 3) heal = 10
 
       let target = currentPlayer === 1 ? 2 : 1
-
       hp[target] -= dmg
       if(hp[target] < 0) hp[target] = 0
-
       hp[currentPlayer] += heal
       if(hp[currentPlayer] > 1000) hp[currentPlayer] = 1000
 
@@ -262,7 +294,6 @@
         turnInfo.textContent = `Ход игрока ${currentPlayer}`
         startBtn.textContent = 'Начать ход'
       }
-
       overlay.style.display = 'flex'
     }
 
@@ -278,9 +309,9 @@
       const t = e.touches[0]
       const el = document.elementFromPoint(t.clientX, t.clientY)
       if(el && el.classList.contains('cell') && el!==dragging){
-        let tmp = el.style.background
-        el.style.background = dragging.style.background
-        dragging.style.background = tmp
+        let tmp = dragging.className
+        dragging.className = el.className
+        el.className = tmp
         dragging = el
       }
     })
