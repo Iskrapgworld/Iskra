@@ -43,7 +43,7 @@
       gap: 2px;
       width: 360px;
       height: 360px;
-      margin: 0 auto 30px;
+      margin: 0 auto;
     }
     .cell {
       width: 58px;
@@ -51,36 +51,16 @@
       border-radius: 50%;
       transition: transform 0.2s, opacity 2s ease;
       touch-action: none;
-      background-size: cover;
-      background-repeat: no-repeat;
-      background-position: center;
     }
+    .red { background: radial-gradient(circle, #ff5e5e, #8b0000); }
+    .green { background: radial-gradient(circle, #7fff7f, #228b22); }
+    .blue { background: linear-gradient(135deg, #66ccff, #003366); }
+    .yellow { background: radial-gradient(circle, #ffff88, #ffaa00); }
+    .purple { background: radial-gradient(circle, #dca0ff, #440066); }
+    .orange { background: radial-gradient(circle, #ffc266, #cc6600); }
 
-    .red {
-      background: radial-gradient(circle at 30% 30%, #ff5e5e, #8b0000);
-      clip-path: ellipse(45% 55% at 50% 45%);
-    }
-    .green {
-      background: radial-gradient(circle at 30% 30%, #7fff7f, #228b22);
-    }
-    .blue {
-      background: linear-gradient(135deg, #66ccff, #003366);
-      clip-path: polygon(50% 0%, 100% 25%, 80% 100%, 20% 100%, 0% 25%);
-    }
-    .yellow {
-      background: radial-gradient(circle at 30% 30%, #ffff88, #ffaa00);
-    }
-    .purple {
-      background: radial-gradient(circle at 30% 30%, #dca0ff, #440066);
-      clip-path: polygon(50% 0%, 100% 20%, 90% 100%, 20% 90%, 0% 30%);
-    }
-
-    .highlight {
-      border: 3px solid yellow;
-    }
-    .fade {
-      opacity: 0;
-    }
+    .highlight { border: 3px solid yellow; }
+    .fade { opacity: 0; }
 
     #overlay {
       position: absolute;
@@ -108,15 +88,14 @@
       margin-top: 10px;
       font-size: 16px;
       color: #88f;
-      white-space: pre-line;
     }
   </style>
 </head>
 <body>
   <h1>🔥 ИСКРА: Битва 🔥</h1>
   <div id="scoreboard">
-    <div>Игрок 1: <span id="hp1">200</span> ❤️ / <span id="shield1">150</span> 🛡</div>
-    <div>Игрок 2: <span id="hp2">200</span> ❤️ / <span id="shield2">150</span> 🛡</div>
+    <div>Игрок 1: <span id="hp1">200</span> ❤️ <span id="shield1">150</span> 🛡</div>
+    <div>Игрок 2: <span id="hp2">200</span> ❤️ <span id="shield2">150</span> 🛡</div>
   </div>
   <div id="timerBar"><div id="timerProgress"></div></div>
   <div id="board"></div>
@@ -126,7 +105,7 @@
     <button id="startBtn">Начать ход</button>
   </div>
   <script>
-    const colorClasses = ['red','blue','green','yellow','purple'];
+    const colorClasses = ['red','blue','green','yellow','purple','orange'];
     const board = document.getElementById('board');
     const hp1El = document.getElementById('hp1');
     const hp2El = document.getElementById('hp2');
@@ -138,8 +117,9 @@
     const startBtn = document.getElementById('startBtn');
     const timerProgress = document.getElementById('timerProgress');
 
-    let grid = [], hp = {1:200,2:200}, shield = {1:150, 2:150}, currentPlayer = 1;
+    let grid = [], currentPlayer = 1;
     let dragging = null, turnActive = false, timer, timeLeft;
+    let hp = {1: 200, 2: 200}, shield = {1: 150, 2: 150}, critChance = {1: 10, 2: 10};
 
     function index(r,c){return r*6 + c}
 
@@ -182,20 +162,13 @@
       return matched
     }
 
-    function highlight(matches){
-      grid.forEach(c=>c.classList.remove('highlight'))
-      matches.flat().forEach(i=>grid[i].classList.add('highlight'))
-    }
-
     function removeMatches(matches, callback){
       matches.flat().forEach(i => grid[i].classList.add('fade'))
       setTimeout(() => {
-        matches.flat().forEach(i => {
-          grid[i].className = 'cell'
-        });
-        dropDown();
-        setTimeout(callback, 300);
-      }, 2000);
+        matches.flat().forEach(i => grid[i].className = 'cell')
+        dropDown()
+        setTimeout(callback, 300)
+      }, 2000)
     }
 
     function dropDown(){
@@ -226,8 +199,8 @@
     function startTurn(){
       turnActive = true; timeLeft = 200
       timer = setInterval(()=>{
-        timeLeft--;
-        timerProgress.style.width = (timeLeft/200*100)+"%";
+        timeLeft--
+        timerProgress.style.width = (timeLeft/200*100)+"%"
         if(timeLeft<=0){
           clearInterval(timer)
           finishTurn()
@@ -237,78 +210,104 @@
 
     function finishTurn(){
       turnActive = false
-      let totalRed = 0, totalGreen = 0, totalBlue = 0;
+      let matches = checkMatches(), counts = {
+        red: 0, green: 0, blue: 0, orange: 0, purple: 0
+      }
+      matches.forEach(group=>{
+        let color = getColorClass(grid[group[0]])
+        if(counts[color] !== undefined) counts[color] += group.length
+      })
 
       function cascade(){
-        let matches = checkMatches()
+        matches = checkMatches()
         if(matches.length > 0){
-          highlight(matches)
-          matches.forEach(group => {
+          matches.forEach(group=>{
             let color = getColorClass(grid[group[0]])
-            if(color === 'red') totalRed += group.length
-            if(color === 'green') totalGreen += group.length
-            if(color === 'blue') totalBlue += group.length
+            if(counts[color] !== undefined) counts[color] += group.length
           })
           removeMatches(matches, cascade)
         } else {
-          applyEffects(totalRed, totalGreen, totalBlue)
+          applyEffects(counts)
         }
       }
       cascade()
     }
 
-    function applyEffects(red, green, blue){
-      let dmg = (red >= 5) ? 20 : (red >= 3) ? 10 : 0;
-      let heal = (green >= 5) ? 10 : (green >= 3) ? 5 : 0;
-      let shieldGain = (blue >= 5) ? 10 : (blue >= 3) ? 5 : 0;
+    function applyEffects(counts){
+      let crit = critChance[currentPlayer]
+      if(counts.orange >= 6) crit += 25
+      else if(counts.orange >= 5) crit += 20
+      else if(counts.orange >= 3) crit += 10
 
-      let target = currentPlayer === 1 ? 2 : 1
+      const roll = Math.random()*100 < crit
+      const critText = roll ? "Крит! " : ""
+      if(roll) critChance[currentPlayer] = 10
+      else critChance[currentPlayer] = crit
 
-      let shieldBlock = Math.min(dmg / 2, shield[target]);
-      shield[target] -= shieldBlock;
-      dmg -= shieldBlock;
-      hp[target] -= dmg;
+      let dmg = 0, heal = 0, shieldGain = 0
+      const attackStones = counts.red + counts.purple
+      if(attackStones >= 6) dmg = 20
+      else if(attackStones >= 5) dmg = 15
+      else if(attackStones >= 3) dmg = 10
+      if(roll) dmg *= 2
 
-      shield[currentPlayer] += shieldGain;
-      if(shield[currentPlayer] > 150) shield[currentPlayer] = 150;
+      if(counts.green >= 5) heal = 10
+      else if(counts.green >= 3) heal = 5
 
-      hp[currentPlayer] += heal;
-      if(hp[currentPlayer] > 200) hp[currentPlayer] = 200;
+      if(counts.blue >= 6) shieldGain = 12
+      else if(counts.blue >= 5) shieldGain = 10
+      else if(counts.blue >= 3) shieldGain = 5
 
-      if(hp[target] < 0) hp[target] = 0;
+      const target = currentPlayer === 1 ? 2 : 1
 
-      hp1El.textContent = hp[1];
-      hp2El.textContent = hp[2];
-      shield1El.textContent = shield[1];
-      shield2El.textContent = shield[2];
+      if(shield[target] >= dmg){
+        shield[target] -= dmg
+      } else {
+        const remain = dmg - shield[target]
+        shield[target] = 0
+        hp[target] -= remain
+      }
 
-      damageInfo.innerHTML = `Урон: ${dmg}
-Щит: +${shieldGain}
-Лечение: +${heal}`;
+      shield[currentPlayer] += shieldGain
+      if(shield[currentPlayer] > 150) shield[currentPlayer] = 150
+      hp[currentPlayer] += heal
+      if(hp[currentPlayer] > 200) hp[currentPlayer] = 200
 
-      if(hp[1] === 0 || hp[2] === 0){
-        turnInfo.textContent = `Победа игрока ${hp[1]===0 ? 2 : 1}!`
-        startBtn.textContent = 'Новая игра'
+      hp1El.textContent = hp[1]
+      hp2El.textContent = hp[2]
+      shield1El.textContent = shield[1]
+      shield2El.textContent = shield[2]
+
+      damageInfo.innerHTML = `
+        ${critText}Урон: ${dmg}<br>
+        Лечение: ${heal}<br>
+        Щиты: +${shieldGain}<br>
+        Крит. шанс: ${critChance[currentPlayer]}%
+      `
+
+      if(hp[1] <= 0 || hp[2] <= 0){
+        turnInfo.textContent = `Победа игрока ${hp[1] <= 0 ? 2 : 1}!`
+        startBtn.textContent = "Новая игра"
       } else {
         currentPlayer = target
         turnInfo.textContent = `Ход игрока ${currentPlayer}`
-        startBtn.textContent = 'Начать ход'
+        startBtn.textContent = "Начать ход"
       }
-      overlay.style.display = 'flex'
+      overlay.style.display = "flex"
     }
 
-    board.addEventListener('touchstart',e=>{
+    board.addEventListener("touchstart",e=>{
       if(!turnActive)return
       const t = e.touches[0]
       const el = document.elementFromPoint(t.clientX, t.clientY)
-      if(el && el.classList.contains('cell')) dragging = el
+      if(el && el.classList.contains("cell")) dragging = el
     })
 
-    board.addEventListener('touchmove',e=>{
+    board.addEventListener("touchmove",e=>{
       if(!dragging)return
       const t = e.touches[0]
       const el = document.elementFromPoint(t.clientX, t.clientY)
-      if(el && el.classList.contains('cell') && el!==dragging){
+      if(el && el.classList.contains("cell") && el!==dragging){
         let tmp = dragging.className
         dragging.className = el.className
         el.className = tmp
@@ -316,7 +315,7 @@
       }
     })
 
-    board.addEventListener('touchend',()=>{
+    board.addEventListener("touchend",()=>{
       if(turnActive){
         turnActive = false
         clearInterval(timer)
@@ -325,25 +324,25 @@
     })
 
     startBtn.onclick = ()=>{
-      if(startBtn.textContent==='Новая игра'){
-        hp = {1: 200, 2: 200}
-        shield = {1: 150, 2: 150}
-        currentPlayer = 1
-        hp1El.textContent = '200'
-        hp2El.textContent = '200'
-        shield1El.textContent = '150'
-        shield2El.textContent = '150'
+      if(startBtn.textContent === "Новая игра"){
+        hp = {1:200,2:200}
+        shield = {1:150,2:150}
+        critChance = {1:10,2:10}
+        hp1El.textContent = hp[1]
+        hp2El.textContent = hp[2]
+        shield1El.textContent = shield[1]
+        shield2El.textContent = shield[2]
         createGrid()
-        turnInfo.textContent = 'Ход игрока 1'
-        damageInfo.textContent = ''
-        startBtn.textContent = 'Начать ход'
+        damageInfo.textContent = ""
+        turnInfo.textContent = "Ход игрока 1"
+        startBtn.textContent = "Начать ход"
       }
-      overlay.style.display = 'none'
+      overlay.style.display = "none"
       startTurn()
     }
 
     createGrid()
-    overlay.style.display = 'flex'
+    overlay.style.display = "flex"
   </script>
 </body>
 </html>
