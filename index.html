@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ИСКРА: Кристаллы</title>
   <style>
     body {
@@ -18,21 +18,29 @@
       image-rendering: pixelated;
     }
   </style>
+
+  <!-- Telegram WebApp API -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script>
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+  </script>
 </head>
 <body>
   <h1>ИСКРА: Кристаллы</h1>
   <p>Загрузка игры...</p>
   <canvas id="gameCanvas" width="360" height="640"></canvas>
+
   <script>
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
 
     ctx.fillStyle = "#222";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+
     ctx.fillStyle = "#fff";
     ctx.font = "20px sans-serif";
-    ctx.fillText("Добро пожаловать в PG", 50, 100);
-    ctx.fillText("Разработка начата!", 70, 140);
+    ctx.fillText("Игра готова к старту!", 80, 320);
   </script>
 </body>
 </html>
