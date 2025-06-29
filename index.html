@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="ru">
+<!DOCTYPE html>
+<html lang="ru">
 <head>
   <meta charset="UTF-8" />
   <title>ИСКРА: Битва</title>
@@ -48,11 +49,14 @@
       height: 58px;
       background-color: gray;
       border-radius: 8px;
-      transition: transform 0.2s;
+      transition: transform 0.2s, opacity 2s ease;
       touch-action: none;
     }
     .highlight {
       border: 3px solid yellow;
+    }
+    .fade {
+      opacity: 0;
     }
     #overlay {
       position: absolute;
@@ -96,172 +100,179 @@
     const overlay = document.getElementById('overlay');
     const turnInfo = document.getElementById('turnInfo');
     const startBtn = document.getElementById('startBtn');
-    const timerProgress = document.getElementById('timerProgress');let grid = [], hp = {1:1000,2:1000}, currentPlayer = 1;
-let dragging = null, turnActive = false, timer, timeLeft;
+    const timerProgress = document.getElementById('timerProgress');
+    
+    let grid = [], hp = {1:1000,2:1000}, currentPlayer = 1;
+    let dragging = null, turnActive = false, timer, timeLeft;
 
-function coords(i){return [Math.floor(i/6), i%6]}
-function index(r,c){return r*6 + c}
+    function coords(i){return [Math.floor(i/6), i%6]}
+    function index(r,c){return r*6 + c}
 
-function createGrid() {
-  board.innerHTML = ''; grid = []
-  for(let i=0;i<36;i++){
-    const cell = document.createElement('div')
-    cell.className = 'cell'
-    cell.style.background = colors[Math.floor(Math.random()*colors.length)]
-    board.appendChild(cell)
-    grid.push(cell)
-  }
-}
-
-function checkMatches() {
-  const matched = new Set()
-  for(let r=0;r<6;r++){
-    for(let c=0;c<4;c++){
-      let i = index(r,c)
-      let c1=grid[i],c2=grid[i+1],c3=grid[i+2]
-      if(c1&&c2&&c3 && c1.style.background===c2.style.background && c2.style.background===c3.style.background){
-        matched.add(i); matched.add(i+1); matched.add(i+2)
+    function createGrid() {
+      board.innerHTML = ''; grid = []
+      for(let i=0;i<36;i++){
+        const cell = document.createElement('div')
+        cell.className = 'cell'
+        cell.style.background = colors[Math.floor(Math.random()*colors.length)]
+        board.appendChild(cell)
+        grid.push(cell)
       }
     }
-  }
-  for(let c=0;c<6;c++){
-    for(let r=0;r<4;r++){
-      let i = index(r,c)
-      let c1=grid[i],c2=grid[i+6],c3=grid[i+12]
-      if(c1&&c2&&c3 && c1.style.background===c2.style.background && c2.style.background===c3.style.background){
-        matched.add(i); matched.add(i+6); matched.add(i+12)
+
+    function checkMatches() {
+      const matched = new Set()
+      for(let r=0;r<6;r++){
+        for(let c=0;c<4;c++){
+          let i = index(r,c)
+          let c1=grid[i],c2=grid[i+1],c3=grid[i+2]
+          if(c1&&c2&&c3 && c1.style.background===c2.style.background && c2.style.background===c3.style.background){
+            matched.add(i); matched.add(i+1); matched.add(i+2)
+          }
+        }
       }
+      for(let c=0;c<6;c++){
+        for(let r=0;r<4;r++){
+          let i = index(r,c)
+          let c1=grid[i],c2=grid[i+6],c3=grid[i+12]
+          if(c1&&c2&&c3 && c1.style.background===c2.style.background && c2.style.background===c3.style.background){
+            matched.add(i); matched.add(i+6); matched.add(i+12)
+          }
+        }
+      }
+      return [...matched]
     }
-  }
-  return [...matched]
-}
 
-function highlight(matches){
-  grid.forEach(c=>c.classList.remove('highlight'))
-  matches.forEach(i=>grid[i].classList.add('highlight'))
-}
+    function highlight(matches){
+      grid.forEach(c=>c.classList.remove('highlight'))
+      matches.forEach(i=>grid[i].classList.add('highlight'))
+    }
 
-function removeMatches(matches){
-  matches.forEach(i=>grid[i].style.background='')
-}
+    function removeMatches(matches, callback){
+      matches.forEach(i => {
+        grid[i].classList.add('fade');
+      });
+      setTimeout(() => {
+        matches.forEach(i => {
+          grid[i].classList.remove('fade');
+          grid[i].style.background = '';
+        });
+        dropDown();
+        setTimeout(callback, 300);
+      }, 2000);
+    }
 
-function dropDown(){
-  for(let c=0;c<6;c++){
-    for(let r=5;r>0;r--){
-      let i = index(r,c)
-      if(!grid[i].style.background){
-        for(let k=r-1;k>=0;k--){
-          let up = index(k,c)
-          if(grid[up].style.background){
-            grid[i].style.background = grid[up].style.background
-            grid[up].style.background = ''
-            break
+    function dropDown(){
+      for(let c=0;c<6;c++){
+        for(let r=5;r>0;r--){
+          let i = index(r,c)
+          if(!grid[i].style.background){
+            for(let k=r-1;k>=0;k--){
+              let up = index(k,c)
+              if(grid[up].style.background){
+                grid[i].style.background = grid[up].style.background
+                grid[up].style.background = ''
+                break
+              }
+            }
+          }
+        }
+        for(let r=0;r<6;r++){
+          let i = index(r,c)
+          if(!grid[i].style.background){
+            grid[i].style.background = colors[Math.floor(Math.random()*colors.length)]
           }
         }
       }
     }
-    for(let r=0;r<6;r++){
-      let i = index(r,c)
-      if(!grid[i].style.background){
-        grid[i].style.background = colors[Math.floor(Math.random()*colors.length)]
+
+    function startTurn(){
+      turnActive = true; timeLeft = 200
+      timer = setInterval(()=>{
+        timeLeft--;
+        timerProgress.style.width = (timeLeft/200*100)+"%";
+        if(timeLeft<=0){
+          clearInterval(timer)
+          finishTurn()
+        }
+      },50)
+    }
+
+    function finishTurn(){
+      turnActive = false
+      let matches = checkMatches()
+      let total = 0
+      function cascade(){
+        matches = checkMatches()
+        if(matches.length > 0){
+          highlight(matches)
+          total += matches.length
+          removeMatches(matches, cascade)
+        } else {
+          applyDamage(total)
+        }
       }
+      cascade()
     }
-  }
-}
 
-function startTurn(){
-  turnActive = true; timeLeft = 200
-  timer = setInterval(()=>{
-    timeLeft--;
-    timerProgress.style.width = (timeLeft/200*100)+"%";
-    if(timeLeft<=0){
-      clearInterval(timer)
-      finishTurn()
+    function applyDamage(total){
+      let dmg = total * 10
+      let target = currentPlayer===1 ? 2 : 1
+      hp[target] -= dmg
+      if(hp[target]<0) hp[target]=0
+      hp1El.textContent = hp[1]
+      hp2El.textContent = hp[2]
+      if(hp[1]===0||hp[2]===0){
+        turnInfo.textContent = `Победа игрока ${hp[1]===0?2:1}!`
+        startBtn.textContent = 'Новая игра'
+      } else {
+        currentPlayer = target
+        turnInfo.textContent = `Ход игрока ${currentPlayer}`
+        startBtn.textContent = 'Начать ход'
+      }
+      overlay.style.display = 'flex'
     }
-  },50)
-}
 
-function finishTurn(){
-  turnActive = false
-  let matches = checkMatches()
-  let total = 0
-  function cascade(){
-    matches = checkMatches()
-    if(matches.length>0){
-      highlight(matches)
-      total += matches.length
-      setTimeout(()=>{
-        removeMatches(matches)
-        dropDown()
-        setTimeout(cascade, 300)
-      },300)
-    } else {
-      applyDamage(total)
+    board.addEventListener('touchstart',e=>{
+      if(!turnActive)return
+      const t = e.touches[0]
+      const el = document.elementFromPoint(t.clientX, t.clientY)
+      if(el && el.classList.contains('cell')) dragging = el
+    })
+
+    board.addEventListener('touchmove',e=>{
+      if(!dragging)return
+      const t = e.touches[0]
+      const el = document.elementFromPoint(t.clientX, t.clientY)
+      if(el && el.classList.contains('cell') && el!==dragging){
+        let tmp = el.style.background
+        el.style.background = dragging.style.background
+        dragging.style.background = tmp
+        dragging = el
+      }
+    })
+
+    board.addEventListener('touchend',()=>{
+      if(turnActive){
+        turnActive = false
+        clearInterval(timer)
+        finishTurn()
+      }
+    })
+
+    startBtn.onclick = ()=>{
+      if(startBtn.textContent==='Новая игра'){
+        hp={1:1000,2:1000}; currentPlayer=1
+        hp1El.textContent = '1000'; hp2El.textContent = '1000'
+        createGrid()
+        turnInfo.textContent = 'Ход игрока 1'
+        startBtn.textContent = 'Начать ход'
+      }
+      overlay.style.display = 'none'
+      startTurn()
     }
-  }
-  cascade()
-}
 
-function applyDamage(total){
-  let dmg = total * 10
-  let target = currentPlayer===1 ? 2 : 1
-  hp[target] -= dmg
-  if(hp[target]<0) hp[target]=0
-  hp1El.textContent = hp[1]
-  hp2El.textContent = hp[2]
-  if(hp[1]===0||hp[2]===0){
-    turnInfo.textContent = `Победа игрока ${hp[1]===0?2:1}!`
-    startBtn.textContent = 'Новая игра'
-  } else {
-    currentPlayer = target
-    turnInfo.textContent = `Ход игрока ${currentPlayer}`
-    startBtn.textContent = 'Начать ход'
-  }
-  overlay.style.display = 'flex'
-}
-
-board.addEventListener('touchstart',e=>{
-  if(!turnActive)return
-  const t = e.touches[0]
-  const el = document.elementFromPoint(t.clientX, t.clientY)
-  if(el && el.classList.contains('cell')) dragging = el
-})
-
-board.addEventListener('touchmove',e=>{
-  if(!dragging)return
-  const t = e.touches[0]
-  const el = document.elementFromPoint(t.clientX, t.clientY)
-  if(el && el.classList.contains('cell') && el!==dragging){
-    let tmp = el.style.background
-    el.style.background = dragging.style.background
-    dragging.style.background = tmp
-    dragging = el
-  }
-})
-
-board.addEventListener('touchend',()=>{
-  if(turnActive){
-    turnActive = false
-    clearInterval(timer)
-    finishTurn()
-  }
-})
-
-startBtn.onclick = ()=>{
-  if(startBtn.textContent==='Новая игра'){
-    hp={1:1000,2:1000}; currentPlayer=1
-    hp1El.textContent = '1000'; hp2El.textContent = '1000'
     createGrid()
-    turnInfo.textContent = 'Ход игрока 1'
-    startBtn.textContent = 'Начать ход'
-  }
-  overlay.style.display = 'none'
-  startTurn()
-}
-
-createGrid()
-overlay.style.display = 'flex'
-
+    overlay.style.display = 'flex'
   </script>
 </body>
 </html>
