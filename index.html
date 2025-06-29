@@ -43,7 +43,7 @@
       gap: 2px;
       width: 360px;
       height: 360px;
-      margin: 0 auto;
+      margin: 0 auto 30px;
     }
     .cell {
       width: 58px;
@@ -55,13 +55,33 @@
       background-repeat: no-repeat;
       background-position: center;
     }
-    .red { background-color: #ff4d4d; }
-    .blue { background-color: #4dd2ff; }
-    .green { background-color: #66ff66; }
-    .yellow { background-color: #ffff66; }
-    .purple { background-color: #d580ff; }
-    .highlight { border: 3px solid yellow; }
-    .fade { opacity: 0; }
+
+    .red {
+      background: radial-gradient(circle at 30% 30%, #ff5e5e, #8b0000);
+      clip-path: ellipse(45% 55% at 50% 45%);
+    }
+    .green {
+      background: radial-gradient(circle at 30% 30%, #7fff7f, #228b22);
+    }
+    .blue {
+      background: linear-gradient(135deg, #66ccff, #003366);
+      clip-path: polygon(50% 0%, 100% 25%, 80% 100%, 20% 100%, 0% 25%);
+    }
+    .yellow {
+      background: radial-gradient(circle at 30% 30%, #ffff88, #ffaa00);
+    }
+    .purple {
+      background: radial-gradient(circle at 30% 30%, #dca0ff, #440066);
+      clip-path: polygon(50% 0%, 100% 20%, 90% 100%, 20% 90%, 0% 30%);
+    }
+
+    .highlight {
+      border: 3px solid yellow;
+    }
+    .fade {
+      opacity: 0;
+    }
+
     #overlay {
       position: absolute;
       top: 0; left: 0;
@@ -73,6 +93,7 @@
       align-items: center;
       z-index: 2;
     }
+
     #overlay button {
       padding: 10px 20px;
       font-size: 18px;
@@ -82,10 +103,12 @@
       border-radius: 10px;
       margin-top: 20px;
     }
+
     #damageInfo {
       margin-top: 10px;
       font-size: 16px;
       color: #88f;
+      white-space: pre-line;
     }
   </style>
 </head>
@@ -115,7 +138,7 @@
     const startBtn = document.getElementById('startBtn');
     const timerProgress = document.getElementById('timerProgress');
 
-    let grid = [], hp = {1:200,2:200}, shield = {1:150,2:150}, currentPlayer = 1;
+    let grid = [], hp = {1:200,2:200}, shield = {1:150, 2:150}, currentPlayer = 1;
     let dragging = null, turnActive = false, timer, timeLeft;
 
     function index(r,c){return r*6 + c}
@@ -214,61 +237,54 @@
 
     function finishTurn(){
       turnActive = false
-      let matches = checkMatches()
-      let redCount = 0, greenCount = 0, blueCount = 0;
-
-      matches.forEach(group => {
-        let color = getColorClass(grid[group[0]])
-        if(color === 'red') redCount += group.length
-        if(color === 'green') greenCount += group.length
-        if(color === 'blue') blueCount += group.length
-      })
+      let totalRed = 0, totalGreen = 0, totalBlue = 0;
 
       function cascade(){
-        matches = checkMatches()
+        let matches = checkMatches()
         if(matches.length > 0){
           highlight(matches)
           matches.forEach(group => {
             let color = getColorClass(grid[group[0]])
-            if(color === 'red') redCount += group.length
-            if(color === 'green') greenCount += group.length
-            if(color === 'blue') blueCount += group.length
+            if(color === 'red') totalRed += group.length
+            if(color === 'green') totalGreen += group.length
+            if(color === 'blue') totalBlue += group.length
           })
           removeMatches(matches, cascade)
         } else {
-          applyEffects(redCount, greenCount, blueCount)
+          applyEffects(totalRed, totalGreen, totalBlue)
         }
       }
       cascade()
     }
 
     function applyEffects(red, green, blue){
-      let dmg = red >= 5 ? 20 : red >= 3 ? 10 : 0;
-      let heal = green >= 5 ? 10 : green >= 3 ? 5 : 0;
-      let shieldGain = blue >= 5 ? 10 : blue >= 3 ? 5 : 0;
+      let dmg = (red >= 5) ? 20 : (red >= 3) ? 10 : 0;
+      let heal = (green >= 5) ? 10 : (green >= 3) ? 5 : 0;
+      let shieldGain = (blue >= 5) ? 10 : (blue >= 3) ? 5 : 0;
 
-      let target = currentPlayer === 1 ? 2 : 1;
+      let target = currentPlayer === 1 ? 2 : 1
 
-      if (shield[target] >= dmg) {
-        shield[target] -= dmg;
-      } else {
-        let remainder = dmg - shield[target];
-        shield[target] = 0;
-        hp[target] -= remainder;
-      }
+      let shieldBlock = Math.min(dmg / 2, shield[target]);
+      shield[target] -= shieldBlock;
+      dmg -= shieldBlock;
+      hp[target] -= dmg;
 
-      if(hp[target] < 0) hp[target] = 0;
-      hp[currentPlayer] += heal;
-      if(hp[currentPlayer] > 200) hp[currentPlayer] = 200;
       shield[currentPlayer] += shieldGain;
       if(shield[currentPlayer] > 150) shield[currentPlayer] = 150;
+
+      hp[currentPlayer] += heal;
+      if(hp[currentPlayer] > 200) hp[currentPlayer] = 200;
+
+      if(hp[target] < 0) hp[target] = 0;
 
       hp1El.textContent = hp[1];
       hp2El.textContent = hp[2];
       shield1El.textContent = shield[1];
       shield2El.textContent = shield[2];
 
-      damageInfo.innerHTML = `🔥 Урон: ${dmg} | 💚 Лечение: ${heal} | 🛡 Щиты: +${shieldGain}`
+      damageInfo.innerHTML = `Урон: ${dmg}
+Щит: +${shieldGain}
+Лечение: +${heal}`;
 
       if(hp[1] === 0 || hp[2] === 0){
         turnInfo.textContent = `Победа игрока ${hp[1]===0 ? 2 : 1}!`
