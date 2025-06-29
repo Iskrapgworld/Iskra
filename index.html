@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -19,8 +20,9 @@
     #scoreboard {
       display: flex;
       justify-content: space-around;
-      font-size: 18px;
+      font-size: 16px;
       margin-bottom: 10px;
+      flex-wrap: wrap;
     }
     #timerBar {
       width: 80%;
@@ -54,41 +56,32 @@
       background-repeat: no-repeat;
       background-position: center;
     }
-
-    /* Разные формы через SVG-фоны */
     .red {
       background-color: #ff4d4d;
       background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'><polygon points='50,5 95,50 50,95 5,50' fill='white' /></svg>");
     }
-
     .blue {
       background-color: #4dd2ff;
       background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'><rect x='20' y='20' width='60' height='60' rx='20' fill='white'/></svg>");
     }
-
     .green {
       background-color: #66ff66;
       background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'><circle cx='50' cy='50' r='30' fill='white' /><rect x='45' y='20' width='10' height='60' fill='white'/><rect x='20' y='45' width='60' height='10' fill='white'/></svg>");
     }
-
     .yellow {
       background-color: #ffff66;
       background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'><path d='M50,5 C65,30 35,70 50,95 C65,70 35,30 50,5 Z' fill='white'/></svg>");
     }
-
     .purple {
-      background-color: #d580ff;
+      background-color: #ff9900;
       background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'><polygon points='50,10 90,30 75,90 25,90 10,30' fill='white'/></svg>");
     }
-
     .highlight {
       border: 3px solid yellow;
     }
-
     .fade {
       opacity: 0;
     }
-
     #overlay {
       position: absolute;
       top: 0; left: 0;
@@ -100,7 +93,6 @@
       align-items: center;
       z-index: 2;
     }
-
     #overlay button {
       padding: 10px 20px;
       font-size: 18px;
@@ -110,19 +102,25 @@
       border-radius: 10px;
       margin-top: 20px;
     }
-
     #damageInfo {
       margin-top: 10px;
       font-size: 16px;
       color: #88f;
+      white-space: pre-line;
     }
   </style>
 </head>
 <body>
   <h1>🔥 ИСКРА: Битва 🔥</h1>
   <div id="scoreboard">
-    <div>Игрок 1: <span id="hp1">1000</span> ❤️</div>
-    <div>Игрок 2: <span id="hp2">1000</span> ❤️</div>
+    <div>
+      <div>Игрок 1: <span id="hp1">1000</span> ❤️</div>
+      <div>Щит: <span id="shield1">300</span> 🛡️</div>
+    </div>
+    <div>
+      <div>Игрок 2: <span id="hp2">1000</span> ❤️</div>
+      <div>Щит: <span id="shield2">300</span> 🛡️</div>
+    </div>
   </div>
   <div id="timerBar"><div id="timerProgress"></div></div>
   <div id="board"></div>
@@ -132,215 +130,247 @@
     <button id="startBtn">Начать ход</button>
   </div>
   <script>
-    const colorClasses = ['red','blue','green','yellow','purple'];
-    const board = document.getElementById('board');
-    const hp1El = document.getElementById('hp1');
-    const hp2El = document.getElementById('hp2');
-    const overlay = document.getElementById('overlay');
-    const turnInfo = document.getElementById('turnInfo');
-    const damageInfo = document.getElementById('damageInfo');
-    const startBtn = document.getElementById('startBtn');
-    const timerProgress = document.getElementById('timerProgress');
+const colorClasses = ['red','blue','green','yellow','purple'];
+const board = document.getElementById('board');
+const hp1El = document.getElementById('hp1');
+const hp2El = document.getElementById('hp2');
+const overlay = document.getElementById('overlay');
+const turnInfo = document.getElementById('turnInfo');
+const damageInfo = document.getElementById('damageInfo');
+const startBtn = document.getElementById('startBtn');
+const timerProgress = document.getElementById('timerProgress');
 
-    let grid = [], hp = {1:1000,2:1000}, currentPlayer = 1;
-    let dragging = null, turnActive = false, timer, timeLeft;
+let grid = [], hp = {1:1000,2:1000}, shield = {1:300,2:300}, currentPlayer = 1;
+let dragging = null, turnActive = false, timer, timeLeft, critChance = {1:10,2:10};
 
-    function index(r,c){return r*6 + c}
+function index(r,c){return r*6 + c}
 
-    function createGrid() {
-      board.innerHTML = ''; grid = []
-      for(let i=0;i<36;i++){
-        const cell = document.createElement('div')
-        cell.className = 'cell'
+function createGrid() {
+  board.innerHTML = ''; grid = []
+  for(let i=0;i<36;i++){
+    const cell = document.createElement('div')
+    cell.className = 'cell'
+    let cls = colorClasses[Math.floor(Math.random()*colorClasses.length)]
+    cell.classList.add(cls)
+    board.appendChild(cell)
+    grid.push(cell)
+  }
+}
+
+function getColorClass(el){
+  return colorClasses.find(cls => el.classList.contains(cls))
+}
+
+function checkMatches() {
+  const matched = []
+  for(let r=0;r<6;r++){
+    for(let c=0;c<4;c++){
+      let i = index(r,c)
+      let a=grid[i],b=grid[i+1],c_=grid[i+2]
+      if(getColorClass(a) === getColorClass(b) && getColorClass(b) === getColorClass(c_)){
+        matched.push([i, i+1, i+2])
+      }
+    }
+  }
+  for(let c=0;c<6;c++){
+    for(let r=0;r<4;r++){
+      let i = index(r,c)
+      let a=grid[i],b=grid[i+6],c_=grid[i+12]
+      if(getColorClass(a) === getColorClass(b) && getColorClass(b) === getColorClass(c_)){
+        matched.push([i, i+6, i+12])
+      }
+    }
+  }
+  return matched
+}
+
+function highlight(matches){
+  grid.forEach(c=>c.classList.remove('highlight'))
+  matches.flat().forEach(i=>grid[i].classList.add('highlight'))
+}
+
+function removeMatches(matches, callback){
+  matches.flat().forEach(i => grid[i].classList.add('fade'))
+  setTimeout(() => {
+    matches.flat().forEach(i => {
+      grid[i].className = 'cell'
+    });
+    dropDown();
+    setTimeout(callback, 300);
+  }, 2000);
+}
+
+function dropDown(){
+  for(let c=0;c<6;c++){
+    for(let r=5;r>0;r--){
+      let i = index(r,c)
+      if(!getColorClass(grid[i])){
+        for(let k=r-1;k>=0;k--){
+          let up = index(k,c)
+          if(getColorClass(grid[up])){
+            grid[i].className = grid[up].className
+            grid[up].className = 'cell'
+            break
+          }
+        }
+      }
+    }
+    for(let r=0;r<6;r++){
+      let i = index(r,c)
+      if(!getColorClass(grid[i])){
         let cls = colorClasses[Math.floor(Math.random()*colorClasses.length)]
-        cell.classList.add(cls)
-        board.appendChild(cell)
-        grid.push(cell)
+        grid[i].className = 'cell ' + cls
       }
     }
+  }
+}
 
-    function getColorClass(el){
-      return colorClasses.find(cls => el.classList.contains(cls))
+function startTurn(){
+  turnActive = true; timeLeft = 200
+  timer = setInterval(()=>{
+    timeLeft--;
+    timerProgress.style.width = (timeLeft/200*100)+"%";
+    if(timeLeft<=0){
+      clearInterval(timer)
+      finishTurn()
     }
+  },50)
+}
 
-    function checkMatches() {
-      const matched = []
-      for(let r=0;r<6;r++){
-        for(let c=0;c<4;c++){
-          let i = index(r,c)
-          let a=grid[i],b=grid[i+1],c_=grid[i+2]
-          if(getColorClass(a) === getColorClass(b) && getColorClass(b) === getColorClass(c_)){
-            matched.push([i, i+1, i+2])
-          }
-        }
-      }
-      for(let c=0;c<6;c++){
-        for(let r=0;r<4;r++){
-          let i = index(r,c)
-          let a=grid[i],b=grid[i+6],c_=grid[i+12]
-          if(getColorClass(a) === getColorClass(b) && getColorClass(b) === getColorClass(c_)){
-            matched.push([i, i+6, i+12])
-          }
-        }
-      }
-      return matched
-    }
+function finishTurn(){
+  turnActive = false
+  let matches = checkMatches()
+  let redCount = 0, greenCount = 0, blueCount = 0, orangeCount = 0
+  matches.forEach(group => {
+    let color = getColorClass(grid[group[0]])
+    if(color === 'red') redCount += group.length
+    if(color === 'green') greenCount += group.length
+    if(color === 'blue') blueCount += group.length
+    if(color === 'yellow') orangeCount += group.length
+  })
 
-    function highlight(matches){
-      grid.forEach(c=>c.classList.remove('highlight'))
-      matches.flat().forEach(i=>grid[i].classList.add('highlight'))
-    }
-
-    function removeMatches(matches, callback){
-      matches.flat().forEach(i => grid[i].classList.add('fade'))
-      setTimeout(() => {
-        matches.flat().forEach(i => {
-          grid[i].className = 'cell'
-        });
-        dropDown();
-        setTimeout(callback, 300);
-      }, 2000);
-    }
-
-    function dropDown(){
-      for(let c=0;c<6;c++){
-        for(let r=5;r>0;r--){
-          let i = index(r,c)
-          if(!getColorClass(grid[i])){
-            for(let k=r-1;k>=0;k--){
-              let up = index(k,c)
-              if(getColorClass(grid[up])){
-                grid[i].className = grid[up].className
-                grid[up].className = 'cell'
-                break
-              }
-            }
-          }
-        }
-        for(let r=0;r<6;r++){
-          let i = index(r,c)
-          if(!getColorClass(grid[i])){
-            let cls = colorClasses[Math.floor(Math.random()*colorClasses.length)]
-            grid[i].className = 'cell ' + cls
-          }
-        }
-      }
-    }
-
-    function startTurn(){
-      turnActive = true; timeLeft = 200
-      timer = setInterval(()=>{
-        timeLeft--;
-        timerProgress.style.width = (timeLeft/200*100)+"%";
-        if(timeLeft<=0){
-          clearInterval(timer)
-          finishTurn()
-        }
-      },50)
-    }
-
-    function finishTurn(){
-      turnActive = false
-      let matches = checkMatches()
-      let redCount = 0
-      let greenCount = 0
-
+  function cascade(){
+    matches = checkMatches()
+    if(matches.length > 0){
+      highlight(matches)
       matches.forEach(group => {
         let color = getColorClass(grid[group[0]])
         if(color === 'red') redCount += group.length
         if(color === 'green') greenCount += group.length
+        if(color === 'blue') blueCount += group.length
+        if(color === 'yellow') orangeCount += group.length
       })
-
-      function cascade(){
-        matches = checkMatches()
-        if(matches.length > 0){
-          highlight(matches)
-          matches.forEach(group => {
-            let color = getColorClass(grid[group[0]])
-            if(color === 'red') redCount += group.length
-            if(color === 'green') greenCount += group.length
-          })
-          removeMatches(matches, cascade)
-        } else {
-          applyEffects(redCount, greenCount)
-        }
-      }
-      cascade()
+      removeMatches(matches, cascade)
+    } else {
+      applyEffects(redCount, greenCount, blueCount, orangeCount)
     }
+  }
+  cascade()
+}
 
-    function applyEffects(red, green){
-      let dmg = 0, heal = 0
-      if(red >= 5) dmg = 20
-      else if(red >= 3) dmg = 10
-      if(green >= 5) heal = 20
-      else if(green >= 3) heal = 10
+function applyEffects(red, green, blue, orange){
+  let dmg = 0, heal = 0, shieldHeal = 0, critInfo = '', crit = false
+  if(red >= 5) dmg = 20
+  else if(red >= 3) dmg = 10
+  if(green >= 5) heal = 20
+  else if(green >= 3) heal = 10
+  if(blue >= 5) shieldHeal = 20
+  else if(blue >= 3) shieldHeal = 10
 
-      let target = currentPlayer === 1 ? 2 : 1
-      hp[target] -= dmg
-      if(hp[target] < 0) hp[target] = 0
-      hp[currentPlayer] += heal
-      if(hp[currentPlayer] > 1000) hp[currentPlayer] = 1000
+  let addedCrit = 0
+  if(orange >= 5) addedCrit = 20
+  else if(orange >= 3) addedCrit = 10
 
-      hp1El.textContent = hp[1]
-      hp2El.textContent = hp[2]
+  critChance[currentPlayer] += addedCrit
 
-      damageInfo.innerHTML = `${dmg ? `Урон: ${dmg}` : ''} ${heal ? `Лечение: ${heal}` : ''}`.trim()
+  if(Math.random()*100 < critChance[currentPlayer]){
+    dmg *= 2
+    critInfo = `Крит! Урон ×2. `
+    crit = true
+    critChance[currentPlayer] = 10
+  }
 
-      if(hp[1] === 0 || hp[2] === 0){
-        turnInfo.textContent = `Победа игрока ${hp[1]===0 ? 2 : 1}!`
-        startBtn.textContent = 'Новая игра'
-      } else {
-        currentPlayer = target
-        turnInfo.textContent = `Ход игрока ${currentPlayer}`
-        startBtn.textContent = 'Начать ход'
-      }
-      overlay.style.display = 'flex'
-    }
+  let target = currentPlayer === 1 ? 2 : 1
+  let shieldBefore = shield[target]
+  if(shield[target] >= dmg){
+    shield[target] -= dmg
+    dmg = 0
+  } else {
+    dmg -= shield[target]
+    shield[target] = 0
+  }
 
-    board.addEventListener('touchstart',e=>{
-      if(!turnActive)return
-      const t = e.touches[0]
-      const el = document.elementFromPoint(t.clientX, t.clientY)
-      if(el && el.classList.contains('cell')) dragging = el
-    })
+  hp[target] -= dmg
+  if(hp[target] < 0) hp[target] = 0
 
-    board.addEventListener('touchmove',e=>{
-      if(!dragging)return
-      const t = e.touches[0]
-      const el = document.elementFromPoint(t.clientX, t.clientY)
-      if(el && el.classList.contains('cell') && el!==dragging){
-        let tmp = dragging.className
-        dragging.className = el.className
-        el.className = tmp
-        dragging = el
-      }
-    })
+  hp[currentPlayer] += heal
+  if(hp[currentPlayer] > 1000) hp[currentPlayer] = 1000
 
-    board.addEventListener('touchend',()=>{
-      if(turnActive){
-        turnActive = false
-        clearInterval(timer)
-        finishTurn()
-      }
-    })
+  shield[currentPlayer] += shieldHeal
+  if(shield[currentPlayer] > 300) shield[currentPlayer] = 300
 
-    startBtn.onclick = ()=>{
-      if(startBtn.textContent==='Новая игра'){
-        hp = {1: 1000, 2: 1000}
-        currentPlayer = 1
-        hp1El.textContent = '1000'
-        hp2El.textContent = '1000'
-        createGrid()
-        turnInfo.textContent = 'Ход игрока 1'
-        damageInfo.textContent = ''
-        startBtn.textContent = 'Начать ход'
-      }
-      overlay.style.display = 'none'
-      startTurn()
-    }
+  hp1El.textContent = `${hp[1]} 🛡${shield[1]}`
+  hp2El.textContent = `${hp[2]} 🛡${shield[2]}`
 
+  damageInfo.innerHTML = `${critInfo}${dmg ? `Урон: ${dmg}` : ''} ${heal ? `Лечение: ${heal}` : ''} ${shieldHeal ? `Щит +${shieldHeal}` : ''} ${addedCrit ? `Крит шанс +${addedCrit}%` : ''}`.trim()
+
+  if(hp[1] === 0 || hp[2] === 0){
+    turnInfo.textContent = `Победа игрока ${hp[1]===0 ? 2 : 1}!`
+    startBtn.textContent = 'Новая игра'
+  } else {
+    currentPlayer = target
+    turnInfo.textContent = `Ход игрока ${currentPlayer}`
+    startBtn.textContent = 'Начать ход'
+  }
+  overlay.style.display = 'flex'
+}
+
+board.addEventListener('touchstart',e=>{
+  if(!turnActive)return
+  const t = e.touches[0]
+  const el = document.elementFromPoint(t.clientX, t.clientY)
+  if(el && el.classList.contains('cell')) dragging = el
+})
+
+board.addEventListener('touchmove',e=>{
+  if(!dragging)return
+  const t = e.touches[0]
+  const el = document.elementFromPoint(t.clientX, t.clientY)
+  if(el && el.classList.contains('cell') && el!==dragging){
+    let tmp = dragging.className
+    dragging.className = el.className
+    el.className = tmp
+    dragging = el
+  }
+})
+
+board.addEventListener('touchend',()=>{
+  if(turnActive){
+    turnActive = false
+    clearInterval(timer)
+    finishTurn()
+  }
+})
+
+startBtn.onclick = ()=>{
+  if(startBtn.textContent==='Новая игра'){
+    hp = {1: 1000, 2: 1000}
+    shield = {1: 300, 2: 300}
+    critChance = {1: 10, 2: 10}
+    currentPlayer = 1
+    hp1El.textContent = '1000 🛡300'
+    hp2El.textContent = '1000 🛡300'
     createGrid()
-    overlay.style.display = 'flex'
-  </script>
+    turnInfo.textContent = 'Ход игрока 1'
+    damageInfo.textContent = ''
+    startBtn.textContent = 'Начать ход'
+  }
+  overlay.style.display = 'none'
+  startTurn()
+}
+
+createGrid()
+overlay.style.display = 'flex'
+</script>
 </body>
 </html>
