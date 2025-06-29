@@ -1,101 +1,296 @@
-<!DOCTYPE html><html lang="ru">
+<!DOCTYPE html>
+<html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>⚡️ ИСКРА: PvP-Кристаллы ⚡️</title>
+  <title>ИСКРА: PvP-Кристаллы</title>
   <style>
     body {
-      margin: 0;
-      font-family: sans-serif;
-      background-color: #000;
-      color: #ffd67e;
+      background-color: #1a1a1a;
+      color: #ffcc66;
+      font-family: 'Verdana', sans-serif;
       text-align: center;
-      background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9...'); /* Base64 фона */
-      background-size: cover;
+      margin: 0;
+      padding: 0;
     }
-    h1 {
-      margin: 0.5em 0 0 0;
-      font-size: 1.5em;
-    }
-    .stats {
+    #scoreboard {
       display: flex;
       justify-content: space-around;
-      margin: 0.5em;
-      font-weight: bold;
-      font-size: 1.2em;
+      font-size: 18px;
+      margin-top: 10px;
     }
-    .board {
+    #board {
+      width: 360px;
+      height: 360px;
+      margin: 20px auto;
       display: grid;
-      grid-template-columns: repeat(6, 60px);
-      grid-gap: 4px;
-      justify-content: center;
-      margin: 10px auto;
+      grid-template-columns: repeat(6, 1fr);
+      grid-template-rows: repeat(6, 1fr);
+      gap: 2px;
+      background-color: #333;
+      position: relative;
+      z-index: 1;
     }
     .cell {
-      width: 60px;
-      height: 60px;
+      width: 58px;
+      height: 58px;
+      background-color: #999;
       border-radius: 8px;
-      background-color: #333;
-      background-size: contain;
-      background-position: center;
-      background-repeat: no-repeat;
+      cursor: pointer;
       transition: transform 0.2s;
     }
-    .cell:active {
-      transform: scale(1.1);
+    .highlight {
+      border: 3px solid yellow;
+      box-sizing: border-box;
+    }
+    #overlay {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.9);
+      color: white;
+      font-size: 28px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 2;
+      flex-direction: column;
+    }
+    #startTurnBtn {
+      padding: 10px 20px;
+      font-size: 16px;
+      background: #6622cc;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    #progressBar {
+      width: 80%;
+      height: 10px;
+      background: #444;
+      border-radius: 5px;
+      margin-top: 10px;
+      overflow: hidden;
+    }
+    #progressFill {
+      height: 100%;
+      width: 100%;
+      background: #ffcc66;
+      transition: width 0.1s linear;
     }
   </style>
 </head>
 <body>
-  <h1>🔥 ИСКРА: PvP-Кристаллы 🔥</h1>
-  <div class="stats">
+  <h1>🔥 ИСКРА: Кристаллы PvP 🔥</h1>
+  <div id="scoreboard">
     <div>Игрок 1: <span id="hp1">1000</span> ❤️</div>
     <div>Игрок 2: <span id="hp2">1000</span> ❤️</div>
   </div>
-  <div class="board" id="board"></div> <script>
-    const board = document.getElementById("board");
-    const types = ["red", "blue", "green", "purple", "orange"];
-    const images = {
-      red: 'data:image/png;base64,...', // вставь base64 для каждого кристалла
-      blue: 'data:image/png;base64,...',
-      green: 'data:image/png;base64,...',
-      purple: 'data:image/png;base64,...',
-      orange: 'data:image/png;base64,...'
-    };
+  <div id="board"></div>
 
-    const grid = [];
-    const size = 6;
+  <div id="overlay">
+    <div id="turnText">Ход Игрока</div>
+    <button id="startTurnBtn">Начать ход</button>
+    <div id="progressBar"><div id="progressFill"></div></div>
+  </div>
 
-    function randomType() {
-      return types[Math.floor(Math.random() * types.length)];
+  <script>
+    const colors = ['#ff4d4d', '#4dd2ff', '#66ff66', '#ffff66', '#d580ff'];
+    const board = document.getElementById('board');
+    const hp1El = document.getElementById('hp1');
+    const hp2El = document.getElementById('hp2');
+    const overlay = document.getElementById('overlay');
+    const turnText = document.getElementById('turnText');
+    const startTurnBtn = document.getElementById('startTurnBtn');
+    const progressFill = document.getElementById('progressFill');
+
+    let grid = [];
+    let currentPlayer = 1;
+    let hp = {1: 1000, 2: 1000};
+    let dragging = null;
+    let timer = null;
+    let turnActive = false;
+    let progressInterval = null;
+
+    function coords(i) {
+      return [Math.floor(i / 6), i % 6];
     }
 
-    function drawBoard() {
-      board.innerHTML = "";
-      for (let y = 0; y < size; y++) {
-        for (let x = 0; x < size; x++) {
-          const type = grid[y][x];
-          const cell = document.createElement("div");
-          cell.className = "cell";
-          cell.style.backgroundImage = `url(${images[type]})`;
-          cell.dataset.x = x;
-          cell.dataset.y = y;
-          board.appendChild(cell);
+    function index(row, col) {
+      return row * 6 + col;
+    }
+
+    function createGrid() {
+      grid = [];
+      board.innerHTML = '';
+      for (let i = 0; i < 36; i++) {
+        const cell = document.createElement('div');
+        cell.classList.add('cell');
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        cell.style.backgroundColor = color;
+        board.appendChild(cell);
+        grid.push(cell);
+      }
+      while (checkMatches().length > 0) refillMatches();
+    }
+
+    function checkMatches() {
+      const matched = new Set();
+      for (let row = 0; row < 6; row++) {
+        for (let col = 0; col < 4; col++) {
+          const i = index(row, col);
+          const c1 = grid[i].style.backgroundColor;
+          const c2 = grid[i+1].style.backgroundColor;
+          const c3 = grid[i+2].style.backgroundColor;
+          if (c1 === c2 && c2 === c3) {
+            matched.add(i); matched.add(i+1); matched.add(i+2);
+          }
+        }
+      }
+      for (let col = 0; col < 6; col++) {
+        for (let row = 0; row < 4; row++) {
+          const i = index(row, col);
+          const c1 = grid[i].style.backgroundColor;
+          const c2 = grid[i+6].style.backgroundColor;
+          const c3 = grid[i+12].style.backgroundColor;
+          if (c1 === c2 && c2 === c3) {
+            matched.add(i); matched.add(i+6); matched.add(i+12);
+          }
+        }
+      }
+      return [...matched];
+    }
+
+    function highlightMatches(matches) {
+      grid.forEach(cell => cell.classList.remove('highlight'));
+      matches.forEach(i => grid[i].classList.add('highlight'));
+    }
+
+    function removeMatches(matches) {
+      matches.forEach(i => {
+        grid[i].style.backgroundColor = '';
+      });
+    }
+
+    function dropDown() {
+      for (let col = 0; col < 6; col++) {
+        for (let row = 5; row > 0; row--) {
+          let i = index(row, col);
+          if (!grid[i].style.backgroundColor) {
+            for (let k = row - 1; k >= 0; k--) {
+              let above = index(k, col);
+              if (grid[above].style.backgroundColor) {
+                grid[i].style.backgroundColor = grid[above].style.backgroundColor;
+                grid[above].style.backgroundColor = '';
+                break;
+              }
+            }
+          }
+        }
+        for (let row = 0; row < 6; row++) {
+          let i = index(row, col);
+          if (!grid[i].style.backgroundColor) {
+            grid[i].style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+          }
         }
       }
     }
 
-    function initBoard() {
-      for (let y = 0; y < size; y++) {
-        const row = [];
-        for (let x = 0; x < size; x++) {
-          row.push(randomType());
+    function processTurn() {
+      let totalMatches = 0;
+      function handleMatches() {
+        let matches = checkMatches();
+        if (matches.length === 0) {
+          finishTurn(totalMatches);
+          return;
         }
-        grid.push(row);
+        highlightMatches(matches);
+        totalMatches += matches.length;
+        setTimeout(() => {
+          removeMatches(matches);
+          dropDown();
+          handleMatches();
+        }, 1000);
       }
-      drawBoard();
+      handleMatches();
     }
 
-    initBoard();
-  </script></body>
+    function finishTurn(totalMatches) {
+      const damage = totalMatches * 10;
+      const target = currentPlayer === 1 ? 2 : 1;
+      hp[target] -= damage;
+      if (hp[target] < 0) hp[target] = 0;
+      hp1El.textContent = hp[1];
+      hp2El.textContent = hp[2];
+
+      if (hp[1] === 0 || hp[2] === 0) {
+        setTimeout(() => {
+          alert(`Победил Игрок ${hp[1] === 0 ? 2 : 1}!`);
+          createGrid();
+          hp = {1: 1000, 2: 1000};
+          hp1El.textContent = 1000;
+          hp2El.textContent = 1000;
+          showOverlay();
+        }, 500);
+      } else {
+        currentPlayer = target;
+        showOverlay();
+      }
+    }
+
+    function showOverlay() {
+      turnText.textContent = `Ход Игрока ${currentPlayer}`;
+      overlay.style.display = 'flex';
+      startTurnBtn.disabled = false;
+      clearInterval(progressInterval);
+      progressFill.style.width = '100%';
+      turnActive = false;
+    }
+
+    startTurnBtn.addEventListener('click', () => {
+      overlay.style.display = 'none';
+      turnActive = true;
+      let timeLeft = 20;
+      progressFill.style.width = '100%';
+      progressInterval = setInterval(() => {
+        timeLeft--;
+        progressFill.style.width = `${(timeLeft / 20) * 100}%`;
+        if (timeLeft <= 0) {
+          clearInterval(progressInterval);
+          turnActive = false;
+          processTurn();
+        }
+      }, 1000);
+    });
+
+    board.addEventListener('mousedown', e => {
+      if (!turnActive) return;
+      const cell = e.target.closest('.cell');
+      if (!cell) return;
+      dragging = cell;
+    });
+
+    board.addEventListener('mousemove', e => {
+      if (!dragging || !turnActive) return;
+      const cell = document.elementFromPoint(e.clientX, e.clientY);
+      if (!cell || !cell.classList.contains('cell') || cell === dragging) return;
+      const tmp = cell.style.backgroundColor;
+      cell.style.backgroundColor = dragging.style.backgroundColor;
+      dragging.style.backgroundColor = tmp;
+      dragging = cell;
+    });
+
+    board.addEventListener('mouseup', () => {
+      if (turnActive) {
+        dragging = null;
+        turnActive = false;
+        clearInterval(progressInterval);
+        processTurn();
+      }
+    });
+
+    createGrid();
+    showOverlay();
+  </script>
+</body>
 </html>
