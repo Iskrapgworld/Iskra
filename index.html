@@ -1,32 +1,27 @@
-
 <!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ИСКРА: Битва</title>
   <style>
     body {
       background-color: #1e1e1e;
-      color: white;
       font-family: sans-serif;
-      text-align: center;
+      color: #fff;
       margin: 0;
       padding: 0;
+      text-align: center;
     }
-
     h1 {
-      margin: 20px 0;
+      margin: 10px 0;
       color: #ffcc66;
     }
-
-    #scoreboard {
+    #scoreboard, #shieldboard, #critboard {
       display: flex;
       justify-content: space-around;
-      font-size: 18px;
-      margin-bottom: 10px;
+      font-size: 16px;
+      margin-bottom: 5px;
     }
-
     #timerBar {
       width: 80%;
       height: 10px;
@@ -35,13 +30,11 @@
       border-radius: 5px;
       overflow: hidden;
     }
-
     #timerProgress {
       height: 100%;
       background: #ffcc66;
       transition: width 0.1s;
     }
-
     #board {
       display: grid;
       grid-template-columns: repeat(6, 1fr);
@@ -49,9 +42,8 @@
       gap: 2px;
       width: 360px;
       height: 360px;
-      margin: 0 auto;
+      margin: 0 auto 20px;
     }
-
     .cell {
       width: 58px;
       height: 58px;
@@ -61,94 +53,56 @@
       background-size: cover;
       background-repeat: no-repeat;
       background-position: center;
-      position: relative;
     }
-
-    .highlight { border: 3px solid yellow; }
+    .red { background-color: #ff4d4d; }
+    .green { background-color: #66ff66; }
+    .blue { background-color: #4dd2ff; }
+    .yellow { background-color: #ffff66; }
+    .purple { background-color: #d580ff; }
+    .orange { background-color: #ffaa33; }
+    .highlight { border: 2px solid yellow; }
     .fade { opacity: 0; }
-
-    .red {
-      background: radial-gradient(circle at 30% 30%, #ff5e5e, #8b0000);
-      clip-path: ellipse(45% 55% at 50% 45%);
-    }
-
-    .red::after {
-      content: '';
-      position: absolute;
-      width: 25px;
-      height: 2px;
-      background: #400;
-      bottom: 18px;
-      left: 18px;
-      transform: rotate(-20deg);
-      opacity: 0.6;
-    }
-
-    .green {
-      background: radial-gradient(circle at 30% 30%, #7fff7f, #228b22);
-    }
-
-    .green::after {
-      content: '';
-      position: absolute;
-      width: 18px;
-      height: 30px;
-      border-radius: 50%;
-      background: rgba(0, 100, 0, 0.3);
-      top: 10px;
-      left: 20px;
-      transform: rotate(-30deg);
-    }
-
-    .blue {
-      background: linear-gradient(135deg, #66ccff, #003366);
-      clip-path: polygon(50% 0%, 100% 25%, 80% 100%, 20% 100%, 0% 25%);
-    }
-
-    .yellow {
-      background: radial-gradient(circle at 30% 30%, #ffff88, #ffaa00);
-      box-shadow: 0 0 15px 5px rgba(255, 200, 0, 0.5);
-    }
-
-    .purple {
-      background: radial-gradient(circle at 30% 30%, #dca0ff, #440066);
-      clip-path: polygon(50% 0%, 100% 20%, 90% 100%, 20% 90%, 0% 30%);
-    }
-
     #overlay {
-      position: fixed;
+      position: absolute;
       top: 0; left: 0;
       width: 100%; height: 100%;
-      background: rgba(0, 0, 0, 0.85);
+      background: rgba(0,0,0,0.9);
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      z-index: 10;
+      z-index: 2;
     }
-
     #overlay button {
-      margin-top: 20px;
       padding: 10px 20px;
       font-size: 18px;
       background: #6622cc;
       color: white;
       border: none;
       border-radius: 10px;
+      margin-top: 20px;
     }
-
     #damageInfo {
       margin-top: 10px;
       font-size: 16px;
       color: #88f;
+      white-space: pre-line;
     }
   </style>
 </head>
 <body>
   <h1>🔥 ИСКРА: Битва 🔥</h1>
   <div id="scoreboard">
-    <div>Игрок 1: <span id="hp1">1000</span> ❤️</div>
-    <div>Игрок 2: <span id="hp2">1000</span> ❤️</div>
+    <div>Игрок 1: <span id="hp1">200</span> ❤️</div>
+    <div>Игрок 2: <span id="hp2">200</span> ❤️</div>
+  </div>
+  <div id="shieldboard">
+    <div>Щиты 1: <span id="shield1">150</span> 🛡</div>
+    <div>Щиты 2: <span id="shield2">150</span> 🛡</div>
+  </div>
+  <div id="critboard">
+    <div>Крит 1: <span id="crit1">10%</span></div>
+    <div>Крит 2: <span id="crit2">10%</span></div>
   </div>
   <div id="timerBar"><div id="timerProgress"></div></div>
   <div id="board"></div>
@@ -158,61 +112,7 @@
     <button id="startBtn">Начать ход</button>
   </div>
   <script>
-
-function applyEffects(red, green, yellow, purple) {
-  let dmg = 0, heal = 0, shield = 0, crit = false;
-
-  if (red >= 5) dmg = 20;
-  else if (red >= 3) dmg = 10;
-
-  if (green >= 5) heal = 20;
-  else if (green >= 3) heal = 10;
-
-  if (purple >= 5) shield = 20;
-  else if (purple >= 3) shield = 10;
-
-  if (yellow >= 3) {
-    crit = Math.random() < 0.5; // 50% шанс на крит
-    if (crit) dmg *= 2;
-  }
-
-  let target = currentPlayer === 1 ? 2 : 1;
-  let targetShield = Math.min(players[target].shield || 0, dmg);
-  dmg -= targetShield;
-
-  players[target].shield = Math.max(0, (players[target].shield || 0) - targetShield);
-  players[currentPlayer].shield = (players[currentPlayer].shield || 0) + shield;
-
-  hp[target] -= dmg;
-  if (hp[target] < 0) hp[target] = 0;
-
-  hp[currentPlayer] += heal;
-  if (hp[currentPlayer] > 1000) hp[currentPlayer] = 1000;
-
-  hp1El.textContent = hp[1];
-  hp2El.textContent = hp[2];
-
-  document.getElementById("hp1").nextSibling.textContent = " ❤️" + (players[1].shield ? ` 🛡${players[1].shield}` : "");
-  document.getElementById("hp2").nextSibling.textContent = " ❤️" + (players[2].shield ? ` 🛡${players[2].shield}` : "");
-
-  damageInfo.innerHTML =
-    (dmg ? `💥 Урон: <b>${dmg}</b>` : "") +
-    (heal ? ` 🧬 Лечение: <b>${heal}</b>` : "") +
-    (shield ? ` 🛡 Щит: <b>${shield}</b>` : "") +
-    (crit ? " <span style='color:gold'>КРИТ!</span>" : "");
-
-  if (hp[1] === 0 || hp[2] === 0) {
-    turnInfo.textContent = "Победа игрока " + (hp[1] === 0 ? 2 : 1) + "!";
-    startBtn.textContent = "Новая игра";
-  } else {
-    currentPlayer = target;
-    turnInfo.textContent = "Ход игрока " + currentPlayer;
-    startBtn.textContent = "Начать ход";
-  }
-
-  overlay.style.display = "flex";
-}
-
+    // Скрипт будет вставлен отдельно ниже
   </script>
 </body>
 </html>
