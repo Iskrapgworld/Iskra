@@ -5,27 +5,27 @@
   <style>
     body {
       margin: 0;
+      background-color: #1e1e1e;
       font-family: sans-serif;
-      background: #111;
       color: #fff;
       text-align: center;
     }
-    h1 {
-      color: #ffcc66;
-      margin-top: 20px;
-    }
-    #menu, #gameScreen {
-      display: none;
-    }
-    .btn {
+    h1 { color: #ffcc66; margin: 20px 0; }
+    #menu, #game, #overlay { display: none; }
+    #menu button, #overlay button {
+      padding: 10px 20px;
+      font-size: 18px;
       background: #6622cc;
-      color: #fff;
+      color: white;
       border: none;
-      padding: 15px 30px;
-      font-size: 20px;
       border-radius: 10px;
       margin: 10px;
-      cursor: pointer;
+    }
+    #scoreboard {
+      display: flex;
+      justify-content: space-around;
+      font-size: 16px;
+      margin: 10px;
     }
     #board {
       display: grid;
@@ -34,7 +34,7 @@
       gap: 2px;
       width: 360px;
       height: 360px;
-      margin: 0 auto;
+      margin: auto;
     }
     .cell {
       width: 58px;
@@ -54,91 +54,214 @@
       position: absolute;
       top: 0; left: 0;
       width: 100%; height: 100%;
-      background: rgba(0,0,0,0.8);
+      background: rgba(0,0,0,0.9);
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      z-index: 10;
-    }
-    #overlay button {
-      padding: 10px 20px;
-      font-size: 18px;
-      background: #6622cc;
-      color: white;
-      border: none;
-      border-radius: 10px;
-      margin-top: 20px;
-    }
-    #scoreboard {
-      display: flex;
-      justify-content: space-around;
-      font-size: 18px;
-      margin: 10px;
+      z-index: 2;
     }
   </style>
 </head>
 <body>
   <h1>🔥 ИСКРА: Битва 🔥</h1>
   <div id="menu">
-    <button class="btn" onclick="startPvP()">PvP (на одном устройстве)</button>
-    <button class="btn" onclick="startPvE()">PvE (против бота)</button>
+    <button onclick="startGame('pvp')">PvP (на одном устройстве)</button>
+    <button onclick="startGame('pve')">PvE (с ботом)</button>
   </div>
-  <div id="gameScreen">
+  <div id="game">
     <div id="scoreboard">
-      <div>Игрок 1: <span id="hp1">1000</span> ❤️</div>
-      <div>Игрок 2: <span id="hp2">1000</span> ❤️</div>
+      <div>Игрок 1: <span id="hp1">1000</span> ❤️ <span id="shield1">0</span> 🛡</div>
+      <div>Игрок 2: <span id="hp2">1000</span> ❤️ <span id="shield2">0</span> 🛡</div>
     </div>
     <div id="board"></div>
-    <div id="overlay">
-      <div id="turnInfo">Ход игрока 1</div>
-      <button onclick="nextTurn()">Начать ход</button>
-    </div>
+  </div>
+  <div id="overlay">
+    <div id="turnText">Выберите режим</div>
+    <button onclick="hideOverlay()">Играть</button>
   </div>
   <script>
-    let mode = "pvp";
-    const menu = document.getElementById('menu');
-    const gameScreen = document.getElementById('gameScreen');
+    const colors = ['red','green','blue','yellow','purple','orange'];
     const board = document.getElementById('board');
-    const overlay = document.getElementById('overlay');
-    const turnInfo = document.getElementById('turnInfo');
     const hp1El = document.getElementById('hp1');
     const hp2El = document.getElementById('hp2');
+    const shield1El = document.getElementById('shield1');
+    const shield2El = document.getElementById('shield2');
+    const turnText = document.getElementById('turnText');
+    const overlay = document.getElementById('overlay');
     let hp = {1: 1000, 2: 1000};
-    let currentPlayer = 1;function showMenu() {
-  menu.style.display = 'block';
-  gameScreen.style.display = 'none';
+    let shield = {1: 0, 2: 0};
+    let grid = [];
+    let currentPlayer = 1;
+    let mode = 'pvp';
+    let dragging = null;function startGame(selectedMode) {
+  mode = selectedMode;
+  document.getElementById('menu').style.display = 'none';
+  document.getElementById('game').style.display = 'block';
+  createGrid();
+  showOverlay(`Ход игрока 1`);
 }
 
-function startPvP() {
-  mode = "pvp";
-  menu.style.display = 'none';
-  gameScreen.style.display = 'block';
-  initBoard();
-  updateStats();
-  overlay.style.display = 'flex';
+function createGrid() {
+  board.innerHTML = '';
+  grid = [];
+  for(let i=0; i<36; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'cell ' + colors[Math.floor(Math.random()*colors.length)];
+    board.appendChild(cell);
+    grid.push(cell);
+  }
 }
 
-function startPvE() {
-  mode = "pve";
-  menu.style.display = 'none';
-  gameScreen.style.display = 'block';
-  initBoard();
-  updateStats();
-  overlay.style.display = 'flex';
+function index(r,c){ return r*6 + c; }
+function getColor(el){ return colors.find(c => el.classList.contains(c)); }
+
+function checkMatches() {
+  const matches = [];
+  for(let r=0; r<6; r++) {
+    for(let c=0; c<4; c++) {
+      let i = index(r,c);
+      let a=grid[i], b=grid[i+1], c_=grid[i+2];
+      if(getColor(a) === getColor(b) && getColor(b) === getColor(c_)) matches.push([i,i+1,i+2]);
+    }
+  }
+  for(let c=0; c<6; c++) {
+    for(let r=0; r<4; r++) {
+      let i = index(r,c);
+      let a=grid[i], b=grid[i+6], c_=grid[i+12];
+      if(getColor(a) === getColor(b) && getColor(b) === getColor(c_)) matches.push([i,i+6,i+12]);
+    }
+  }
+  return matches;
 }
 
-function updateStats() {
+function applyEffects(counts) {
+  let damage = (counts.red + counts.purple) * 10;
+  let heal = counts.green * 5;
+  let def = counts.blue * 5;
+  const target = currentPlayer === 1 ? 2 : 1;
+  
+  if (shield[target] >= damage) shield[target] -= damage;
+  else {
+    let d = damage - shield[target];
+    shield[target] = 0;
+    hp[target] -= d;
+  }
+  shield[currentPlayer] += def;
+  hp[currentPlayer] += heal;
+  if (hp[currentPlayer] > 1000) hp[currentPlayer] = 1000;
+  
   hp1El.textContent = hp[1];
   hp2El.textContent = hp[2];
+  shield1El.textContent = shield[1];
+  shield2El.textContent = shield[2];
 }
 
-function nextTurn() {
-  overlay.style.display = 'none';
-  turnInfo.textContent = `Ход игрока ${currentPlayer}`;
-  // Пока просто автоурон для проверки
+function cascadeAndApply() {
+  let matches = checkMatches();
+  const counts = {red:0,green:0,blue:0,orange:0,purple:0,yellow:0};
+  if(matches.length===0){
+    switchTurn(); return;
+  }
+  matches.forEach(g=>{
+    let color = getColor(grid[g[0]]);
+    counts[color] += g.length;
+    g.forEach(i => grid[i].classList.add('fade'));
+  });
   setTimeout(() => {
-    const target = currentPlayer === 1 ? 2 : 1;
-    hp[target] -= 50;
-    updateStats();
-    if (hp[target] <= 0) {
+    matches.flat().forEach(i => grid[i].className = 'cell');
+    dropDown();
+    setTimeout(()=>{ applyEffects(counts); switchTurn(); }, 1000);
+  }, 2000);
+}
+
+function dropDown() {
+  for(let c=0;c<6;c++){
+    for(let r=5;r>0;r--){
+      let i = index(r,c);
+      if(!getColor(grid[i])){
+        for(let k=r-1;k>=0;k--){
+          let up = index(k,c);
+          if(getColor(grid[up])){
+            grid[i].className = grid[up].className;
+            grid[up].className = 'cell';
+            break;
+          }
+        }
+      }
+    }
+    for(let r=0;r<6;r++){
+      let i = index(r,c);
+      if(!getColor(grid[i])){
+        let cls = colors[Math.floor(Math.random()*colors.length)];
+        grid[i].className = 'cell ' + cls;
+      }
+    }
+  }
+}
+
+function switchTurn() {
+  if(hp[1]<=0 || hp[2]<=0){
+    showOverlay(`Победа игрока ${hp[1]<=0 ? 2 : 1}`);
+    return;
+  }
+  currentPlayer = currentPlayer === 1 ? 2 : 1;
+  showOverlay(`Ход игрока ${currentPlayer}`);
+  if(mode==='pve' && currentPlayer===2){
+    setTimeout(()=>{ botMove(); }, 1000);
+  }
+}
+
+function showOverlay(text) {
+  turnText.textContent = text;
+  overlay.style.display = 'flex';
+}
+function hideOverlay() {
+  overlay.style.display = 'none';
+}
+
+board.addEventListener("touchstart", e => {
+  const t = e.touches[0];
+  const el = document.elementFromPoint(t.clientX, t.clientY);
+  if(el && el.classList.contains('cell')) dragging = el;
+});
+board.addEventListener("touchmove", e => {
+  if(!dragging)return;
+  const t = e.touches[0];
+  const el = document.elementFromPoint(t.clientX, t.clientY);
+  if(el && el.classList.contains('cell') && el!==dragging){
+    let tmp = dragging.className;
+    dragging.className = el.className;
+    el.className = tmp;
+    dragging = el;
+  }
+});
+board.addEventListener("touchend", () => {
+  dragging = null;
+  cascadeAndApply();
+});
+
+function botMove(){
+  let moved = false;
+  for(let i=0;i<36 && !moved;i++){
+    for(let j=i+1;j<36;j++){
+      let tmp = grid[i].className;
+      grid[i].className = grid[j].className;
+      grid[j].className = tmp;
+      if(checkMatches().length>0){
+        moved = true;
+        cascadeAndApply();
+        break;
+      } else {
+        grid[j].className = grid[i].className;
+        grid[i].className = tmp;
+      }
+    }
+  }
+}
+
+document.getElementById('menu').style.display = 'block';
+
+  </script>
+</body>
+</html>
