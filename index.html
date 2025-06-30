@@ -32,11 +32,6 @@
       font-weight: bold;
       color: #ffcc66;
     }
-    #stats {
-      font-size: 14px;
-      margin-bottom: 10px;
-      color: #aaa;
-    }
     #board {
       display: grid;
       grid-template-columns: repeat(6, 1fr);
@@ -51,12 +46,13 @@
       transition: transform 0.2s, opacity 1s ease;
       touch-action: none;
     }
-    .red    { background: radial-gradient(circle, #ff5e5e, #8b0000); }
-    .green  { background: radial-gradient(circle, #7fff7f, #228b22); }
-    .blue   { background: linear-gradient(135deg, #66ccff, #003366); }
-    .yellow { background: radial-gradient(circle, #ffff88, #ffaa00); }
-    .purple { background: radial-gradient(circle, #dca0ff, #440066); }
-    .orange { background: radial-gradient(circle, #ffc266, #cc6600); }
+    .red    { background: radial-gradient(circle, #ff5e5e, #8b0000); box-shadow: 0 0 10px 2px #ff3c3c; }
+    .green  { background: radial-gradient(circle, #7fff7f, #228b22); box-shadow: 0 0 10px 2px #77ff77; }
+    .blue   { background: linear-gradient(135deg, #66ccff, #003366); box-shadow: 0 0 10px 2px #66ccff; }
+    .yellow { background: radial-gradient(circle, #ffffcc, #ffdd55); box-shadow: 0 0 10px 3px #fffca3; }
+    .purple { background: radial-gradient(circle, #dca0ff, #440066); box-shadow: 0 0 10px 2px #c060ff; }
+    .orange { background: radial-gradient(circle, #ffbb66, #aa5500); box-shadow: 0 0 10px 2px #ff9933; }
+    .highlight { outline: 3px solid white; }
     .fade { opacity: 0; }
     #overlay {
       position: absolute;
@@ -74,7 +70,7 @@
 <body>
   <h1>🔥 ИСКРА: Битва 🔥</h1>
   <div id="menu">
-    <button onclick="startGame('pvp')">PvP (на одном устройстве)</button>
+    <button onclick="startGame('pvp')">PvP</button>
     <button onclick="startGame('pve')">PvE (с ботом)</button>
   </div>
   <div id="game">
@@ -82,13 +78,13 @@
       <div id="player1">Игрок 1: <span id="hp1">1000</span> ❤️ <span id="shield1">0</span> 🛡</div>
       <div id="player2">Игрок 2: <span id="hp2">1000</span> ❤️ <span id="shield2">0</span> 🛡</div>
     </div>
-    <div id="stats"></div>
     <div id="board"></div>
   </div>
   <div id="overlay">
     <div id="turnText">Выберите режим</div>
-    <button onclick="hideOverlay()">Играть</button>
-    <button onclick="backToMenu()">В главное меню</button>
+    <div id="statsText" style="margin:10px; font-size:16px;"></div>
+    <button onclick="hideOverlay()">Продолжить</button>
+    <button onclick="location.reload()">🔁 Новая игра</button>
   </div>
   <script>
     const colors = ['red','green','blue','yellow','purple','orange'];
@@ -98,8 +94,8 @@
     const shield1El = document.getElementById('shield1');
     const shield2El = document.getElementById('shield2');
     const turnText = document.getElementById('turnText');
+    const statsText = document.getElementById('statsText');
     const overlay = document.getElementById('overlay');
-    const stats = document.getElementById('stats');
     const player1Box = document.getElementById('player1');
     const player2Box = document.getElementById('player2');
 
@@ -119,7 +115,7 @@
       currentPlayer = 1;
       updateScore();
       createGrid();
-      showOverlay(`Ход игрока ${currentPlayer}`);
+      showOverlay(`Ход игрока ${currentPlayer}`, '');
     }
 
     function createGrid() {
@@ -134,22 +130,20 @@
     }
 
     function index(r, c) { return r*6 + c; }
-    function getColor(el) {
-      return colors.find(c => el.classList.contains(c));
-    }
+    function getColor(el) { return colors.find(c => el.classList.contains(c)); }
 
     function checkMatches() {
       const matches = [];
-      for(let r = 0; r < 6; r++) {
-        for(let c = 0; c < 4; c++) {
-          let i = index(r, c);
+      for(let r=0; r<6; r++) {
+        for(let c=0; c<4; c++) {
+          let i = index(r,c);
           let a=grid[i], b=grid[i+1], c_=grid[i+2];
           if(getColor(a) === getColor(b) && getColor(b) === getColor(c_)) matches.push([i,i+1,i+2]);
         }
       }
-      for(let c = 0; c < 6; c++) {
-        for(let r = 0; r < 4; r++) {
-          let i = index(r, c);
+      for(let c=0; c<6; c++) {
+        for(let r=0; r<4; r++) {
+          let i = index(r,c);
           let a=grid[i], b=grid[i+6], c_=grid[i+12];
           if(getColor(a) === getColor(b) && getColor(b) === getColor(c_)) matches.push([i,i+6,i+12]);
         }
@@ -161,6 +155,9 @@
       let damage = (counts.red + counts.purple) * 10;
       let heal = counts.green * 5;
       let def = counts.blue * 5;
+      let crits = counts.orange;
+      if (counts.red >= 5) damage += 20;
+      if (counts.green >= 5) heal += 20;
       const target = currentPlayer === 1 ? 2 : 1;
 
       if (shield[target] >= damage) shield[target] -= damage;
@@ -174,8 +171,8 @@
       hp[currentPlayer] += heal;
       if (hp[currentPlayer] > 1000) hp[currentPlayer] = 1000;
 
+      statsText.innerHTML = `Нанесено урона: ${damage}<br>Получено лечения: ${heal}<br>Щит: ${def}<br>Критов собрано: ${crits}`;
       updateScore();
-      stats.innerHTML = `➤ Урон: ${damage}, Лечение: ${heal}, Щит: ${def}`;
     }
 
     function updateScore() {
@@ -197,12 +194,18 @@
       matches.forEach(g=>{
         let color = getColor(grid[g[0]]);
         counts[color] += g.length;
-        g.forEach(i => grid[i].classList.add('fade'));
+        g.forEach(i => grid[i].classList.add('highlight'));
       });
       setTimeout(() => {
-        matches.flat().forEach(i => grid[i].className = 'cell');
-        dropDown();
-        setTimeout(()=>{ applyEffects(counts); switchTurn(); }, 1000);
+        matches.flat().forEach(i => {
+          grid[i].classList.remove('highlight');
+          grid[i].classList.add('fade');
+        });
+        setTimeout(() => {
+          matches.flat().forEach(i => grid[i].className = 'cell');
+          dropDown();
+          setTimeout(() => { applyEffects(counts); switchTurn(); }, 500);
+        }, 1000);
       }, 2000);
     }
 
@@ -229,30 +232,29 @@
           }
         }
       }
+      setTimeout(() => {
+        if (checkMatches().length > 0) cascadeAndApply();
+      }, 300);
     }
 
     function switchTurn() {
       if(hp[1] <= 0 || hp[2] <= 0){
-        showOverlay(`Победа игрока ${hp[1] <= 0 ? 2 : 1}`);
+        showOverlay(`Победа игрока ${hp[1] <= 0 ? 2 : 1}`, '');
         return;
       }
       currentPlayer = currentPlayer === 1 ? 2 : 1;
-      showOverlay(`Ход игрока ${currentPlayer}`);
+      showOverlay(`Ход игрока ${currentPlayer}`, statsText.innerHTML);
       if(mode==='pve' && currentPlayer===2){
         setTimeout(() => { botMove(); }, 1000);
       }
     }
 
-    function showOverlay(text) {
-      turnText.textContent = text;
+    function showOverlay(text, stats) {
+      turnText.innerHTML = text;
+      statsText.innerHTML = stats;
       overlay.style.display = 'flex';
     }
     function hideOverlay() {
-      overlay.style.display = 'none';
-    }
-    function backToMenu() {
-      document.getElementById('menu').style.display = 'block';
-      document.getElementById('game').style.display = 'none';
       overlay.style.display = 'none';
     }
 
