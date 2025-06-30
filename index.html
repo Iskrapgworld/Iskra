@@ -1,116 +1,81 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <title>ИСКРА: Битва</title>
+  <meta charset="UTF-8">
+  <title>ИСКРА: Битва — PvE</title>
   <style>
     body {
-      background-color: #1e1e1e;
-      font-family: sans-serif;
+      background: #1e1e1e;
       color: #fff;
-      margin: 0;
-      padding: 0;
+      font-family: sans-serif;
       text-align: center;
+      margin: 0;
     }
     h1 {
-      margin: 20px 0;
       color: #ffcc66;
-    }
-    #startScreen, #overlay {
-      position: absolute;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.95);
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      z-index: 3;
-    }
-    #startScreen button, #overlay button {
-      padding: 12px 24px;
-      font-size: 18px;
-      background: #6622cc;
-      color: white;
-      border: none;
-      border-radius: 10px;
-      margin: 10px;
-      cursor: pointer;
     }
     #scoreboard {
       display: flex;
       justify-content: space-around;
-      font-size: 18px;
-      margin-bottom: 10px;
-    }
-    #timerBar {
-      width: 80%;
-      height: 10px;
-      background: #555;
-      margin: 0 auto 10px;
-      border-radius: 5px;
-      overflow: hidden;
-    }
-    #timerProgress {
-      height: 100%;
-      background: #ffcc66;
-      transition: width 0.1s;
+      margin: 10px;
     }
     #board {
       display: grid;
       grid-template-columns: repeat(6, 1fr);
-      grid-template-rows: repeat(6, 1fr);
       gap: 2px;
       width: 360px;
-      height: 360px;
       margin: 0 auto;
     }
     .cell {
       width: 58px;
       height: 58px;
       border-radius: 50%;
-      transition: transform 0.2s, opacity 2s ease;
       touch-action: none;
     }
-    .red    { background: radial-gradient(circle, #ff5e5e, #8b0000); }
-    .green  { background: radial-gradient(circle, #7fff7f, #228b22); }
-    .blue   { background: linear-gradient(135deg, #66ccff, #003366); }
+    .red { background: radial-gradient(circle, #ff5e5e, #8b0000); }
+    .green { background: radial-gradient(circle, #7fff7f, #228b22); }
+    .blue { background: linear-gradient(135deg, #66ccff, #003366); }
     .yellow { background: radial-gradient(circle, #ffff88, #ffaa00); }
     .purple { background: radial-gradient(circle, #dca0ff, #440066); }
     .orange { background: radial-gradient(circle, #ffc266, #cc6600); }
-    .fade   { opacity: 0; }
-    #damageInfo {
-      font-size: 16px;
-      color: #88f;
-      margin-top: 10px;
+    #overlay {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
+    }
+    #overlay button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      background: #6622cc;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 18px;
     }
   </style>
 </head>
 <body>
-  <h1>🔥 ИСКРА: Битва (PvE) 🔥</h1>
-
-  <div id="startScreen">
-    <h2>Выберите режим</h2>
-    <button id="pveBtn">Играть с ботом</button>
-  </div>
-
+  <h1>🔥 ИСКРА: Битва — PvE 🔥</h1>
   <div id="scoreboard">
-    <div>Игрок: <span id="hp1">200</span> ❤️ <span id="shield1">150</span> 🛡</div>
+    <div>Ты: <span id="hp1">200</span> ❤️ <span id="shield1">150</span> 🛡</div>
     <div>Бот: <span id="hp2">200</span> ❤️ <span id="shield2">150</span> 🛡</div>
   </div>
-
-  <div id="timerBar"><div id="timerProgress"></div></div>
   <div id="board"></div>
-
   <div id="overlay">
-    <div id="turnInfo">Ход игрока</div>
+    <div id="turnInfo">Ход Игрока</div>
     <div id="damageInfo"></div>
     <button id="startBtn">Начать ход</button>
   </div>
 
   <script>
+    const colorClasses = ['red','blue','green','yellow','purple','orange'];
     const board = document.getElementById('board');
-    const startScreen = document.getElementById('startScreen');
     const overlay = document.getElementById('overlay');
     const turnInfo = document.getElementById('turnInfo');
     const damageInfo = document.getElementById('damageInfo');
@@ -119,28 +84,25 @@
     const hp2El = document.getElementById('hp2');
     const shield1El = document.getElementById('shield1');
     const shield2El = document.getElementById('shield2');
-    const timerProgress = document.getElementById('timerProgress');
 
-    const colorClasses = ['red','green','blue','yellow','purple','orange'];
-    let grid = [], currentPlayer = 1, timer, timeLeft, turnActive = false;
-    let dragging = null;
-    let hp = {1: 200, 2: 200}, shield = {1: 150, 2: 150}, critChance = {1: 10, 2: 10};
+    let grid = [], dragging = null, turnActive = false;
+    let currentPlayer = 1, hp = {1:200,2:200}, shield = {1:150,2:150}, crit = {1:10,2:10};
 
-    const index = (r, c) => r * 6 + c;
+    function index(r,c) { return r*6 + c }
 
     function createGrid() {
       board.innerHTML = '';
       grid = [];
-      for (let i = 0; i < 36; i++) {
+      for(let i=0; i<36; i++) {
         const cell = document.createElement('div');
-        cell.className = 'cell ' + colorClasses[Math.floor(Math.random() * colorClasses.length)];
+        cell.className = 'cell ' + colorClasses[Math.floor(Math.random()*colorClasses.length)];
         board.appendChild(cell);
         grid.push(cell);
       }
     }
 
     function getColor(el) {
-      return colorClasses.find(cls => el.classList.contains(cls));
+      return colorClasses.find(c => el.classList.contains(c));
     }
 
     function checkMatches() {
@@ -148,39 +110,41 @@
       for (let r = 0; r < 6; r++) {
         for (let c = 0; c < 4; c++) {
           let i = index(r, c);
-          let a = getColor(grid[i]), b = getColor(grid[i+1]), c_ = getColor(grid[i+2]);
-          if (a && a === b && b === c_) matched.push([i,i+1,i+2]);
+          if (getColor(grid[i]) === getColor(grid[i+1]) && getColor(grid[i]) === getColor(grid[i+2]))
+            matched.push([i, i+1, i+2]);
         }
       }
       for (let c = 0; c < 6; c++) {
         for (let r = 0; r < 4; r++) {
           let i = index(r, c);
-          let a = getColor(grid[i]), b = getColor(grid[i+6]), c_ = getColor(grid[i+12]);
-          if (a && a === b && b === c_) matched.push([i,i+6,i+12]);
+          if (getColor(grid[i]) === getColor(grid[i+6]) && getColor(grid[i]) === getColor(grid[i+12]))
+            matched.push([i, i+6, i+12]);
         }
       }
       return matched;
     }
 
     function removeMatches(matches, callback) {
-      matches.flat().forEach(i => grid[i].classList.add('fade'));
+      matches.flat().forEach(i => grid[i].style.opacity = 0);
       setTimeout(() => {
-        matches.flat().forEach(i => grid[i].className = 'cell');
-        dropDown();
-        setTimeout(callback, 300);
+        matches.flat().forEach(i => {
+          grid[i].className = 'cell ' + colorClasses[Math.floor(Math.random()*colorClasses.length)];
+          grid[i].style.opacity = 1;
+        });
+        callback();
       }, 1000);
     }
 
-    function dropDown() {
+    function dropAndRefill() {
       for (let c = 0; c < 6; c++) {
         for (let r = 5; r > 0; r--) {
           let i = index(r, c);
           if (!getColor(grid[i])) {
             for (let k = r - 1; k >= 0; k--) {
-              let up = index(k, c);
-              if (getColor(grid[up])) {
-                grid[i].className = grid[up].className;
-                grid[up].className = 'cell';
+              let above = index(k, c);
+              if (getColor(grid[above])) {
+                grid[i].className = grid[above].className;
+                grid[above].className = 'cell';
                 break;
               }
             }
@@ -189,135 +153,97 @@
         for (let r = 0; r < 6; r++) {
           let i = index(r, c);
           if (!getColor(grid[i])) {
-            let cls = colorClasses[Math.floor(Math.random() * colorClasses.length)];
-            grid[i].className = 'cell ' + cls;
+            grid[i].className = 'cell ' + colorClasses[Math.floor(Math.random()*colorClasses.length)];
           }
         }
       }
     }
 
     function applyEffects(counts) {
-      let crit = critChance[currentPlayer];
-      if (counts.orange >= 6) crit += 25;
-      else if (counts.orange >= 5) crit += 20;
-      else if (counts.orange >= 3) crit += 10;
-      const isCrit = Math.random() * 100 < crit;
-      if (isCrit) critChance[currentPlayer] = 10;
-      else critChance[currentPlayer] = crit;
+      let attacker = currentPlayer;
+      let defender = attacker === 1 ? 2 : 1;
+      let crt = crit[attacker];
+      if (counts.orange >= 5) crt += 20;
+      let isCrit = Math.random()*100 < crt;
+      if (isCrit) crt = 10;
+      else crit[attacker] = crt;
 
-      let dmg = 0, heal = 0, shieldGain = 0;
-      const attackStones = counts.red + counts.purple;
-      if (attackStones >= 6) dmg = 20;
-      else if (attackStones >= 5) dmg = 15;
-      else if (attackStones >= 3) dmg = 10;
+      let dmg = (counts.red + counts.purple >= 5) ? 20 : (counts.red + counts.purple >= 3) ? 10 : 0;
       if (isCrit) dmg *= 2;
 
-      if (counts.green >= 5) heal = 10;
-      else if (counts.green >= 3) heal = 5;
+      let heal = (counts.green >= 5) ? 10 : (counts.green >= 3) ? 5 : 0;
+      let shieldGain = (counts.blue >= 5) ? 12 : (counts.blue >= 3) ? 6 : 0;
 
-      if (counts.blue >= 6) shieldGain = 12;
-      else if (counts.blue >= 5) shieldGain = 10;
-      else if (counts.blue >= 3) shieldGain = 5;
-
-      const target = currentPlayer === 1 ? 2 : 1;
-      if (shield[target] >= dmg) shield[target] -= dmg;
-      else {
-        const remain = dmg - shield[target];
-        shield[target] = 0;
-        hp[target] -= remain;
-      }
-
-      shield[currentPlayer] += shieldGain;
-      if (shield[currentPlayer] > 150) shield[currentPlayer] = 150;
-      hp[currentPlayer] += heal;
-      if (hp[currentPlayer] > 200) hp[currentPlayer] = 200;
-
-      hp1El.textContent = hp[1];
-      hp2El.textContent = hp[2];
-      shield1El.textContent = shield[1];
-      shield2El.textContent = shield[2];
-
-      damageInfo.innerHTML = `${isCrit ? "Крит! " : ""}Урон: ${dmg}<br>Лечение: ${heal}<br>Щит: +${shieldGain}`;
-
-      if (hp[1] <= 0 || hp[2] <= 0) {
-        turnInfo.textContent = `Победа ${hp[1] <= 0 ? "бота" : "игрока"}!`;
-        startBtn.textContent = "Новая игра";
-        overlay.style.display = "flex";
+      if (shield[defender] >= dmg) {
+        shield[defender] -= dmg;
       } else {
-        currentPlayer = target;
-        turnInfo.textContent = `Ход ${currentPlayer === 1 ? "игрока" : "бота"}`;
-        startBtn.textContent = "Начать ход";
-        overlay.style.display = "flex";
-        if (currentPlayer === 2) setTimeout(botTurn, 1000);
+        let remain = dmg - shield[defender];
+        shield[defender] = 0;
+        hp[defender] -= remain;
       }
+      shield[attacker] = Math.min(150, shield[attacker] + shieldGain);
+      hp[attacker] = Math.min(200, hp[attacker] + heal);
+
+      hp1El.textContent = hp[1]; hp2El.textContent = hp[2];
+      shield1El.textContent = shield[1]; shield2El.textContent = shield[2];
+      damageInfo.innerHTML = `Урон: ${dmg}, Лечение: ${heal}, Щиты: +${shieldGain}, Крит: ${crt}%`;
     }
 
     function finishTurn() {
-      let matches = checkMatches(), counts = {
-        red: 0, green: 0, blue: 0, orange: 0, purple: 0
-      };
+      turnActive = false;
+      let matches = checkMatches();
+      let counts = {red:0, green:0, blue:0, orange:0, purple:0};
       matches.forEach(group => {
         let color = getColor(grid[group[0]]);
         if (counts[color] !== undefined) counts[color] += group.length;
       });
-      function cascade() {
-        matches = checkMatches();
-        if (matches.length > 0) {
-          matches.forEach(group => {
-            let color = getColor(grid[group[0]]);
-            if (counts[color] !== undefined) counts[color] += group.length;
-          });
-          removeMatches(matches, cascade);
+
+      removeMatches(matches, () => {
+        applyEffects(counts);
+        if (hp[1] <= 0 || hp[2] <= 0) {
+          turnInfo.textContent = `Победа: ${hp[1]<=0 ? "Бот" : "Ты"}`;
+          startBtn.textContent = "Новая игра";
+          overlay.style.display = "flex";
+          return;
+        }
+        currentPlayer = currentPlayer === 1 ? 2 : 1;
+        if (currentPlayer === 2) {
+          setTimeout(startBotTurn, 1000);
         } else {
-          applyEffects(counts);
+          overlay.style.display = "flex";
+          turnInfo.textContent = "Твой ход";
         }
-      }
-      cascade();
+      });
     }
 
-    function startTurn() {
-      turnActive = true;
-      timeLeft = 200;
-      timer = setInterval(() => {
-        timeLeft--;
-        timerProgress.style.width = (timeLeft / 200 * 100) + "%";
-        if (timeLeft <= 0) {
-          clearInterval(timer);
-          turnActive = false;
-          finishTurn();
-        }
-      }, 50);
-    }
-
-    function botTurn() {
+    function startBotTurn() {
       let moved = false;
-      for (let i = 0; i < 36 && !moved; i++) {
-        for (let j = 0; j < 36 && !moved; j++) {
-          if (i !== j) {
-            let tmp1 = grid[i].className;
-            let tmp2 = grid[j].className;
-            grid[i].className = tmp2;
-            grid[j].className = tmp1;
-            if (checkMatches().length > 0) {
-              moved = true;
-              finishTurn();
-            } else {
-              grid[i].className = tmp1;
-              grid[j].className = tmp2;
-            }
+      for (let i = 0; i < 35 && !moved; i++) {
+        let a = grid[i], b = grid[i+1];
+        if (a && b) {
+          let tmp = a.className;
+          a.className = b.className;
+          b.className = tmp;
+          if (checkMatches().length > 0) {
+            moved = true;
+          } else {
+            tmp = a.className;
+            a.className = b.className;
+            b.className = tmp;
           }
         }
       }
+      finishTurn();
     }
 
-    board.addEventListener("touchstart", e => {
+    board.addEventListener('touchstart', e => {
       if (!turnActive) return;
       const t = e.touches[0];
       const el = document.elementFromPoint(t.clientX, t.clientY);
       if (el && el.classList.contains("cell")) dragging = el;
     });
 
-    board.addEventListener("touchmove", e => {
+    board.addEventListener('touchmove', e => {
       if (!dragging) return;
       const t = e.touches[0];
       const el = document.elementFromPoint(t.clientX, t.clientY);
@@ -325,39 +251,25 @@
         let tmp = dragging.className;
         dragging.className = el.className;
         el.className = tmp;
-        dragging = el;
-      }
-    });
-
-    board.addEventListener("touchend", () => {
-      if (turnActive) {
-        turnActive = false;
-        clearInterval(timer);
+        dragging = null;
         finishTurn();
       }
     });
 
     startBtn.onclick = () => {
       if (startBtn.textContent === "Новая игра") {
-        hp = {1: 200, 2: 200};
-        shield = {1: 150, 2: 150};
-        critChance = {1: 10, 2: 10};
-        hp1El.textContent = hp[1];
-        hp2El.textContent = hp[2];
-        shield1El.textContent = shield[1];
-        shield2El.textContent = shield[2];
+        hp = {1:200, 2:200};
+        shield = {1:150, 2:150};
+        crit = {1:10, 2:10};
         createGrid();
-        turnInfo.textContent = "Ход игрока";
       }
       overlay.style.display = "none";
-      startTurn();
+      turnActive = true;
     }
 
-    document.getElementById("pveBtn").onclick = () => {
-      startScreen.style.display = "none";
-      overlay.style.display = "flex";
-      createGrid();
-    }
+    createGrid();
+    overlay.style.display = "flex";
+    turnInfo.textContent = "Твой ход";
   </script>
 </body>
 </html>
