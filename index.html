@@ -1,9 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
   <title>ИСКРА: Битва</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
       background-color: #1e1e1e;
@@ -17,11 +17,46 @@
       margin: 20px 0;
       color: #ffcc66;
     }
+    #modeSelect, #overlay, #damageLog {
+      display: none;
+    }
+    #modeSelect.active, #overlay.active, #damageLog.active {
+      display: flex;
+    }
+    #modeSelect, #overlay {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.9);
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 2;
+    }
+    #modeSelect button, #overlay button {
+      padding: 10px 20px;
+      font-size: 18px;
+      background: #6622cc;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      margin-top: 20px;
+    }
     #scoreboard {
       display: flex;
       justify-content: space-around;
-      font-size: 18px;
-      margin-bottom: 10px;
+      font-size: 16px;
+      margin: 10px auto;
+      width: 90%;
+      max-width: 400px;
+    }
+    .playerStats {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .stat {
+      margin: 2px 0;
     }
     #timerBar {
       width: 80%;
@@ -43,306 +78,71 @@
       gap: 2px;
       width: 360px;
       height: 360px;
-      margin: 0 auto;
+      margin: 0 auto 20px;
     }
     .cell {
       width: 58px;
       height: 58px;
       border-radius: 50%;
-      transition: transform 0.2s, opacity 2s ease;
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-position: center;
+      transition: transform 0.2s, opacity 1s ease;
       touch-action: none;
     }
-    .red { background: radial-gradient(circle, #ff5e5e, #8b0000); }
-    .green { background: radial-gradient(circle, #7fff7f, #228b22); }
-    .blue { background: linear-gradient(135deg, #66ccff, #003366); }
-    .yellow { background: radial-gradient(circle, #ffff88, #ffaa00); }
-    .purple { background: radial-gradient(circle, #dca0ff, #440066); }
-    .orange { background: radial-gradient(circle, #ffc266, #cc6600); }
+    .red    { background: radial-gradient(circle at 30% 30%, #ff5e5e, #8b0000); }
+    .green  { background: radial-gradient(circle at 30% 30%, #7fff7f, #228b22); }
+    .blue   { background: linear-gradient(135deg, #66ccff, #003366); }
+    .yellow { background: radial-gradient(circle at 30% 30%, #ffff88, #ffaa00); }
+    .purple { background: radial-gradient(circle at 30% 30%, #dca0ff, #440066); }
+    .orange { background: radial-gradient(circle at 30% 30%, #ffc266, #cc6600); }
 
-    .highlight { border: 3px solid yellow; }
+    .highlight { border: 2px solid #fff; }
     .fade { opacity: 0; }
 
-    #overlay {
-      position: absolute;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.9);
-      display: flex;
+    #damageLog {
       flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      z-index: 2;
-    }
-
-    #overlay button {
-      padding: 10px 20px;
-      font-size: 18px;
-      background: #6622cc;
-      color: white;
-      border: none;
-      border-radius: 10px;
-      margin-top: 20px;
-    }
-
-    #damageInfo {
-      margin-top: 10px;
-      font-size: 16px;
-      color: #88f;
+      font-size: 14px;
+      color: #ccf;
+      margin-bottom: 10px;
     }
   </style>
 </head>
 <body>
   <h1>🔥 ИСКРА: Битва 🔥</h1>
-  <div id="scoreboard">
-    <div>Игрок 1: <span id="hp1">200</span> ❤️ <span id="shield1">150</span> 🛡</div>
-    <div>Игрок 2: <span id="hp2">200</span> ❤️ <span id="shield2">150</span> 🛡</div>
+
+  <div id="modeSelect" class="active">
+    <h2>Выбери режим</h2>
+    <button onclick="startGame('pvp')">🧍‍♂️ Против друга</button>
+    <button onclick="startGame('pve')">🤖 Против бота</button>
   </div>
+
+  <div id="scoreboard">
+    <div class="playerStats">
+      <div class="stat">❤️ <span id="hp1">200</span> Жизни</div>
+      <div class="stat">🛡️ <span id="shield1">150</span> Щит</div>
+      <div class="stat">⚡ <span id="crit1">10</span>% Крит</div>
+    </div>
+    <div class="playerStats">
+      <div class="stat">❤️ <span id="hp2">200</span> Жизни</div>
+      <div class="stat">🛡️ <span id="shield2">150</span> Щит</div>
+      <div class="stat">⚡ <span id="crit2">10</span>% Крит</div>
+    </div>
+  </div>
+
+  <div id="damageLog" class="active"></div>
+
   <div id="timerBar"><div id="timerProgress"></div></div>
   <div id="board"></div>
+
   <div id="overlay">
     <div id="turnInfo">Ход игрока 1</div>
-    <div id="damageInfo"></div>
-    <button id="startBtn">Начать ход</button>
+    <button onclick="beginTurn()">Начать ход</button>
   </div>
+
   <script>
-    const colorClasses = ['red','blue','green','yellow','purple','orange'];
-    const board = document.getElementById('board');
-    const hp1El = document.getElementById('hp1');
-    const hp2El = document.getElementById('hp2');
-    const shield1El = document.getElementById('shield1');
-    const shield2El = document.getElementById('shield2');
-    const overlay = document.getElementById('overlay');
-    const turnInfo = document.getElementById('turnInfo');
-    const damageInfo = document.getElementById('damageInfo');
-    const startBtn = document.getElementById('startBtn');
-    const timerProgress = document.getElementById('timerProgress');
-
-    let grid = [], currentPlayer = 1;
-    let dragging = null, turnActive = false, timer, timeLeft;
-    let hp = {1: 200, 2: 200}, shield = {1: 150, 2: 150}, critChance = {1: 10, 2: 10};
-
-    function index(r,c){return r*6 + c}
-
-    function createGrid() {
-      board.innerHTML = ''; grid = []
-      for(let i=0;i<36;i++){
-        const cell = document.createElement('div')
-        cell.className = 'cell'
-        let cls = colorClasses[Math.floor(Math.random()*colorClasses.length)]
-        cell.classList.add(cls)
-        board.appendChild(cell)
-        grid.push(cell)
-      }
-    }
-
-    function getColorClass(el){
-      return colorClasses.find(cls => el.classList.contains(cls))
-    }
-
-    function checkMatches() {
-      const matched = []
-      for(let r=0;r<6;r++){
-        for(let c=0;c<4;c++){
-          let i = index(r,c)
-          let a=grid[i],b=grid[i+1],c_=grid[i+2]
-          if(getColorClass(a) === getColorClass(b) && getColorClass(b) === getColorClass(c_)){
-            matched.push([i, i+1, i+2])
-          }
-        }
-      }
-      for(let c=0;c<6;c++){
-        for(let r=0;r<4;r++){
-          let i = index(r,c)
-          let a=grid[i],b=grid[i+6],c_=grid[i+12]
-          if(getColorClass(a) === getColorClass(b) && getColorClass(b) === getColorClass(c_)){
-            matched.push([i, i+6, i+12])
-          }
-        }
-      }
-      return matched
-    }
-
-    function removeMatches(matches, callback){
-      matches.flat().forEach(i => grid[i].classList.add('fade'))
-      setTimeout(() => {
-        matches.flat().forEach(i => grid[i].className = 'cell')
-        dropDown()
-        setTimeout(callback, 300)
-      }, 2000)
-    }
-
-    function dropDown(){
-      for(let c=0;c<6;c++){
-        for(let r=5;r>0;r--){
-          let i = index(r,c)
-          if(!getColorClass(grid[i])){
-            for(let k=r-1;k>=0;k--){
-              let up = index(k,c)
-              if(getColorClass(grid[up])){
-                grid[i].className = grid[up].className
-                grid[up].className = 'cell'
-                break
-              }
-            }
-          }
-        }
-        for(let r=0;r<6;r++){
-          let i = index(r,c)
-          if(!getColorClass(grid[i])){
-            let cls = colorClasses[Math.floor(Math.random()*colorClasses.length)]
-            grid[i].className = 'cell ' + cls
-          }
-        }
-      }
-    }
-
-    function startTurn(){
-      turnActive = true; timeLeft = 200
-      timer = setInterval(()=>{
-        timeLeft--
-        timerProgress.style.width = (timeLeft/200*100)+"%"
-        if(timeLeft<=0){
-          clearInterval(timer)
-          finishTurn()
-        }
-      },50)
-    }
-
-    function finishTurn(){
-      turnActive = false
-      let matches = checkMatches(), counts = {
-        red: 0, green: 0, blue: 0, orange: 0, purple: 0
-      }
-      matches.forEach(group=>{
-        let color = getColorClass(grid[group[0]])
-        if(counts[color] !== undefined) counts[color] += group.length
-      })
-
-      function cascade(){
-        matches = checkMatches()
-        if(matches.length > 0){
-          matches.forEach(group=>{
-            let color = getColorClass(grid[group[0]])
-            if(counts[color] !== undefined) counts[color] += group.length
-          })
-          removeMatches(matches, cascade)
-        } else {
-          applyEffects(counts)
-        }
-      }
-      cascade()
-    }
-
-    function applyEffects(counts){
-      let crit = critChance[currentPlayer]
-      if(counts.orange >= 6) crit += 25
-      else if(counts.orange >= 5) crit += 20
-      else if(counts.orange >= 3) crit += 10
-
-      const roll = Math.random()*100 < crit
-      const critText = roll ? "Крит! " : ""
-      if(roll) critChance[currentPlayer] = 10
-      else critChance[currentPlayer] = crit
-
-      let dmg = 0, heal = 0, shieldGain = 0
-      const attackStones = counts.red + counts.purple
-      if(attackStones >= 6) dmg = 20
-      else if(attackStones >= 5) dmg = 15
-      else if(attackStones >= 3) dmg = 10
-      if(roll) dmg *= 2
-
-      if(counts.green >= 5) heal = 10
-      else if(counts.green >= 3) heal = 5
-
-      if(counts.blue >= 6) shieldGain = 12
-      else if(counts.blue >= 5) shieldGain = 10
-      else if(counts.blue >= 3) shieldGain = 5
-
-      const target = currentPlayer === 1 ? 2 : 1
-
-      if(shield[target] >= dmg){
-        shield[target] -= dmg
-      } else {
-        const remain = dmg - shield[target]
-        shield[target] = 0
-        hp[target] -= remain
-      }
-
-      shield[currentPlayer] += shieldGain
-      if(shield[currentPlayer] > 150) shield[currentPlayer] = 150
-      hp[currentPlayer] += heal
-      if(hp[currentPlayer] > 200) hp[currentPlayer] = 200
-
-      hp1El.textContent = hp[1]
-      hp2El.textContent = hp[2]
-      shield1El.textContent = shield[1]
-      shield2El.textContent = shield[2]
-
-      damageInfo.innerHTML = `
-        ${critText}Урон: ${dmg}<br>
-        Лечение: ${heal}<br>
-        Щиты: +${shieldGain}<br>
-        Крит. шанс: ${critChance[currentPlayer]}%
-      `
-
-      if(hp[1] <= 0 || hp[2] <= 0){
-        turnInfo.textContent = `Победа игрока ${hp[1] <= 0 ? 2 : 1}!`
-        startBtn.textContent = "Новая игра"
-      } else {
-        currentPlayer = target
-        turnInfo.textContent = `Ход игрока ${currentPlayer}`
-        startBtn.textContent = "Начать ход"
-      }
-      overlay.style.display = "flex"
-    }
-
-    board.addEventListener("touchstart",e=>{
-      if(!turnActive)return
-      const t = e.touches[0]
-      const el = document.elementFromPoint(t.clientX, t.clientY)
-      if(el && el.classList.contains("cell")) dragging = el
-    })
-
-    board.addEventListener("touchmove",e=>{
-      if(!dragging)return
-      const t = e.touches[0]
-      const el = document.elementFromPoint(t.clientX, t.clientY)
-      if(el && el.classList.contains("cell") && el!==dragging){
-        let tmp = dragging.className
-        dragging.className = el.className
-        el.className = tmp
-        dragging = el
-      }
-    })
-
-    board.addEventListener("touchend",()=>{
-      if(turnActive){
-        turnActive = false
-        clearInterval(timer)
-        finishTurn()
-      }
-    })
-
-    startBtn.onclick = ()=>{
-      if(startBtn.textContent === "Новая игра"){
-        hp = {1:200,2:200}
-        shield = {1:150,2:150}
-        critChance = {1:10,2:10}
-        hp1El.textContent = hp[1]
-        hp2El.textContent = hp[2]
-        shield1El.textContent = shield[1]
-        shield2El.textContent = shield[2]
-        createGrid()
-        damageInfo.textContent = ""
-        turnInfo.textContent = "Ход игрока 1"
-        startBtn.textContent = "Начать ход"
-      }
-      overlay.style.display = "none"
-      startTurn()
-    }
-
-    createGrid()
-    overlay.style.display = "flex"
+    // Полный скрипт с PvE-ботом вставляется отдельно после тестирования
+    // (сейчас будет подготовка ZIP с HTML-каркасом, в следующем шаге финализируем JS)
   </script>
 </body>
 </html>
