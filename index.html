@@ -1,5 +1,4 @@
-<!DOCTYPE html>
-<html lang="ru">
+<!DOCTYPE html><html lang="ru">
 <head>
   <meta charset="UTF-8" />
   <title>ИСКРА: Битва</title>
@@ -11,41 +10,65 @@
       color: #fff;
       text-align: center;
     }
-    h1 { color: #ffcc66; margin: 20px 0; }
-    #menu, #game, #overlay { display: none; }
+    h1 { color: #ffcc66; margin: 10px 0; font-size: 24px; }
+    #topbar {
+      display: flex;
+      justify-content: space-between;
+      padding: 5px 15px;
+      font-size: 14px;
+      background: #111;
+    }
+    #restartBtn {
+      background: none;
+      color: #888;
+      border: none;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    #overlay, #startScreen { 
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.9);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 5;
+    }
+    input { padding: 8px; font-size: 16px; border-radius: 6px; border: none; margin-bottom: 10px; }
     button {
       padding: 10px 20px;
-      font-size: 18px;
+      font-size: 16px;
       background: #6622cc;
       color: white;
       border: none;
       border-radius: 10px;
       margin: 10px;
     }
-    #scoreboard {
-      display: flex;
-      justify-content: space-around;
-      font-size: 16px;
-      margin: 10px;
-    }
-    #scoreboard div.active {
-      font-weight: bold;
-      color: #ffcc66;
+    #statsPanel {
+      padding: 10px;
+      font-size: 14px;
+      background: #222;
+      border-bottom: 2px solid #444;
     }
     #board {
       display: grid;
       grid-template-columns: repeat(6, 1fr);
       gap: 2px;
       width: 360px;
-      margin: auto;
+      margin: 20px auto;
+      pointer-events: auto;
+    }
+    .disabled #board {
+      pointer-events: none;
+      opacity: 0.5;
     }
     .cell {
       width: 58px;
       height: 58px;
       border-radius: 50%;
       transition: transform 0.2s, opacity 1s ease;
-      touch-action: none;
-      box-shadow: 0 0 4px 2px rgba(255,255,255,0.1);
     }
     .red    { background: radial-gradient(circle, #ff5e5e, #8b0000); }
     .green  { background: radial-gradient(circle, #7fff7f, #228b22); }
@@ -55,85 +78,47 @@
     .orange { background: radial-gradient(circle, #cc9444, #cc6600); }
     .fade   { opacity: 0; }
     .highlight { box-shadow: 0 0 8px 4px #ffffffaa; }
-
-    #overlay {
-      position: absolute;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.9);
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      z-index: 2;
-    }
-
-    #turnText {
-      font-size: 20px;
-      margin-bottom: 10px;
-    }
-    #stats {
-      font-size: 14px;
-      margin-bottom: 10px;
-      color: #ccc;
-    }
   </style>
 </head>
 <body>
-  <h1>🔥 ИСКРА: Битва 🔥</h1>
-  <div id="menu">
-    <button onclick="startGame('pvp')">PvP (на одном устройстве)</button>
-    <button onclick="startGame('pve')">PvE (с ботом)</button>
+  <div id="topbar">
+    <div id="nicknameDisplay"></div>
+    <button id="restartBtn" onclick="location.reload()">⟳</button>
   </div>
-  <div id="game">
-    <div id="scoreboard">
-      <div id="player1">Игрок 1: <span id="hp1">1000</span> ❤️ <span id="shield1">0</span> 🛡</div>
-      <div id="player2">Игрок 2: <span id="hp2">1000</span> ❤️ <span id="shield2">0</span> 🛡</div>
-    </div>
-    <div id="board"></div>
+  <h1>ИСКРА: Битва</h1>
+  <div id="statsPanel">
+    <div id="statusText">Добро пожаловать в мир ИСКРЫ!</div>
+    <div id="hpStats">Вы: ❤️ 1000 | Щит: 🛡 0 — Противник: 👹 1000</div>
   </div>
-  <div id="overlay">
-    <div id="turnText">Ход...</div>
-    <div id="stats"></div>
-    <button onclick="hideOverlay()">Играть</button>
-    <button onclick="location.reload()">🔁 Новая игра</button>
-  </div>
-  <script>
-    const colors = ['red','green','blue','yellow','purple','orange'];
+  <div id="board"></div>  <div id="startScreen">
+    <h2>Твоё имя, герой:</h2>
+    <input type="text" id="nicknameInput" placeholder="Введи ник" />
+    <button onclick="beginGame()">В бой!</button>
+  </div>  <script>
     const board = document.getElementById('board');
-    const hp1El = document.getElementById('hp1');
-    const hp2El = document.getElementById('hp2');
-    const shield1El = document.getElementById('shield1');
-    const shield2El = document.getElementById('shield2');
-    const turnText = document.getElementById('turnText');
-    const overlay = document.getElementById('overlay');
-    const stats = document.getElementById('stats');
-    const player1Box = document.getElementById('player1');
-    const player2Box = document.getElementById('player2');
+    const nicknameDisplay = document.getElementById('nicknameDisplay');
+    const statusText = document.getElementById('statusText');
+    const hpStats = document.getElementById('hpStats');
+    const startScreen = document.getElementById('startScreen');
 
-    let hp = {1: 1000, 2: 1000};
-    let shield = {1: 0, 2: 0};
-    let grid = [];
-    let currentPlayer = 1;
-    let mode = 'pvp';
-    let dragging = null;
+    const colors = ['red','green','blue','yellow','purple','orange'];
+    let grid = [], dragging = null;
+    let player = {hp: 1000, shield: 0, name: 'Игрок'};
+    let enemy = {hp: 1000, name: 'Пепельный Жевун'};
 
-    function startGame(selectedMode) {
-      mode = selectedMode;
-      document.getElementById('menu').style.display = 'none';
-      document.getElementById('game').style.display = 'block';
-      hp = {1: 1000, 2: 1000};
-      shield = {1: 0, 2: 0};
-      currentPlayer = 1;
-      updateScore();
+    function beginGame() {
+      const name = document.getElementById('nicknameInput').value.trim();
+      if (name) player.name = name;
+      nicknameDisplay.textContent = player.name;
+      startScreen.style.display = 'none';
       createGrid();
-      showOverlay(`Ход игрока ${currentPlayer}`, '');
+      updateStats();
     }
 
     function createGrid() {
       board.innerHTML = '';
       grid = [];
-      for(let i = 0; i < 36; i++) {
+      for (let i = 0; i < 36; i++) {
         const cell = document.createElement('div');
         cell.className = 'cell ' + colors[Math.floor(Math.random()*colors.length)];
         board.appendChild(cell);
@@ -141,133 +126,16 @@
       }
     }
 
-    function index(r, c) { return r*6 + c; }
-    function getColor(el) { return colors.find(c => el.classList.contains(c)); }
-
-    function checkMatches() {
-      const matches = [];
-      for(let r=0; r<6; r++) {
-        for(let c=0; c<4; c++) {
-          let i = index(r,c);
-          let a=grid[i], b=grid[i+1], c_=grid[i+2];
-          if(getColor(a) === getColor(b) && getColor(b) === getColor(c_)) matches.push([i,i+1,i+2]);
-        }
-      }
-      for(let c=0; c<6; c++) {
-        for(let r=0; r<4; r++) {
-          let i = index(r,c);
-          let a=grid[i], b=grid[i+6], c_=grid[i+12];
-          if(getColor(a) === getColor(b) && getColor(b) === getColor(c_)) matches.push([i,i+6,i+12]);
-        }
-      }
-      return matches;
+    function getColor(el) {
+      return colors.find(c => el.classList.contains(c));
     }
 
-    function applyEffects(counts) {
-      let damage = (counts.red + counts.purple) * 10;
-      let heal = counts.green * 5;
-      let def = counts.blue * 5;
-      if (counts.red >= 5) damage += 20;
-      if (counts.green >= 5) heal += 20;
-      const target = currentPlayer === 1 ? 2 : 1;
-
-      if (shield[target] >= damage) shield[target] -= damage;
-      else {
-        let d = damage - shield[target];
-        shield[target] = 0;
-        hp[target] -= d;
-      }
-      shield[currentPlayer] += def;
-      if (shield[currentPlayer] > 150) shield[currentPlayer] = 150;
-      hp[currentPlayer] += heal;
-      if (hp[currentPlayer] > 1000) hp[currentPlayer] = 1000;
-
-      stats.innerHTML = `Урон: ${damage}, Лечение: ${heal}, Щит: +${def}`;
-      updateScore();
+    function updateStats() {
+      hpStats.innerHTML = `${player.name}: ❤️ ${player.hp} | 🛡 ${player.shield} — ${enemy.name}: 👹 ${enemy.hp}`;
     }
 
-    function updateScore() {
-      hp1El.textContent = hp[1];
-      hp2El.textContent = hp[2];
-      shield1El.textContent = shield[1];
-      shield2El.textContent = shield[2];
-      player1Box.classList.toggle('active', currentPlayer === 1);
-      player2Box.classList.toggle('active', currentPlayer === 2);
-    }
-
-    function cascadeAndApply() {
-      let matches = checkMatches();
-      const counts = {red:0,green:0,blue:0,orange:0,purple:0,yellow:0};
-      if(matches.length === 0){
-        switchTurn(); return;
-      }
-      matches.forEach(g=>{
-        let color = getColor(grid[g[0]]);
-        counts[color] += g.length;
-        g.forEach(i => grid[i].classList.add('highlight'));
-      });
-      setTimeout(() => {
-        matches.flat().forEach(i => {
-          grid[i].classList.remove('highlight');
-          grid[i].classList.add('fade');
-        });
-        setTimeout(() => {
-          matches.flat().forEach(i => grid[i].className = 'cell');
-          dropDown();
-          setTimeout(() => {
-            applyEffects(counts);
-            setTimeout(() => {
-              cascadeAndApply(); // продолжить, если новые комбинации
-            }, 200);
-          }, 600);
-        }, 1000);
-      }, 2000);
-    }
-
-    function dropDown() {
-      for(let c=0;c<6;c++){
-        for(let r=5;r>0;r--){
-          let i = index(r,c);
-          if(!getColor(grid[i])){
-            for(let k=r-1;k>=0;k--){
-              let up = index(k,c);
-              if(getColor(grid[up])){
-                grid[i].className = grid[up].className;
-                grid[up].className = 'cell';
-                break;
-              }
-            }
-          }
-        }
-        for(let r=0;r<6;r++){
-          let i = index(r,c);
-          if(!getColor(grid[i])){
-            let cls = colors[Math.floor(Math.random()*colors.length)];
-            grid[i].className = 'cell ' + cls;
-          }
-        }
-      }
-    }
-
-    function switchTurn() {
-      if(hp[1] <= 0 || hp[2] <= 0){
-        showOverlay(`Победа игрока ${hp[1] <= 0 ? 2 : 1}`, '');
-        return;
-      }
-      currentPlayer = currentPlayer === 1 ? 2 : 1;
-      showOverlay(`Ход игрока ${currentPlayer}`, '');
-      if(mode==='pve' && currentPlayer===2){
-        setTimeout(() => { botMove(); }, 1000);
-      }
-    }
-
-    function showOverlay(text, statText='') {
-      turnText.textContent = text;
-      stats.innerHTML = statText;
-      overlay.style.display = 'flex';
-    }
-    function hideOverlay() {
-      overlay.style.display = 'none';
+    function showMessage(text) {
+      statusText.textContent = text;
     }
 
     board.addEventListener("touchstart", e => {
@@ -288,29 +156,43 @@
     });
     board.addEventListener("touchend", () => {
       dragging = null;
-      cascadeAndApply();
+      playerTurn();
     });
 
-    function botMove(){
-      let moved = false;
-      for(let i=0;i<36 && !moved;i++){
-        for(let j=i+1;j<36;j++){
-          let tmp = grid[i].className;
-          grid[i].className = grid[j].className;
-          grid[j].className = tmp;
-          if(checkMatches().length > 0){
-            moved = true;
-            cascadeAndApply();
-            break;
-          } else {
-            grid[j].className = grid[i].className;
-            grid[i].className = tmp;
-          }
+    function playerTurn() {
+      showMessage('Ты атакуешь...');
+      document.body.classList.add('disabled');
+      setTimeout(() => {
+        const dmg = Math.floor(Math.random() * 100 + 50);
+        enemy.hp -= dmg;
+        showMessage(`${player.name} нанёс ${dmg} урона!`);
+        updateStats();
+        if(enemy.hp <= 0) {
+          showMessage(`Победа! ${enemy.name} повержен.`);
+          return;
         }
-      }
+        setTimeout(monsterTurn, 1500);
+      }, 1000);
     }
 
-    document.getElementById('menu').style.display = 'block';
-  </script>
-</body>
+    function monsterTurn() {
+      showMessage(`${enemy.name} отвечает!`);
+      const dmg = Math.floor(Math.random()*80 + 40);
+      if (player.shield >= dmg) player.shield -= dmg;
+      else {
+        const diff = dmg - player.shield;
+        player.shield = 0;
+        player.hp -= diff;
+      }
+      updateStats();
+      if(player.hp <= 0) {
+        showMessage(`Ты пал в бою против ${enemy.name}...`);
+        return;
+      }
+      setTimeout(() => {
+        showMessage('Твой ход!');
+        document.body.classList.remove('disabled');
+      }, 1000);
+    }
+  </script></body>
 </html>
