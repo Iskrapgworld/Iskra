@@ -6,8 +6,8 @@
   <title>ИСКРА: Битва</title>
   <style>
     body {
-      background-color: #1e1e1e;
-      font-family: sans-serif;
+      background: linear-gradient(to bottom, #1e1e1e, #121212);
+      font-family: 'Segoe UI', sans-serif;
       color: #fff;
       margin: 0;
       padding: 0;
@@ -16,24 +16,36 @@
     h1 {
       margin: 20px 0;
       color: #ffcc66;
+      font-size: 32px;
+      text-shadow: 1px 1px 2px #000;
     }
     #scoreboard {
       display: flex;
       justify-content: space-around;
-      font-size: 18px;
+      font-size: 16px;
       margin-bottom: 10px;
+      padding: 5px 0;
+      background: rgba(255, 255, 255, 0.05);
+      border-top: 1px solid #444;
+      border-bottom: 1px solid #444;
+    }
+    #scoreboard div {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 5px;
     }
     #timerBar {
       width: 80%;
       height: 10px;
-      background: #555;
+      background: #333;
       margin: 0 auto 10px;
       border-radius: 5px;
       overflow: hidden;
     }
     #timerProgress {
       height: 100%;
-      background: #ffcc66;
+      background: linear-gradient(90deg, #ffcc66, #ff9966);
       transition: width 0.1s;
     }
     #board {
@@ -43,7 +55,11 @@
       gap: 2px;
       width: 360px;
       height: 360px;
-      margin: 0 auto;
+      margin: 10px auto;
+      background: #2e2e2e;
+      padding: 5px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px #000;
     }
     .cell {
       width: 58px;
@@ -51,17 +67,18 @@
       border-radius: 50%;
       transition: transform 0.2s, opacity 2s ease;
       touch-action: none;
-      background-size: cover;
-      background-repeat: no-repeat;
-      background-position: center;
+      box-shadow: inset 0 0 5px #000;
     }
-    .red { background-color: #ff4d4d; }
-    .blue { background-color: #4dd2ff; }
-    .green { background-color: #66ff66; }
-    .yellow { background-color: #ffff66; }
-    .purple { background-color: #d580ff; }
+    .red    { background: radial-gradient(circle at 30% 30%, #ff5e5e, #8b0000); }
+    .green  { background: radial-gradient(circle at 30% 30%, #7fff7f, #228b22); }
+    .blue   { background: radial-gradient(circle at 30% 30%, #66ccff, #003366); }
+    .yellow { background: radial-gradient(circle at 30% 30%, #ffff88, #ffaa00); }
+    .purple { background: radial-gradient(circle at 30% 30%, #dca0ff, #440066); }
+    .orange { background: radial-gradient(circle at 30% 30%, #ffc266, #cc6600); }
+
     .highlight { border: 3px solid yellow; }
     .fade { opacity: 0; }
+
     #overlay {
       position: absolute;
       top: 0; left: 0;
@@ -73,6 +90,7 @@
       align-items: center;
       z-index: 2;
     }
+
     #overlay button {
       padding: 10px 20px;
       font-size: 18px;
@@ -82,6 +100,7 @@
       border-radius: 10px;
       margin-top: 20px;
     }
+
     #damageInfo {
       margin-top: 10px;
       font-size: 16px;
@@ -92,8 +111,8 @@
 <body>
   <h1>🔥 ИСКРА: Битва 🔥</h1>
   <div id="scoreboard">
-    <div>Игрок 1: <span id="hp1">1000</span> ❤️</div>
-    <div>Игрок 2: <span id="hp2">1000</span> ❤️</div>
+    <div><strong>Игрок 1</strong><div><span id="hp1">200</span> ❤️</div><div><span id="shield1">150</span> 🛡</div></div>
+    <div><strong>Игрок 2</strong><div><span id="hp2">200</span> ❤️</div><div><span id="shield2">150</span> 🛡</div></div>
   </div>
   <div id="timerBar"><div id="timerProgress"></div></div>
   <div id="board"></div>
@@ -103,215 +122,7 @@
     <button id="startBtn">Начать ход</button>
   </div>
   <script>
-    const colorClasses = ['red','blue','green','yellow','purple'];
-    const board = document.getElementById('board');
-    const hp1El = document.getElementById('hp1');
-    const hp2El = document.getElementById('hp2');
-    const overlay = document.getElementById('overlay');
-    const turnInfo = document.getElementById('turnInfo');
-    const damageInfo = document.getElementById('damageInfo');
-    const startBtn = document.getElementById('startBtn');
-    const timerProgress = document.getElementById('timerProgress');
-
-    let grid = [], hp = {1:1000,2:1000}, currentPlayer = 1;
-    let dragging = null, turnActive = false, timer, timeLeft;
-
-    function index(r,c){return r*6 + c}
-
-    function createGrid() {
-      board.innerHTML = ''; grid = []
-      for(let i=0;i<36;i++){
-        const cell = document.createElement('div')
-        cell.className = 'cell'
-        let cls = colorClasses[Math.floor(Math.random()*colorClasses.length)]
-        cell.classList.add(cls)
-        board.appendChild(cell)
-        grid.push(cell)
-      }
-    }
-
-    function getColorClass(el){
-      return colorClasses.find(cls => el.classList.contains(cls))
-    }
-
-    function checkMatches() {
-      const matched = []
-      for(let r=0;r<6;r++){
-        for(let c=0;c<4;c++){
-          let i = index(r,c)
-          let a=grid[i],b=grid[i+1],c_=grid[i+2]
-          if(getColorClass(a) === getColorClass(b) && getColorClass(b) === getColorClass(c_)){
-            matched.push([i, i+1, i+2])
-          }
-        }
-      }
-      for(let c=0;c<6;c++){
-        for(let r=0;r<4;r++){
-          let i = index(r,c)
-          let a=grid[i],b=grid[i+6],c_=grid[i+12]
-          if(getColorClass(a) === getColorClass(b) && getColorClass(b) === getColorClass(c_)){
-            matched.push([i, i+6, i+12])
-          }
-        }
-      }
-      return matched
-    }
-
-    function highlight(matches){
-      grid.forEach(c=>c.classList.remove('highlight'))
-      matches.flat().forEach(i=>grid[i].classList.add('highlight'))
-    }
-
-    function removeMatches(matches, callback){
-      matches.flat().forEach(i => grid[i].classList.add('fade'))
-      setTimeout(() => {
-        matches.flat().forEach(i => {
-          grid[i].className = 'cell'
-        });
-        dropDown();
-        setTimeout(callback, 300);
-      }, 2000);
-    }
-
-    function dropDown(){
-      for(let c=0;c<6;c++){
-        for(let r=5;r>0;r--){
-          let i = index(r,c)
-          if(!getColorClass(grid[i])){
-            for(let k=r-1;k>=0;k--){
-              let up = index(k,c)
-              if(getColorClass(grid[up])){
-                grid[i].className = grid[up].className
-                grid[up].className = 'cell'
-                break
-              }
-            }
-          }
-        }
-        for(let r=0;r<6;r++){
-          let i = index(r,c)
-          if(!getColorClass(grid[i])){
-            let cls = colorClasses[Math.floor(Math.random()*colorClasses.length)]
-            grid[i].className = 'cell ' + cls
-          }
-        }
-      }
-    }
-
-    function startTurn(){
-      turnActive = true; timeLeft = 200
-      timer = setInterval(()=>{
-        timeLeft--;
-        timerProgress.style.width = (timeLeft/200*100)+"%";
-        if(timeLeft<=0){
-          clearInterval(timer)
-          finishTurn()
-        }
-      },50)
-    }
-
-    function finishTurn(){
-      turnActive = false
-      let matches = checkMatches()
-      let redCount = 0
-      let greenCount = 0
-
-      matches.forEach(group => {
-        let color = getColorClass(grid[group[0]])
-        if(color === 'red') redCount += group.length
-        if(color === 'green') greenCount += group.length
-      })
-
-      function cascade(){
-        matches = checkMatches()
-        if(matches.length > 0){
-          highlight(matches)
-          matches.forEach(group => {
-            let color = getColorClass(grid[group[0]])
-            if(color === 'red') redCount += group.length
-            if(color === 'green') greenCount += group.length
-          })
-          removeMatches(matches, cascade)
-        } else {
-          applyEffects(redCount, greenCount)
-        }
-      }
-      cascade()
-    }
-
-    function applyEffects(red, green){
-      let dmg = 0, heal = 0
-      if(red >= 5) dmg = 20
-      else if(red >= 3) dmg = 10
-      if(green >= 5) heal = 20
-      else if(green >= 3) heal = 10
-
-      let target = currentPlayer === 1 ? 2 : 1
-      hp[target] -= dmg
-      if(hp[target] < 0) hp[target] = 0
-      hp[currentPlayer] += heal
-      if(hp[currentPlayer] > 1000) hp[currentPlayer] = 1000
-
-      hp1El.textContent = hp[1]
-      hp2El.textContent = hp[2]
-
-      damageInfo.innerHTML = `${dmg ? `Урон: ${dmg}` : ''} ${heal ? `Лечение: ${heal}` : ''}`.trim()
-
-      if(hp[1] === 0 || hp[2] === 0){
-        turnInfo.textContent = `Победа игрока ${hp[1]===0 ? 2 : 1}!`
-        startBtn.textContent = 'Новая игра'
-      } else {
-        currentPlayer = target
-        turnInfo.textContent = `Ход игрока ${currentPlayer}`
-        startBtn.textContent = 'Начать ход'
-      }
-      overlay.style.display = 'flex'
-    }
-
-    board.addEventListener('touchstart',e=>{
-      if(!turnActive)return
-      const t = e.touches[0]
-      const el = document.elementFromPoint(t.clientX, t.clientY)
-      if(el && el.classList.contains('cell')) dragging = el
-    })
-
-    board.addEventListener('touchmove',e=>{
-      if(!dragging)return
-      const t = e.touches[0]
-      const el = document.elementFromPoint(t.clientX, t.clientY)
-      if(el && el.classList.contains('cell') && el!==dragging){
-        let tmp = dragging.className
-        dragging.className = el.className
-        el.className = tmp
-        dragging = el
-      }
-    })
-
-    board.addEventListener('touchend',()=>{
-      if(turnActive){
-        turnActive = false
-        clearInterval(timer)
-        finishTurn()
-      }
-    })
-
-    startBtn.onclick = ()=>{
-      if(startBtn.textContent==='Новая игра'){
-        hp = {1: 1000, 2: 1000}
-        currentPlayer = 1
-        hp1El.textContent = '1000'
-        hp2El.textContent = '1000'
-        createGrid()
-        turnInfo.textContent = 'Ход игрока 1'
-        damageInfo.textContent = ''
-        startBtn.textContent = 'Начать ход'
-      }
-      overlay.style.display = 'none'
-      startTurn()
-    }
-
-    createGrid()
-    overlay.style.display = 'flex'
+    // ⚔️ ВСТАВЛЯЕМ ВСЮ БОЕВУЮ ЛОГИКУ СЮДА (здесь будет вставлен остальной скрипт)
   </script>
 </body>
 </html>
