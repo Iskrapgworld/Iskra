@@ -45,15 +45,17 @@
       border-radius: 50%;
       transition: transform 0.2s, opacity 1s ease;
       touch-action: none;
+      box-shadow: 0 0 4px 2px rgba(255,255,255,0.1);
     }
-    .red    { background: radial-gradient(circle, #ff5e5e, #8b0000); box-shadow: 0 0 10px 2px #ff3c3c; }
-    .green  { background: radial-gradient(circle, #7fff7f, #228b22); box-shadow: 0 0 10px 2px #77ff77; }
-    .blue   { background: linear-gradient(135deg, #66ccff, #003366); box-shadow: 0 0 10px 2px #66ccff; }
-    .yellow { background: radial-gradient(circle, #ffffcc, #ffdd55); box-shadow: 0 0 10px 3px #fffca3; }
-    .purple { background: radial-gradient(circle, #dca0ff, #440066); box-shadow: 0 0 10px 2px #c060ff; }
-    .orange { background: radial-gradient(circle, #ffbb66, #aa5500); box-shadow: 0 0 10px 2px #ff9933; }
-    .highlight { outline: 3px solid white; }
-    .fade { opacity: 0; }
+    .red    { background: radial-gradient(circle, #ff5e5e, #8b0000); }
+    .green  { background: radial-gradient(circle, #7fff7f, #228b22); }
+    .blue   { background: linear-gradient(135deg, #66ccff, #003366); }
+    .yellow { background: radial-gradient(circle, #ffffcc, #ffaa00); }
+    .purple { background: radial-gradient(circle, #dca0ff, #440066); }
+    .orange { background: radial-gradient(circle, #cc9444, #cc6600); }
+    .fade   { opacity: 0; }
+    .highlight { box-shadow: 0 0 8px 4px #ffffffaa; }
+
     #overlay {
       position: absolute;
       top: 0; left: 0;
@@ -65,12 +67,22 @@
       align-items: center;
       z-index: 2;
     }
+
+    #turnText {
+      font-size: 20px;
+      margin-bottom: 10px;
+    }
+    #stats {
+      font-size: 14px;
+      margin-bottom: 10px;
+      color: #ccc;
+    }
   </style>
 </head>
 <body>
   <h1>🔥 ИСКРА: Битва 🔥</h1>
   <div id="menu">
-    <button onclick="startGame('pvp')">PvP</button>
+    <button onclick="startGame('pvp')">PvP (на одном устройстве)</button>
     <button onclick="startGame('pve')">PvE (с ботом)</button>
   </div>
   <div id="game">
@@ -81,9 +93,9 @@
     <div id="board"></div>
   </div>
   <div id="overlay">
-    <div id="turnText">Выберите режим</div>
-    <div id="statsText" style="margin:10px; font-size:16px;"></div>
-    <button onclick="hideOverlay()">Продолжить</button>
+    <div id="turnText">Ход...</div>
+    <div id="stats"></div>
+    <button onclick="hideOverlay()">Играть</button>
     <button onclick="location.reload()">🔁 Новая игра</button>
   </div>
   <script>
@@ -94,8 +106,8 @@
     const shield1El = document.getElementById('shield1');
     const shield2El = document.getElementById('shield2');
     const turnText = document.getElementById('turnText');
-    const statsText = document.getElementById('statsText');
     const overlay = document.getElementById('overlay');
+    const stats = document.getElementById('stats');
     const player1Box = document.getElementById('player1');
     const player2Box = document.getElementById('player2');
 
@@ -155,7 +167,6 @@
       let damage = (counts.red + counts.purple) * 10;
       let heal = counts.green * 5;
       let def = counts.blue * 5;
-      let crits = counts.orange;
       if (counts.red >= 5) damage += 20;
       if (counts.green >= 5) heal += 20;
       const target = currentPlayer === 1 ? 2 : 1;
@@ -171,7 +182,7 @@
       hp[currentPlayer] += heal;
       if (hp[currentPlayer] > 1000) hp[currentPlayer] = 1000;
 
-      statsText.innerHTML = `Нанесено урона: ${damage}<br>Получено лечения: ${heal}<br>Щит: ${def}<br>Критов собрано: ${crits}`;
+      stats.innerHTML = `Урон: ${damage}, Лечение: ${heal}, Щит: +${def}`;
       updateScore();
     }
 
@@ -188,8 +199,7 @@
       let matches = checkMatches();
       const counts = {red:0,green:0,blue:0,orange:0,purple:0,yellow:0};
       if(matches.length === 0){
-        switchTurn();
-        return;
+        switchTurn(); return;
       }
       matches.forEach(g=>{
         let color = getColor(grid[g[0]]);
@@ -204,17 +214,22 @@
         setTimeout(() => {
           matches.flat().forEach(i => grid[i].className = 'cell');
           dropDown();
-          setTimeout(() => { applyEffects(counts); switchTurn(); }, 500);
+          setTimeout(() => {
+            applyEffects(counts);
+            setTimeout(() => {
+              cascadeAndApply(); // продолжить, если новые комбинации
+            }, 200);
+          }, 600);
         }, 1000);
       }, 2000);
     }
 
     function dropDown() {
-      for(let c=0; c<6; c++){
-        for(let r=5; r>0; r--){
+      for(let c=0;c<6;c++){
+        for(let r=5;r>0;r--){
           let i = index(r,c);
           if(!getColor(grid[i])){
-            for(let k=r-1; k>=0; k--){
+            for(let k=r-1;k>=0;k--){
               let up = index(k,c);
               if(getColor(grid[up])){
                 grid[i].className = grid[up].className;
@@ -224,7 +239,7 @@
             }
           }
         }
-        for(let r=0; r<6; r++){
+        for(let r=0;r<6;r++){
           let i = index(r,c);
           if(!getColor(grid[i])){
             let cls = colors[Math.floor(Math.random()*colors.length)];
@@ -232,9 +247,6 @@
           }
         }
       }
-      setTimeout(() => {
-        if (checkMatches().length > 0) cascadeAndApply();
-      }, 300);
     }
 
     function switchTurn() {
@@ -243,15 +255,15 @@
         return;
       }
       currentPlayer = currentPlayer === 1 ? 2 : 1;
-      showOverlay(`Ход игрока ${currentPlayer}`, statsText.innerHTML);
+      showOverlay(`Ход игрока ${currentPlayer}`, '');
       if(mode==='pve' && currentPlayer===2){
         setTimeout(() => { botMove(); }, 1000);
       }
     }
 
-    function showOverlay(text, stats) {
-      turnText.innerHTML = text;
-      statsText.innerHTML = stats;
+    function showOverlay(text, statText='') {
+      turnText.textContent = text;
+      stats.innerHTML = statText;
       overlay.style.display = 'flex';
     }
     function hideOverlay() {
