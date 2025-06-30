@@ -44,6 +44,7 @@
       width: 360px;
       margin: 10px auto;
       pointer-events: auto;
+      transition: opacity 0.3s;
     }
     .cell {
       width: 58px;
@@ -79,9 +80,6 @@
       font-size: 16px;
       margin-top: 10px;
     }
-    .disabled { pointer-events: none; opacity: 0.3; transition: opacity 0.5s ease; }
-    .log-player { color: #66ff66; font-weight: bold; }
-    .log-enemy { color: #ff4444; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -97,23 +95,24 @@
     <div id="turnText">Добро пожаловать! Введите имя и жмите "В бой"</div>
     <input type="text" id="nickname" placeholder="Ваш ник" />
     <button onclick="startGame()">В бой!</button>
-  </div><script>
-let board = document.getElementById('board');
-let hp = 1000, shield = 0, enemyHp = 1000, enemyShield = 0;
-let grid = [], dragging = null, playerName = 'Игрок';
-const hpEl = document.getElementById('hp');
-const shieldEl = document.getElementById('shield');
-const enemyHpEl = document.getElementById('enemyHp');
-const enemyShieldEl = document.getElementById('enemyShield');
-const logBox = document.getElementById('battleLog');
-const overlay = document.getElementById('overlay');
-const timerBar = document.getElementById('timerBar');
-let turnTimer;
-const colors = ['red','green','blue','yellow','purple','orange'];
+  </div>
+  <script>
+    const board = document.getElementById('board');
+    const hpEl = document.getElementById('hp');
+    const shieldEl = document.getElementById('shield');
+    const enemyHpEl = document.getElementById('enemyHp');
+    const enemyShieldEl = document.getElementById('enemyShield');
+    const timerBar = document.getElementById('timerBar');
+    const overlay = document.getElementById('overlay');
+    const turnText = document.getElementById('turnText');
+    const logBox = document.getElementById('battleLog');
+    const colors = ['red','green','blue','yellow','purple','orange'];let hp = 1000, shield = 0, enemyHp = 1000, enemyShield = 0;
+let grid = [], dragging = null, turnTimer;
+let playerName = "Игрок";
+let currentTurn = 'player';
 
 function startGame() {
-  const nick = document.getElementById('nickname').value;
-  if (nick) playerName = nick;
+  playerName = document.getElementById('nickname').value || "Игрок";
   overlay.style.display = 'none';
   hp = 1000; shield = 0; enemyHp = 1000; enemyShield = 0;
   updateStats();
@@ -143,7 +142,9 @@ function index(r,c){ return r*6 + c; }
 function getColor(el){ return colors.find(c => el.classList.contains(c)); }
 
 function startTurn() {
-  board.classList.remove('disabled');
+  currentTurn = 'player';
+  board.style.opacity = '1';
+  board.style.pointerEvents = 'auto';
   timerBar.style.width = '100%';
   let time = 20;
   clearInterval(turnTimer);
@@ -152,7 +153,7 @@ function startTurn() {
     timerBar.style.width = (time*5) + '%';
     if(time<=0){
       clearInterval(turnTimer);
-      board.classList.add('disabled');
+      board.style.pointerEvents = 'none';
       cascadeAndApply();
     }
   }, 1000);
@@ -161,7 +162,11 @@ function startTurn() {
 function cascadeAndApply() {
   let matches = checkMatches();
   const counts = {red:0,green:0,blue:0,orange:0,purple:0,yellow:0};
-  if(matches.length===0){ setTimeout(botMove, 800); return; }
+  if(matches.length===0){
+    if(currentTurn==='player') setTimeout(botMove, 1000);
+    else startTurn();
+    return;
+  }
   matches.forEach(g=>{
     let color = getColor(grid[g[0]]);
     counts[color] += g.length;
@@ -170,47 +175,31 @@ function cascadeAndApply() {
   setTimeout(() => {
     matches.flat().forEach(i => grid[i].className = 'cell');
     dropDown();
-    applyEffects(counts, matches.length, true);
+    applyEffects(counts);
     setTimeout(() => cascadeAndApply(), 1000);
   }, 2000);
 }
 
-function applyEffects(counts, comboCount, fromPlayer = true) {
+function applyEffects(counts) {
   let dmg = counts.red*10 + (counts.red>=5 ? 20 : 0);
   let heal = counts.green*5 + (counts.green>=5 ? 20 : 0);
   let def = counts.blue*5;
-  let critChance = Math.min(counts.orange * 5, 100);
-  let crit = Math.random() * 100 < critChance;
-  if (crit) dmg *= 2;
 
-  if (fromPlayer) {
-    let shieldDmg = Math.floor(dmg/2);
-    let hpDmg = dmg - shieldDmg;
-    if (enemyShield >= shieldDmg) enemyShield -= shieldDmg;
-    else {
-      hpDmg += shieldDmg - enemyShield;
-      enemyShield = 0;
-    }
-    enemyHp -= hpDmg;
-    if (enemyHp < 0) enemyHp = 0;
+  if(currentTurn==='player') {
+    let dmgToShield = Math.min(dmg/2, enemyShield);
+    enemyShield -= dmgToShield;
+    enemyHp -= (dmg - dmgToShield);
+    if(enemyHp<0) enemyHp = 0;
     shield += def;
     hp += heal;
-    if (hp > 1000) hp = 1000;
-    log(`<span class='log-player'>${playerName} нанёс ${dmg} урона${crit ? ' (КРИТ!)' : ''}, 💚+${heal}, 🛡+${def}</span>`);
+    if(hp > 1000) hp = 1000;
+    logBox.innerHTML = `<span style="color:#9f9">🧙 ${playerName}<br>Урон: ${dmg}, Лечение: ${heal}, Щит: +${def}</span>`;
   } else {
-    let shieldDmg = Math.floor(dmg/2);
-    let hpDmg = dmg - shieldDmg;
-    if (shield >= shieldDmg) shield -= shieldDmg;
-    else {
-      hpDmg += shieldDmg - shield;
-      shield = 0;
-    }
-    hp -= hpDmg;
-    if (hp < 0) hp = 0;
-    enemyShield += def;
-    log(`<span class='log-enemy'>Монстр атакует: -${dmg} урона${crit ? ' (КРИТ!)' : ''}, 🛡+${def}</span>`);
+    let dmgToShield = Math.min(80/2, shield);
+    shield -= dmgToShield;
+    hp -= (80 - dmgToShield);
+    logBox.innerHTML = `<span style="color:#f66">👹 Монстр атакует<br>Урон: 80</span>`;
   }
-
   updateStats();
 }
 
@@ -259,39 +248,22 @@ function checkMatches(){
 }
 
 function botMove(){
-  board.classList.add('disabled');
+  currentTurn = 'bot';
+  board.style.pointerEvents = 'none';
+  board.style.opacity = '0.4';
   setTimeout(() => {
-    let moved = false;
-    for(let i=0;i<36&&!moved;i++){
-      for(let j=i+1;j<36;j++){
-        let tmp=grid[i].className;
-        grid[i].className=grid[j].className;
-        grid[j].className=tmp;
-        if(checkMatches().length>0){
-          moved=true;
-          setTimeout(() => cascadeAndApply(false), 300);
-          break;
-        } else {
-          grid[j].className=grid[i].className;
-          grid[i].className=tmp;
-        }
-      }
-    }
-    if(!moved) setTimeout(startTurn, 800);
-  }, 800);
-}
-
-function log(text){
-  logBox.innerHTML = text;
+    cascadeAndApply();
+  }, 1000);
 }
 
 board.addEventListener("touchstart", e => {
+  if(currentTurn !== 'player') return;
   const t = e.touches[0];
   const el = document.elementFromPoint(t.clientX, t.clientY);
   if(el && el.classList.contains('cell')) dragging = el;
 });
 board.addEventListener("touchmove", e => {
-  if(!dragging)return;
+  if(!dragging || currentTurn !== 'player') return;
   const t = e.touches[0];
   const el = document.elementFromPoint(t.clientX, t.clientY);
   if(el && el.classList.contains('cell') && el!==dragging){
@@ -302,10 +274,13 @@ board.addEventListener("touchmove", e => {
   }
 });
 board.addEventListener("touchend", () => {
+  if(currentTurn !== 'player') return;
   dragging = null;
   clearInterval(turnTimer);
-  board.classList.add('disabled');
+  board.style.pointerEvents = 'none';
   cascadeAndApply();
 });
-</script></body>
+
+  </script>
+</body>
 </html>
