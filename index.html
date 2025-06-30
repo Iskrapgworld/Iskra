@@ -16,6 +16,26 @@
       margin: 20px 0;
       color: #ffcc66;
     }
+    #modeSelect {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.9);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 3;
+    }
+    #modeSelect button {
+      padding: 15px 30px;
+      font-size: 18px;
+      margin: 10px;
+      background: #6622cc;
+      color: white;
+      border: none;
+      border-radius: 10px;
+    }
     #scoreboard {
       display: flex;
       justify-content: space-around;
@@ -33,134 +53,103 @@
     #timerProgress {
       height: 100%;
       background: #ffcc66;
-      width: 100%;
-      transition: width 1s linear;
+      transition: width 0.1s;
     }
-    #gameBoard {
+    #board {
       display: grid;
-      grid-template-columns: repeat(6, 50px);
-      grid-gap: 4px;
-      justify-content: center;
-      margin: 20px auto;
+      grid-template-columns: repeat(6, 1fr);
+      grid-template-rows: repeat(6, 1fr);
+      gap: 2px;
+      width: 360px;
+      height: 360px;
+      margin: 0 auto;
     }
     .cell {
-      width: 50px;
-      height: 50px;
-      background-color: #333;
-      border-radius: 6px;
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      transition: transform 0.2s, opacity 2s ease;
+      touch-action: none;
+    }
+    .red { background: radial-gradient(circle, #ff5e5e, #8b0000); }
+    .green { background: radial-gradient(circle, #7fff7f, #228b22); }
+    .blue { background: linear-gradient(135deg, #66ccff, #003366); }
+    .yellow { background: radial-gradient(circle, #ffff88, #ffaa00); }
+    .purple { background: radial-gradient(circle, #dca0ff, #440066); }
+    .orange { background: radial-gradient(circle, #ffc266, #cc6600); }
+    .highlight { border: 3px solid yellow; }
+    .fade { opacity: 0; }
+    #overlay {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.9);
       display: flex;
+      flex-direction: column;
       justify-content: center;
       align-items: center;
-      font-size: 24px;
-      cursor: pointer;
+      z-index: 2;
     }
-    .highlight {
-      animation: highlight 2s ease-in-out;
+    #overlay button {
+      padding: 10px 20px;
+      font-size: 18px;
+      background: #6622cc;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      margin-top: 20px;
     }
-    @keyframes highlight {
-      0% { box-shadow: 0 0 5px 2px #fff; }
-      100% { box-shadow: 0 0 0 0 transparent; }
+    #damageInfo {
+      margin-top: 10px;
+      font-size: 16px;
+      color: #88f;
     }
   </style>
 </head>
 <body>
-  <h1>ИСКРА: Битва</h1>
+  <h1>🔥 ИСКРА: Битва 🔥</h1>
+  <div id="modeSelect">
+    <button onclick="startGame('pvp')">PvP (на одном устройстве)</button>
+    <button onclick="startGame('pve')">PvE (против бота)</button>
+  </div>
   <div id="scoreboard">
-    <div>Ладрин: <span id="playerHP">1000</span> HP</div>
-    <div>Враг: <span id="enemyHP">1000</span> HP</div>
+    <div>Игрок 1: <span id="hp1">200</span> ❤️ <span id="shield1">150</span> 🛡</div>
+    <div>Игрок 2: <span id="hp2">200</span> ❤️ <span id="shield2">150</span> 🛡</div>
   </div>
-  <div id="timerBar">
-    <div id="timerProgress"></div>
+  <div id="timerBar"><div id="timerProgress"></div></div>
+  <div id="board"></div>
+  <div id="overlay">
+    <div id="turnInfo">Ход игрока 1</div>
+    <div id="damageInfo"></div>
+    <button id="startBtn">Начать ход</button>
   </div>
-  <div id="gameBoard"></div>
   <script>
-    const types = ['🔴','🔵','🟢','🟣','🟠'];
-    const effects = ['attack','shield','heal','magic','crit'];
-    let playerHP = 1000, enemyHP = 1000;
-    let currentPlayer = 'player';
-    const boardSize = 6;
-    const board = [];
-
-    const gameBoard = document.getElementById('gameBoard');
-
-    function createBoard() {
-      gameBoard.innerHTML = '';
-      for (let i = 0; i < boardSize * boardSize; i++) {
-        const cell = document.createElement('div');
-        cell.classList.add('cell');
-        const type = Math.floor(Math.random() * types.length);
-        cell.textContent = types[type];
-        cell.dataset.type = effects[type];
-        board.push(cell);
-        gameBoard.appendChild(cell);
-      }
-    }
-
-    function updateHP() {
-      document.getElementById('playerHP').textContent = playerHP;
-      document.getElementById('enemyHP').textContent = enemyHP;
-    }
-
-    function startTurn() {
-      const progress = document.getElementById('timerProgress');
-      let timeLeft = 20;
-      const interval = setInterval(() => {
-        timeLeft--;
-        progress.style.width = (timeLeft * 5) + '%';
-        if (timeLeft <= 0) {
-          clearInterval(interval);
-          endTurn();
+    
+function botTurn() {
+  setTimeout(() => {
+    let bestMatch = null;
+    for (let r = 0; r < 6; r++) {
+      for (let c = 0; c < 5; c++) {
+        let i = index(r, c);
+        let a = getColorClass(grid[i]);
+        let b = getColorClass(grid[i + 1]);
+        if (a && b && a !== b) {
+          let tmp = grid[i].className;
+          grid[i].className = grid[i + 1].className;
+          grid[i + 1].className = tmp;
+          finishTurn();
+          return;
         }
-      }, 1000);
-    }
-
-    function endTurn() {
-      currentPlayer = currentPlayer === 'player' ? 'bot' : 'player';
-      if (currentPlayer === 'bot') {
-        setTimeout(() => {
-          botMove();
-          startTurn();
-        }, 1000);
-      } else {
-        startTurn();
       }
     }
+    finishTurn(); // если не нашёл, просто завершает
+  }, 1000);
+}
 
-    function botMove() {
-      let match = board.find(cell => cell.dataset.type === 'attack');
-      if (match) {
-        applyEffect('attack', 'bot');
-        match.classList.add('highlight');
-      }
+    function startGame(mode) {
+      document.getElementById("modeSelect").style.display = "none";
+      document.getElementById("overlay").style.display = "flex";
     }
-
-    function applyEffect(effect, source) {
-      if (effect === 'attack') {
-        if (source === 'player') enemyHP -= 50;
-        else playerHP -= 50;
-      } else if (effect === 'heal') {
-        if (source === 'player') playerHP += 30;
-        else enemyHP += 30;
-      } else if (effect === 'shield') {
-        // add future shield logic
-      }
-      updateHP();
-    }
-
-    gameBoard.addEventListener('click', (e) => {
-      if (e.target.classList.contains('cell') && currentPlayer === 'player') {
-        const effect = e.target.dataset.type;
-        applyEffect(effect, 'player');
-        e.target.classList.add('highlight');
-        setTimeout(() => {
-          endTurn();
-        }, 1000);
-      }
-    });
-
-    createBoard();
-    updateHP();
-    startTurn();
   </script>
 </body>
 </html>
