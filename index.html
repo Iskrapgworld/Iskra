@@ -1,15 +1,132 @@
-ИСКРА: Битва body { background-color: #1e1e1e; font-family: sans-serif; color: #fff; margin: 0; padding: 0; text-align: center; } h1 { margin: 20px 0; color: #ffcc66; } #scoreboard, #overlay, #board, #modeSelect { display: none; } #scoreboard.active, #overlay.active, #board.active { display: block; } #modeSelect { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10; } #modeSelect button { padding: 15px 25px; font-size: 20px; margin: 15px; background: #6622cc; color: white; border: none; border-radius: 10px; }
+<!DOCTYPE html><html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>ИСКРА: Битва</title>
+  <style>
+    body {
+      background-color: #1e1e1e;
+      font-family: sans-serif;
+      color: #fff;
+      margin: 0;
+      padding: 0;
+      text-align: center;
+    }
+    h1 {
+      margin: 20px 0;
+      color: #ffcc66;
+    }
+    #scoreboard, #overlay, #board, #modeSelect {
+      display: none;
+    }
+    #scoreboard.active, #overlay.active, #board.active {
+      display: block;
+    }
+    #modeSelect {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.95);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
+    }
+    #modeSelect button {
+      padding: 15px 25px;
+      font-size: 20px;
+      margin: 15px;
+      background: #6622cc;
+      color: white;
+      border: none;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔥 ИСКРА: Битва 🔥</h1>
+  <div id="modeSelect">
+    <button onclick="startGame('pvp')">Играть вдвоем</button>
+    <button onclick="startGame('pve')">Играть с ботом</button>
+  </div> <div id="scoreboard" class="active">
+    <div>Игрок 1: <span id="hp1">1000</span> ❤️</div>
+    <div>Игрок 2: <span id="hp2">1000</span> ❤️</div>
+  </div> <div id="board" class="active"></div>
+  <div id="overlay" class="active">
+    <div id="turnInfo">Ход игрока 1</div>
+    <button onclick="startTurn()">Начать ход</button>
+  </div> <script>
+    const board = document.getElementById('board');
+    const hp1El = document.getElementById('hp1');
+    const hp2El = document.getElementById('hp2');
+    const turnInfo = document.getElementById('turnInfo');
+    const overlay = document.getElementById('overlay');
 
-🔥 ИСКРА: Битва 🔥
+    let mode = 'pvp';
+    let currentPlayer = 1;
+    let hp = {1: 1000, 2: 1000};
+    let botThinking = false;
+    let isAnimating = false;
 
-Играть вдвоем Играть с ботом
+    function startGame(selectedMode) {
+      mode = selectedMode;
+      document.getElementById('modeSelect').style.display = 'none';
+      document.getElementById('scoreboard').classList.add('active');
+      document.getElementById('overlay').classList.add('active');
+      document.getElementById('board').classList.add('active');
+      createGrid();
+    }
 
-Игрок 1: 1000 ❤️
+    function createGrid() {
+      board.innerHTML = '';
+      for (let i = 0; i < 36; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.style.background = '#333';
+        cell.style.width = '50px';
+        cell.style.height = '50px';
+        cell.style.margin = '2px';
+        cell.style.display = 'inline-block';
+        board.appendChild(cell);
+      }
+    }
 
-Игрок 2: 1000 ❤️
+    function startTurn() {
+      if (mode === 'pve' && currentPlayer === 2) {
+        botMove();
+      } else {
+        overlay.style.display = 'none';
+        // игрок будет ходить вручную...
+      }
+    }
 
-Ход игрока 1
+    function endTurn() {
+      if (hp[1] <= 0 || hp[2] <= 0) {
+        turnInfo.textContent = `Победа игрока ${hp[1] <= 0 ? 2 : 1}`;
+        overlay.style.display = 'flex';
+        return;
+      }
+      currentPlayer = currentPlayer === 1 ? 2 : 1;
+      turnInfo.textContent = `Ход игрока ${currentPlayer}`;
+      overlay.style.display = 'flex';
+    }
 
-Начать ход
-
-const board = document.getElementById('board'); const hp1El = document.getElementById('hp1'); const hp2El = document.getElementById('hp2'); const turnInfo = document.getElementById('turnInfo'); const overlay = document.getElementById('overlay'); let mode = 'pvp'; let currentPlayer = 1; let hp = {1: 1000, 2: 1000}; let botThinking = false; let isAnimating = false; function startGame(selectedMode) { mode = selectedMode; document.getElementById('modeSelect').style.display = 'none'; document.getElementById('scoreboard').classList.add('active'); document.getElementById('overlay').classList.add('active'); document.getElementById('board').classList.add('active'); createGrid(); } function createGrid() { board.innerHTML = ''; for (let i = 0; i < 36; i++) { const cell = document.createElement('div'); cell.className = 'cell'; cell.style.background = '#333'; cell.style.width = '50px'; cell.style.height = '50px'; cell.style.margin = '2px'; cell.style.display = 'inline-block'; board.appendChild(cell); } } function startTurn() { if (mode === 'pve' && currentPlayer === 2) { botMove(); } else { overlay.style.display = 'none'; // игрок будет ходить вручную... } } function endTurn() { if (hp[1] <= 0 || hp[2] <= 0) { turnInfo.textContent = `Победа игрока ${hp[1] <= 0 ? 2 : 1}`; overlay.style.display = 'flex'; return; } currentPlayer = currentPlayer === 1 ? 2 : 1; turnInfo.textContent = `Ход игрока ${currentPlayer}`; overlay.style.display = 'flex'; } function botMove() { if (botThinking || isAnimating) return; botThinking = true; overlay.style.display = 'none'; setTimeout(() => { if (currentPlayer !== 2) return; // симуляция урона const dmg = Math.floor(Math.random() * 50) + 50; hp[1] -= dmg; if (hp[1] < 0) hp[1] = 0; hp1El.textContent = hp[1]; botThinking = false; endTurn(); }, 1500); }
+    function botMove() {
+      if (botThinking || isAnimating) return;
+      botThinking = true;
+      overlay.style.display = 'none';
+      setTimeout(() => {
+        if (currentPlayer !== 2) return;
+        // симуляция урона
+        const dmg = Math.floor(Math.random() * 50) + 50;
+        hp[1] -= dmg;
+        if (hp[1] < 0) hp[1] = 0;
+        hp1El.textContent = hp[1];
+        botThinking = false;
+        endTurn();
+      }, 1500);
+    }
+  </script></body>
+</html>
