@@ -1,26 +1,28 @@
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ИСКРА: Битва</title>
   <style>
     body {
       background-color: #1e1e1e;
+      color: white;
       font-family: sans-serif;
-      color: #fff;
+      text-align: center;
       margin: 0;
       padding: 0;
-      text-align: center;
     }
     h1 {
-      margin: 10px 0;
+      margin: 20px 0;
       color: #ffcc66;
     }
-    #scoreboard, #shieldboard, #critboard {
+    #scoreboard {
       display: flex;
       justify-content: space-around;
-      font-size: 16px;
-      margin-bottom: 5px;
+      font-size: 18px;
+      margin-bottom: 10px;
     }
     #timerBar {
       width: 80%;
@@ -42,7 +44,7 @@
       gap: 2px;
       width: 360px;
       height: 360px;
-      margin: 0 auto 20px;
+      margin: 0 auto;
     }
     .cell {
       width: 58px;
@@ -55,12 +57,11 @@
       background-position: center;
     }
     .red { background-color: #ff4d4d; }
-    .green { background-color: #66ff66; }
     .blue { background-color: #4dd2ff; }
+    .green { background-color: #66ff66; }
     .yellow { background-color: #ffff66; }
     .purple { background-color: #d580ff; }
-    .orange { background-color: #ffaa33; }
-    .highlight { border: 2px solid yellow; }
+    .highlight { border: 3px solid yellow; }
     .fade { opacity: 0; }
     #overlay {
       position: absolute;
@@ -86,23 +87,14 @@
       margin-top: 10px;
       font-size: 16px;
       color: #88f;
-      white-space: pre-line;
     }
   </style>
 </head>
 <body>
   <h1>🔥 ИСКРА: Битва 🔥</h1>
   <div id="scoreboard">
-    <div>Игрок 1: <span id="hp1">200</span> ❤️</div>
-    <div>Игрок 2: <span id="hp2">200</span> ❤️</div>
-  </div>
-  <div id="shieldboard">
-    <div>Щиты 1: <span id="shield1">150</span> 🛡</div>
-    <div>Щиты 2: <span id="shield2">150</span> 🛡</div>
-  </div>
-  <div id="critboard">
-    <div>Крит 1: <span id="crit1">10%</span></div>
-    <div>Крит 2: <span id="crit2">10%</span></div>
+    <div>Игрок 1: <span id="hp1">1000</span> ❤️</div>
+    <div>Игрок 2: <span id="hp2">1000</span> ❤️</div>
   </div>
   <div id="timerBar"><div id="timerProgress"></div></div>
   <div id="board"></div>
@@ -112,7 +104,8 @@
     <button id="startBtn">Начать ход</button>
   </div>
   <script>
-    // Скрипт будет вставлен отдельно ниже
+    // Тут будет полная логика боя, вставляемая позже при расширении
+    console.log("Стабильная версия PG загружена");
   </script>
 </body>
 </html>
