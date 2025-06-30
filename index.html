@@ -4,129 +4,141 @@
   <title>ИСКРА: Битва</title>
   <style>
     body {
-      background-color: #1e1e1e;
-      font-family: sans-serif;
-      color: #fff;
       margin: 0;
-      padding: 0;
+      font-family: sans-serif;
+      background: #111;
+      color: #fff;
       text-align: center;
     }
     h1 {
-      margin: 20px 0;
       color: #ffcc66;
+      margin-top: 20px;
     }
-    #scoreboard, #overlay, #board, #modeSelect {
+    #menu, #gameScreen {
       display: none;
     }
-    #scoreboard.active, #overlay.active, #board.active {
-      display: block;
+    .btn {
+      background: #6622cc;
+      color: #fff;
+      border: none;
+      padding: 15px 30px;
+      font-size: 20px;
+      border-radius: 10px;
+      margin: 10px;
+      cursor: pointer;
     }
-    #modeSelect {
+    #board {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      grid-template-rows: repeat(6, 1fr);
+      gap: 2px;
+      width: 360px;
+      height: 360px;
+      margin: 0 auto;
+    }
+    .cell {
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      transition: transform 0.2s, opacity 1s ease;
+      touch-action: none;
+    }
+    .red { background: radial-gradient(circle, #ff5e5e, #8b0000); }
+    .green { background: radial-gradient(circle, #7fff7f, #228b22); }
+    .blue { background: linear-gradient(135deg, #66ccff, #003366); }
+    .yellow { background: radial-gradient(circle, #ffff88, #ffaa00); }
+    .purple { background: radial-gradient(circle, #dca0ff, #440066); }
+    .orange { background: radial-gradient(circle, #ffc266, #cc6600); }
+    .fade { opacity: 0; }
+    #overlay {
       position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.95);
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8);
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
       z-index: 10;
     }
-    #modeSelect button {
-      padding: 15px 25px;
-      font-size: 20px;
-      margin: 15px;
+    #overlay button {
+      padding: 10px 20px;
+      font-size: 18px;
       background: #6622cc;
       color: white;
       border: none;
       border-radius: 10px;
+      margin-top: 20px;
+    }
+    #scoreboard {
+      display: flex;
+      justify-content: space-around;
+      font-size: 18px;
+      margin: 10px;
     }
   </style>
 </head>
 <body>
   <h1>🔥 ИСКРА: Битва 🔥</h1>
-  <div id="modeSelect">
-    <button onclick="startGame('pvp')">Играть вдвоем</button>
-    <button onclick="startGame('pve')">Играть с ботом</button>
-  </div> <div id="scoreboard" class="active">
-    <div>Игрок 1: <span id="hp1">1000</span> ❤️</div>
-    <div>Игрок 2: <span id="hp2">1000</span> ❤️</div>
-  </div> <div id="board" class="active"></div>
-  <div id="overlay" class="active">
-    <div id="turnInfo">Ход игрока 1</div>
-    <button onclick="startTurn()">Начать ход</button>
-  </div> <script>
+  <div id="menu">
+    <button class="btn" onclick="startPvP()">PvP (на одном устройстве)</button>
+    <button class="btn" onclick="startPvE()">PvE (против бота)</button>
+  </div>
+  <div id="gameScreen">
+    <div id="scoreboard">
+      <div>Игрок 1: <span id="hp1">1000</span> ❤️</div>
+      <div>Игрок 2: <span id="hp2">1000</span> ❤️</div>
+    </div>
+    <div id="board"></div>
+    <div id="overlay">
+      <div id="turnInfo">Ход игрока 1</div>
+      <button onclick="nextTurn()">Начать ход</button>
+    </div>
+  </div>
+  <script>
+    let mode = "pvp";
+    const menu = document.getElementById('menu');
+    const gameScreen = document.getElementById('gameScreen');
     const board = document.getElementById('board');
+    const overlay = document.getElementById('overlay');
+    const turnInfo = document.getElementById('turnInfo');
     const hp1El = document.getElementById('hp1');
     const hp2El = document.getElementById('hp2');
-    const turnInfo = document.getElementById('turnInfo');
-    const overlay = document.getElementById('overlay');
-
-    let mode = 'pvp';
-    let currentPlayer = 1;
     let hp = {1: 1000, 2: 1000};
-    let botThinking = false;
-    let isAnimating = false;
+    let currentPlayer = 1;function showMenu() {
+  menu.style.display = 'block';
+  gameScreen.style.display = 'none';
+}
 
-    function startGame(selectedMode) {
-      mode = selectedMode;
-      document.getElementById('modeSelect').style.display = 'none';
-      document.getElementById('scoreboard').classList.add('active');
-      document.getElementById('overlay').classList.add('active');
-      document.getElementById('board').classList.add('active');
-      createGrid();
-    }
+function startPvP() {
+  mode = "pvp";
+  menu.style.display = 'none';
+  gameScreen.style.display = 'block';
+  initBoard();
+  updateStats();
+  overlay.style.display = 'flex';
+}
 
-    function createGrid() {
-      board.innerHTML = '';
-      for (let i = 0; i < 36; i++) {
-        const cell = document.createElement('div');
-        cell.className = 'cell';
-        cell.style.background = '#333';
-        cell.style.width = '50px';
-        cell.style.height = '50px';
-        cell.style.margin = '2px';
-        cell.style.display = 'inline-block';
-        board.appendChild(cell);
-      }
-    }
+function startPvE() {
+  mode = "pve";
+  menu.style.display = 'none';
+  gameScreen.style.display = 'block';
+  initBoard();
+  updateStats();
+  overlay.style.display = 'flex';
+}
 
-    function startTurn() {
-      if (mode === 'pve' && currentPlayer === 2) {
-        botMove();
-      } else {
-        overlay.style.display = 'none';
-        // игрок будет ходить вручную...
-      }
-    }
+function updateStats() {
+  hp1El.textContent = hp[1];
+  hp2El.textContent = hp[2];
+}
 
-    function endTurn() {
-      if (hp[1] <= 0 || hp[2] <= 0) {
-        turnInfo.textContent = `Победа игрока ${hp[1] <= 0 ? 2 : 1}`;
-        overlay.style.display = 'flex';
-        return;
-      }
-      currentPlayer = currentPlayer === 1 ? 2 : 1;
-      turnInfo.textContent = `Ход игрока ${currentPlayer}`;
-      overlay.style.display = 'flex';
-    }
-
-    function botMove() {
-      if (botThinking || isAnimating) return;
-      botThinking = true;
-      overlay.style.display = 'none';
-      setTimeout(() => {
-        if (currentPlayer !== 2) return;
-        // симуляция урона
-        const dmg = Math.floor(Math.random() * 50) + 50;
-        hp[1] -= dmg;
-        if (hp[1] < 0) hp[1] = 0;
-        hp1El.textContent = hp[1];
-        botThinking = false;
-        endTurn();
-      }, 1500);
-    }
-  </script></body>
-</html>
+function nextTurn() {
+  overlay.style.display = 'none';
+  turnInfo.textContent = `Ход игрока ${currentPlayer}`;
+  // Пока просто автоурон для проверки
+  setTimeout(() => {
+    const target = currentPlayer === 1 ? 2 : 1;
+    hp[target] -= 50;
+    updateStats();
+    if (hp[target] <= 0) {
