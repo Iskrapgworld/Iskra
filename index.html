@@ -2,211 +2,287 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>ИСКРА: Битва</title>
   <style>
     body {
       margin: 0;
-      background: #000 url('https://i.imgur.com/lkA1J8k.png') repeat; /* Пиксельный тёмный фон */
+      background-color: #1e1e1e;
       font-family: sans-serif;
-      color: #ffc;
+      color: #fff;
       text-align: center;
     }
-    #game {
-      margin: auto;
-      max-width: 400px;
+    h1 { color: #ffcc66; margin: 20px 0; }
+    #menu, #game, #overlay { display: none; }
+    button {
+      padding: 10px 20px;
+      font-size: 18px;
+      background: #6622cc;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      margin: 10px;
     }
-    h1 {
-      margin: 10px 0;
-      font-size: 20px;
-    }
-    #players {
+    #scoreboard {
       display: flex;
-      justify-content: space-between;
-      margin: 0 10px;
+      justify-content: space-around;
+      font-size: 16px;
+      margin: 10px;
+    }
+    #scoreboard div.active {
+      font-weight: bold;
+      color: #ffcc66;
     }
     #board {
       display: grid;
-      grid-template-columns: repeat(6, 50px);
-      grid-template-rows: repeat(6, 50px);
+      grid-template-columns: repeat(6, 1fr);
       gap: 2px;
-      margin: 10px auto;
+      width: 360px;
+      margin: auto;
     }
     .cell {
-      width: 50px;
-      height: 50px;
-      image-rendering: pixelated;
-      background-size: cover;
-      transition: opacity 1s ease-in-out;
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      transition: transform 0.2s, opacity 1s ease;
+      touch-action: none;
     }
-    .highlight {
-      box-shadow: 0 0 10px 2px yellow;
-    }
-    .fade-out {
-      opacity: 0;
-    }
-    .timer-bar {
-      height: 8px;
-      background: orange;
-      transition: width 0.2s linear;
-      margin: 5px 10px;
+    .red    { background: radial-gradient(circle, #ff5e5e, #8b0000); }
+    .green  { background: radial-gradient(circle, #7fff7f, #228b22); }
+    .blue   { background: linear-gradient(135deg, #66ccff, #003366); }
+    .yellow { background: radial-gradient(circle, #ffff88, #ffaa00); }
+    .purple { background: radial-gradient(circle, #dca0ff, #440066); }
+    .orange { background: radial-gradient(circle, #ffc266, #cc6600); }
+    .fade { opacity: 0; }
+    #overlay {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.9);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 2;
     }
   </style>
 </head>
 <body>
+  <h1>🔥 ИСКРА: Битва 🔥</h1>
+  <div id="menu">
+    <button onclick="startGame('pvp')">PvP (на одном устройстве)</button>
+    <button onclick="startGame('pve')">PvE (с ботом)</button>
+  </div>
   <div id="game">
-    <h1>🔥 ИСКРА: PvP-Кристаллы 🔥</h1>
-    <div id="players">
-      <div>Игрок 1: <span id="hp1">1000</span> ❤️</div>
-      <div>Игрок 2: <span id="hp2">1000</span> ❤️</div>
+    <div id="scoreboard">
+      <div id="player1">Игрок 1: <span id="hp1">1000</span> ❤️ <span id="shield1">0</span> 🛡</div>
+      <div id="player2">Игрок 2: <span id="hp2">1000</span> ❤️ <span id="shield2">0</span> 🛡</div>
     </div>
-    <div class="timer-bar" id="timer"></div>
     <div id="board"></div>
-    <p id="log"></p>
+  </div>
+  <div id="overlay">
+    <div id="turnText">Выберите режим</div>
+    <button onclick="hideOverlay()">Играть</button>
   </div>
   <script>
-    const board = document.getElementById("board");
-    const log = document.getElementById("log");
-    const hp1 = document.getElementById("hp1");
-    const hp2 = document.getElementById("hp2");
-    const timerBar = document.getElementById("timer");
-    const width = 6;
-    const height = 6;
-    const types = ['attack', 'shield', 'heal', 'crit', 'critdmg', 'magic'];
-    const images = {
-      attack: 'https://i.imgur.com/xMWrg8K.png',
-      shield: 'https://i.imgur.com/I1wGQXM.png',
-      heal: 'https://i.imgur.com/lS7ZLgW.png',
-      crit: 'https://i.imgur.com/fMEAsrR.png',
-      critdmg:'https://i.imgur.com/OlmkQQe.png',
-      magic: 'https://i.imgur.com/dDFtqDN.png'
-    };
-    let grid = [], selected = null, turn = 1;
-    let hp = [1000, 1000];
-    let timer, timeLeft = 20;
-    function startGame() {
-      for (let y = 0; y < height; y++) {
-        for (let x = 0; x < width; x++) {
-          createCell(x, y, randomType());
+    const colors = ['red','green','blue','yellow','purple','orange'];
+    const board = document.getElementById('board');
+    const hp1El = document.getElementById('hp1');
+    const hp2El = document.getElementById('hp2');
+    const shield1El = document.getElementById('shield1');
+    const shield2El = document.getElementById('shield2');
+    const turnText = document.getElementById('turnText');
+    const overlay = document.getElementById('overlay');
+    const player1Box = document.getElementById('player1');
+    const player2Box = document.getElementById('player2');
+
+    let hp = {1: 1000, 2: 1000};
+    let shield = {1: 0, 2: 0};
+    let grid = [];
+    let currentPlayer = 1;
+    let mode = 'pvp';
+    let dragging = null;
+
+    function startGame(selectedMode) {
+      mode = selectedMode;
+      document.getElementById('menu').style.display = 'none';
+      document.getElementById('game').style.display = 'block';
+      hp = {1: 1000, 2: 1000};
+      shield = {1: 0, 2: 0};
+      currentPlayer = 1;
+      updateScore();
+      createGrid();
+      showOverlay(`Ход игрока ${currentPlayer}`);
+    }
+
+    function createGrid() {
+      board.innerHTML = '';
+      grid = [];
+      for(let i = 0; i < 36; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell ' + colors[Math.floor(Math.random()*colors.length)];
+        board.appendChild(cell);
+        grid.push(cell);
+      }
+    }
+
+    function index(r, c) { return r*6 + c; }
+    function getColor(el) {
+      return colors.find(c => el.classList.contains(c));
+    }
+
+    function checkMatches() {
+      const matches = [];
+      for(let r = 0; r < 6; r++) {
+        for(let c = 0; c < 4; c++) {
+          let i = index(r, c);
+          let a=grid[i], b=grid[i+1], c_=grid[i+2];
+          if(getColor(a) === getColor(b) && getColor(b) === getColor(c_)) matches.push([i,i+1,i+2]);
         }
       }
-      startTimer();
-    }
-    function createCell(x, y, type) {
-      const cell = document.createElement("div");
-      cell.className = "cell";
-      cell.dataset.x = x;
-      cell.dataset.y = y;
-      cell.dataset.type = type;
-      cell.style.backgroundImage = `url(${images[type]})`;
-      cell.addEventListener("touchstart", touchStart, { passive: true });
-      cell.addEventListener("touchend", touchEnd);
-      board.appendChild(cell);
-      grid[y * width + x] = cell;
-    }
-    let dragStart = null;
-    function touchStart(e) {
-      dragStart = e.target;
-    }
-    function touchEnd(e) {
-      if (!dragStart) return;
-      const target = document.elementFromPoint(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
-      if (!target || !target.classList.contains("cell")) return;
-      swapCells(dragStart, target);
-      dragStart = null;
-      endTurn();
-    }
-    function swapCells(a, b) {
-      if (a === b) return;
-      let t = a.dataset.type;
-      a.dataset.type = b.dataset.type;
-      b.dataset.type = t;
-      a.style.backgroundImage = `url(${images[a.dataset.type]})`;
-      b.style.backgroundImage = `url(${images[b.dataset.type]})`;
-    }
-    function endTurn() {
-      clearInterval(timer);
-      checkMatches().then(() => {
-        if (hp[0] <= 0 || hp[1] <= 0) {
-          log.textContent = `Победил Игрок ${hp[0] <= 0 ? 2 : 1}!`;
-          return;
+      for(let c = 0; c < 6; c++) {
+        for(let r = 0; r < 4; r++) {
+          let i = index(r, c);
+          let a=grid[i], b=grid[i+6], c_=grid[i+12];
+          if(getColor(a) === getColor(b) && getColor(b) === getColor(c_)) matches.push([i,i+6,i+12]);
         }
-        turn = 3 - turn;
-        timeLeft = 20;
-        startTimer();
+      }
+      return matches;
+    }
+
+    function applyEffects(counts) {
+      let damage = (counts.red + counts.purple) * 10;
+      let heal = counts.green * 5;
+      let def = counts.blue * 5;
+      const target = currentPlayer === 1 ? 2 : 1;
+
+      if (shield[target] >= damage) shield[target] -= damage;
+      else {
+        let d = damage - shield[target];
+        shield[target] = 0;
+        hp[target] -= d;
+      }
+      shield[currentPlayer] += def;
+      if (shield[currentPlayer] > 150) shield[currentPlayer] = 150;
+      hp[currentPlayer] += heal;
+      if (hp[currentPlayer] > 1000) hp[currentPlayer] = 1000;
+
+      updateScore();
+    }
+
+    function updateScore() {
+      hp1El.textContent = hp[1];
+      hp2El.textContent = hp[2];
+      shield1El.textContent = shield[1];
+      shield2El.textContent = shield[2];
+      player1Box.classList.toggle('active', currentPlayer === 1);
+      player2Box.classList.toggle('active', currentPlayer === 2);
+    }
+
+    function cascadeAndApply() {
+      let matches = checkMatches();
+      const counts = {red:0,green:0,blue:0,orange:0,purple:0,yellow:0};
+      if(matches.length === 0){
+        switchTurn();
+        return;
+      }
+      matches.forEach(g=>{
+        let color = getColor(grid[g[0]]);
+        counts[color] += g.length;
+        g.forEach(i => grid[i].classList.add('fade'));
       });
-    }
-    function startTimer() {
-      timerBar.style.width = "100%";
-      timer = setInterval(() => {
-        timeLeft--;
-        timerBar.style.width = `${(timeLeft / 20) * 100}%`;
-        if (timeLeft <= 0) {
-          clearInterval(timer);
-          endTurn();
-        }
+      setTimeout(() => {
+        matches.flat().forEach(i => grid[i].className = 'cell');
+        dropDown();
+        setTimeout(()=>{ applyEffects(counts); switchTurn(); }, 800);
       }, 1000);
     }
-    async function checkMatches() {
-      const matched = [];
-      for (let y = 0; y < height; y++) {
-        for (let x = 0; x < width - 2; x++) {
-          let a = cell(x, y), b = cell(x + 1, y), c = cell(x + 2, y);
-          if (a.dataset.type === b.dataset.type && a.dataset.type === c.dataset.type) {
-            matched.push(a, b, c);
-            if (x + 3 < width && cell(x + 3, y).dataset.type === a.dataset.type) matched.push(cell(x + 3, y));
-            if (x + 4 < width && cell(x + 4, y).dataset.type === a.dataset.type) matched.push(cell(x + 4, y));
+
+    function dropDown() {
+      for(let c=0; c<6; c++){
+        for(let r=5; r>0; r--){
+          let i = index(r,c);
+          if(!getColor(grid[i])){
+            for(let k=r-1; k>=0; k--){
+              let up = index(k,c);
+              if(getColor(grid[up])){
+                grid[i].className = grid[up].className;
+                grid[up].className = 'cell';
+                break;
+              }
+            }
+          }
+        }
+        for(let r=0; r<6; r++){
+          let i = index(r,c);
+          if(!getColor(grid[i])){
+            let cls = colors[Math.floor(Math.random()*colors.length)];
+            grid[i].className = 'cell ' + cls;
           }
         }
       }
-      for (let x = 0; x < width; x++) {
-        for (let y = 0; y < height - 2; y++) {
-          let a = cell(x, y), b = cell(x, y + 1), c = cell(x, y + 2);
-          if (a.dataset.type === b.dataset.type && a.dataset.type === c.dataset.type) {
-            matched.push(a, b, c);
-            if (y + 3 < height && cell(x, y + 3).dataset.type === a.dataset.type) matched.push(cell(x, y + 3));
-            if (y + 4 < height && cell(x, y + 4).dataset.type === a.dataset.type) matched.push(cell(x, y + 4));
+    }
+
+    function switchTurn() {
+      if(hp[1] <= 0 || hp[2] <= 0){
+        showOverlay(`Победа игрока ${hp[1] <= 0 ? 2 : 1}`);
+        return;
+      }
+      currentPlayer = currentPlayer === 1 ? 2 : 1;
+      showOverlay(`Ход игрока ${currentPlayer}`);
+      if(mode==='pve' && currentPlayer===2){
+        setTimeout(() => { botMove(); }, 1000);
+      }
+    }
+
+    function showOverlay(text) {
+      turnText.textContent = text;
+      overlay.style.display = 'flex';
+    }
+    function hideOverlay() {
+      overlay.style.display = 'none';
+    }
+
+    board.addEventListener("touchstart", e => {
+      const t = e.touches[0];
+      const el = document.elementFromPoint(t.clientX, t.clientY);
+      if(el && el.classList.contains('cell')) dragging = el;
+    });
+    board.addEventListener("touchmove", e => {
+      if(!dragging)return;
+      const t = e.touches[0];
+      const el = document.elementFromPoint(t.clientX, t.clientY);
+      if(el && el.classList.contains('cell') && el!==dragging){
+        let tmp = dragging.className;
+        dragging.className = el.className;
+        el.className = tmp;
+        dragging = el;
+      }
+    });
+    board.addEventListener("touchend", () => {
+      dragging = null;
+      cascadeAndApply();
+    });
+
+    function botMove(){
+      let moved = false;
+      for(let i=0;i<36 && !moved;i++){
+        for(let j=i+1;j<36;j++){
+          let tmp = grid[i].className;
+          grid[i].className = grid[j].className;
+          grid[j].className = tmp;
+          if(checkMatches().length > 0){
+            moved = true;
+            cascadeAndApply();
+            break;
+          } else {
+            grid[j].className = grid[i].className;
+            grid[i].className = tmp;
           }
         }
       }
-      const unique = [...new Set(matched)];
-      unique.forEach(cell => cell.classList.add("highlight"));
-      await new Promise(r => setTimeout(r, 2000));
-      for (let cell of unique) cell.classList.remove("highlight");
-      await new Promise(r => setTimeout(r, 100));
-      unique.forEach(cell => {
-        cell.classList.add("fade-out");
-        cell.style.transition = "opacity 1s";
-      });
-      await new Promise(r => setTimeout(r, 1000));
-      const count = unique.length;
-      unique.forEach(cell => {
-        const newType = randomType();
-        cell.classList.remove("fade-out");
-        cell.dataset.type = newType;
-        cell.style.backgroundImage = `url(${images[newType]})`;
-        cell.style.opacity = "1";
-      });
-      applyEffects(count, unique[0]?.dataset.type);
     }
-    function applyEffects(count, type) {
-      if (!type) return;
-      let value = (count >= 5 ? 20 : 10);
-      if (type === "attack") {
-        hp[2 - turn] -= value;
-      } else if (type === "heal") {
-        hp[turn - 1] += value;
-      }
-      hp1.textContent = hp[0];
-      hp2.textContent = hp[1];
-    }
-    function cell(x, y) {
-      return grid[y * width + x];
-    }
-    function randomType() {
-      return types[Math.floor(Math.random() * types.length)];
-    }
-    startGame();
+
+    document.getElementById('menu').style.display = 'block';
   </script>
 </body>
 </html>
