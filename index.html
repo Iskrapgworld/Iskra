@@ -2,196 +2,306 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ИСКРА: Битва</title>
   <style>
     body {
       margin: 0;
-      background: #000;
+      background-color: #1e1e1e;
       font-family: sans-serif;
       color: #fff;
       text-align: center;
-      background-image: url('https://i.imgur.com/ZGuYHhb.png'); /* Фон */
-      background-size: cover;
-      background-position: center;
     }
-    #gameCanvas {
-      display: block;
-      margin: 0 auto;
-      image-rendering: pixelated;
-      border: 2px solid orange;
+    h1 { color: #ffcc66; margin: 20px 0; }
+    #menu, #game, #overlay { display: none; }
+    button {
+      padding: 10px 20px;
+      font-size: 18px;
+      background: #6622cc;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      margin: 10px;
     }
-    #status {
-      margin-top: 10px;
-      font-size: 20px;
+    #scoreboard {
+      display: flex;
+      justify-content: space-around;
+      font-size: 16px;
+      margin: 10px;
+    }
+    #scoreboard div.active {
+      font-weight: bold;
+      color: #ffcc66;
+    }
+    #board {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 2px;
+      width: 360px;
+      margin: auto;
+    }
+    .cell {
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      transition: transform 0.2s ease, opacity 1s ease;
+      touch-action: none;
+      opacity: 1;
+    }
+    .red { background: radial-gradient(circle, #ff5e5e, #8b0000); }
+    .green { background: radial-gradient(circle, #7fff7f, #228b22); }
+    .blue { background: linear-gradient(135deg, #66ccff, #003366); }
+    .yellow { background: radial-gradient(circle, #ffff88, #ffaa00); }
+    .purple { background: radial-gradient(circle, #dca0ff, #440066); }
+    .orange { background: radial-gradient(circle, #ffc266, #cc6600); }
+    .matching {
+      box-shadow: 0 0 10px 4px #fff;
+      transform: scale(1.1);
+    }
+    .fade { opacity: 0; }
+    #overlay {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.9);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 2;
     }
   </style>
 </head>
 <body>
-  <h2>🔥 ИСКРА: PvP-Кристаллы 🔥</h2>
-  <div id="status">Игрок 1: 1000 ❤️ — Игрок 2: 1000 ❤️</div>
-  <canvas id="gameCanvas" width="360" height="360"></canvas>
-
+  <h1>🔥 ИСКРА: Битва 🔥</h1>
+  <div id="menu">
+    <button onclick="startGame('pvp')">PvP (на одном устройстве)</button>
+    <button onclick="startGame('pve')">PvE (с ботом)</button>
+  </div>
+  <div id="game">
+    <div id="scoreboard">
+      <div id="player1">Игрок 1: <span id="hp1">1000</span> ❤️ <span id="shield1">0</span> 🛡</div>
+      <div id="player2">Игрок 2: <span id="hp2">1000</span> ❤️ <span id="shield2">0</span> 🛡</div>
+    </div>
+    <div id="board"></div>
+  </div>
+  <div id="overlay">
+    <div id="turnText">Выберите режим</div>
+    <button onclick="hideOverlay()">Играть</button>
+  </div>
   <script>
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
+    const colors = ['red','green','blue','yellow','purple','orange'];
+    const board = document.getElementById('board');
+    const hp1El = document.getElementById('hp1');
+    const hp2El = document.getElementById('hp2');
+    const shield1El = document.getElementById('shield1');
+    const shield2El = document.getElementById('shield2');
+    const turnText = document.getElementById('turnText');
+    const overlay = document.getElementById('overlay');
+    const player1Box = document.getElementById('player1');
+    const player2Box = document.getElementById('player2');
 
-    const size = 6;
-    const tileSize = 60;
-    const colors = ["#f00", "#0f0", "#00f", "#f0f", "#ffa500", "#fff"]; // + базовая палитра
-    const types = ["attack", "heal", "shield", "mana", "crit", "blank"];
-
-    let board = [];
+    let hp = {1: 1000, 2: 1000};
+    let shield = {1: 0, 2: 0};
+    let grid = [];
+    let currentPlayer = 1;
+    let mode = 'pvp';
     let dragging = null;
-    let turn = 1;
-    let hp1 = 1000;
-    let hp2 = 1000;
 
-    function initBoard() {
-      board = [];
-      for (let y = 0; y < size; y++) {
-        let row = [];
-        for (let x = 0; x < size; x++) {
-          row.push({
-            type: types[Math.floor(Math.random() * 5)],
-            fading: false,
-            fadeTime: 0
-          });
-        }
-        board.push(row);
+    function startGame(selectedMode) {
+      mode = selectedMode;
+      document.getElementById('menu').style.display = 'none';
+      document.getElementById('game').style.display = 'block';
+      hp = {1: 1000, 2: 1000};
+      shield = {1: 0, 2: 0};
+      currentPlayer = 1;
+      updateScore();
+      createGrid();
+      showOverlay(`Ход игрока ${currentPlayer}`);
+    }
+
+    function createGrid() {
+      board.innerHTML = '';
+      grid = [];
+      for(let i = 0; i < 36; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell ' + colors[Math.floor(Math.random()*colors.length)];
+        board.appendChild(cell);
+        grid.push(cell);
       }
     }
 
-    function drawBoard() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      for (let y = 0; y < size; y++) {
-        for (let x = 0; x < size; x++) {
-          const cell = board[y][x];
-          const color = getColor(cell.type);
-          if (cell.fading) {
-            ctx.globalAlpha = 1 - cell.fadeTime / 1000;
-          } else {
-            ctx.globalAlpha = 1;
-          }
-          ctx.fillStyle = color;
-          ctx.beginPath();
-          if (cell.type === "attack") {
-            ctx.moveTo(x * tileSize + 30, y * tileSize);
-            ctx.lineTo(x * tileSize + 60, y * tileSize + 30);
-            ctx.lineTo(x * tileSize + 30, y * tileSize + 60);
-            ctx.lineTo(x * tileSize, y * tileSize + 30);
-          } else if (cell.type === "heal") {
-            ctx.fillRect(x * tileSize + 20, y * tileSize + 25, 20, 10);
-            ctx.fillRect(x * tileSize + 25, y * tileSize + 20, 10, 20);
-            continue;
-          } else if (cell.type === "shield") {
-            ctx.arc(x * tileSize + 30, y * tileSize + 30, 25, 0, Math.PI * 2);
-          } else {
-            ctx.rect(x * tileSize + 5, y * tileSize + 5, 50, 50);
-          }
-          ctx.fill();
-        }
-      }
-      ctx.globalAlpha = 1;
+    function index(r, c) { return r*6 + c; }
+    function getColor(el) {
+      return colors.find(c => el.classList.contains(c));
     }
 
-    function getColor(type) {
-      switch (type) {
-        case "attack": return "#f00";
-        case "heal": return "#0f0";
-        case "shield": return "#00f";
-        case "mana": return "#f0f";
-        case "crit": return "#ffa500";
-        default: return "#888";
+    function checkMatches() {
+      const matches = [];
+      for(let r = 0; r < 6; r++) {
+        for(let c = 0; c < 4; c++) {
+          let i = index(r, c);
+          let a=grid[i], b=grid[i+1], c_=grid[i+2];
+          if(getColor(a) === getColor(b) && getColor(b) === getColor(c_)) matches.push([i,i+1,i+2]);
+        }
       }
+      for(let c = 0; c < 6; c++) {
+        for(let r = 0; r < 4; r++) {
+          let i = index(r, c);
+          let a=grid[i], b=grid[i+6], c_=grid[i+12];
+          if(getColor(a) === getColor(b) && getColor(b) === getColor(c_)) matches.push([i,i+6,i+12]);
+        }
+      }
+      return matches;
     }
 
-    canvas.addEventListener("mousedown", (e) => {
-      const x = Math.floor(e.offsetX / tileSize);
-      const y = Math.floor(e.offsetY / tileSize);
-      dragging = {x, y, started: true};
-      lostMove = false;
-    });
+    function applyEffects(counts, bonus) {
+      let damage = (counts.red + counts.purple) * 10 + (bonus.red * 20);
+      let heal = counts.green * 5 + (bonus.green * 20);
+      let def = counts.blue * 5;
+      const target = currentPlayer === 1 ? 2 : 1;
 
-    canvas.addEventListener("mouseup", () => {
-      if (dragging) {
-        if (dragging.started) {
-          lostMove = true; // отпустил раньше
-        } else {
-          checkCombos();
-        }
+      if (shield[target] >= damage) shield[target] -= damage;
+      else {
+        let d = damage - shield[target];
+        shield[target] = 0;
+        hp[target] -= d;
       }
-      dragging = null;
-    });
+      shield[currentPlayer] += def;
+      if (shield[currentPlayer] > 150) shield[currentPlayer] = 150;
+      hp[currentPlayer] += heal;
+      if (hp[currentPlayer] > 1000) hp[currentPlayer] = 1000;
 
-    function checkCombos() {
-      let combos = [];
-      for (let y = 0; y < size; y++) {
-        let streak = 1;
-        for (let x = 1; x < size; x++) {
-          if (board[y][x].type === board[y][x-1].type) {
-            streak++;
-          } else {
-            if (streak >= 3) combos.push({row: y, start: x - streak, end: x - 1, type: board[y][x-1].type});
-            streak = 1;
-          }
-        }
-        if (streak >= 3) combos.push({row: y, start: size - streak, end: size - 1, type: board[y][size-1].type});
+      updateScore();
+    }
+
+    function updateScore() {
+      hp1El.textContent = hp[1];
+      hp2El.textContent = hp[2];
+      shield1El.textContent = shield[1];
+      shield2El.textContent = shield[2];
+      player1Box.classList.toggle('active', currentPlayer === 1);
+      player2Box.classList.toggle('active', currentPlayer === 2);
+    }
+
+    function cascadeAndApply() {
+      let matches = checkMatches();
+      const counts = {red:0,green:0,blue:0,orange:0,purple:0,yellow:0};
+      const longChains = {red: 0, green: 0};
+      if(matches.length === 0){
+        switchTurn();
+        return;
       }
 
-      if (combos.length > 0) {
-        for (let c of combos) {
-          for (let x = c.start; x <= c.end; x++) {
-            board[c.row][x].fading = true;
-            board[c.row][x].fadeTime = 0;
-          }
-        }
+      matches.forEach(g => {
+        let color = getColor(grid[g[0]]);
+        counts[color] += g.length;
+        if (color === 'red' && g.length >= 5) longChains.red++;
+        if (color === 'green' && g.length >= 5) longChains.green++;
+        g.forEach(i => grid[i].classList.add('matching'));
+      });
 
+      setTimeout(() => {
+        matches.flat().forEach(i => {
+          grid[i].classList.remove('matching');
+          grid[i].classList.add('fade');
+        });
         setTimeout(() => {
-          for (let c of combos) {
-            for (let x = c.start; x <= c.end; x++) {
-              applyEffect(c.type, c.end - c.start + 1);
-              board[c.row][x] = {
-                type: types[Math.floor(Math.random() * 5)],
-                fading: false,
-                fadeTime: 0
-              };
+          matches.flat().forEach(i => grid[i].className = 'cell');
+          dropDown();
+          setTimeout(() => {
+            applyEffects(counts, longChains);
+            switchTurn();
+          }, 800);
+        }, 1000);
+      }, 2000);
+    }
+
+    function dropDown() {
+      for(let c=0; c<6; c++){
+        for(let r=5; r>0; r--){
+          let i = index(r,c);
+          if(!getColor(grid[i])){
+            for(let k=r-1; k>=0; k--){
+              let up = index(k,c);
+              if(getColor(grid[up])){
+                grid[i].className = grid[up].className;
+                grid[up].className = 'cell';
+                break;
+              }
             }
           }
-          drawBoard();
-          updateStatus();
-        }, 2000);
+        }
+        for(let r=0; r<6; r++){
+          let i = index(r,c);
+          if(!getColor(grid[i])){
+            let cls = colors[Math.floor(Math.random()*colors.length)];
+            grid[i].className = 'cell ' + cls;
+          }
+        }
       }
     }
 
-    function applyEffect(type, count) {
-      let value = (count >= 5) ? 20 : 10;
-      if (type === "attack") {
-        if (turn === 1) hp2 -= value;
-        else hp1 -= value;
-      } else if (type === "heal") {
-        if (turn === 1) hp1 += value;
-        else hp2 += value;
+    function switchTurn() {
+      if(hp[1] <= 0 || hp[2] <= 0){
+        showOverlay(`Победа игрока ${hp[1] <= 0 ? 2 : 1}`);
+        return;
+      }
+      currentPlayer = currentPlayer === 1 ? 2 : 1;
+      showOverlay(`Ход игрока ${currentPlayer}`);
+      if(mode==='pve' && currentPlayer===2){
+        setTimeout(() => { botMove(); }, 1500);
       }
     }
 
-    function updateStatus() {
-      document.getElementById("status").innerText = `Игрок 1: ${hp1} ❤️ — Игрок 2: ${hp2} ❤️`;
-      if (hp1 <= 0 || hp2 <= 0) {
-        setTimeout(() => {
-          alert(hp1 <= 0 ? "Победил Игрок 2!" : "Победил Игрок 1!");
-          initBoard();
-          hp1 = 1000;
-          hp2 = 1000;
-          updateStatus();
-          drawBoard();
-        }, 500);
+    function showOverlay(text) {
+      turnText.textContent = text;
+      overlay.style.display = 'flex';
+    }
+    function hideOverlay() {
+      overlay.style.display = 'none';
+    }
+
+    board.addEventListener("touchstart", e => {
+      const t = e.touches[0];
+      const el = document.elementFromPoint(t.clientX, t.clientY);
+      if(el && el.classList.contains('cell')) dragging = el;
+    });
+    board.addEventListener("touchmove", e => {
+      if(!dragging)return;
+      const t = e.touches[0];
+      const el = document.elementFromPoint(t.clientX, t.clientY);
+      if(el && el.classList.contains('cell') && el!==dragging){
+        let tmp = dragging.className;
+        dragging.className = el.className;
+        el.className = tmp;
+        dragging = el;
+      }
+    });
+    board.addEventListener("touchend", () => {
+      dragging = null;
+      cascadeAndApply();
+    });
+
+    function botMove(){
+      let moved = false;
+      for(let i=0;i<36 && !moved;i++){
+        for(let j=i+1;j<36;j++){
+          let tmp = grid[i].className;
+          grid[i].className = grid[j].className;
+          grid[j].className = tmp;
+          if(checkMatches().length > 0){
+            moved = true;
+            cascadeAndApply();
+            break;
+          } else {
+            grid[j].className = grid[i].className;
+            grid[i].className = tmp;
+          }
+        }
       }
     }
 
-    initBoard();
-    drawBoard();
-    updateStatus();
+    document.getElementById('menu').style.display = 'block';
   </script>
 </body>
 </html>
