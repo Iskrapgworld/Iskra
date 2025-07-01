@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>ИСКРА: Битва</title>
+  <meta charset="UTF-8" />
+  <title>ИСКРА: Шахта</title>
   <style>
     body {
       margin: 0;
@@ -12,635 +12,244 @@
       text-align: center;
     }
     h1 {
-      color: #ffa500;
-      margin: 10px 0;
-      text-shadow: 0 0 10px #ff6600;
+      color: #ffcc00;
+      margin-top: 10px;
     }
     #topBar {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 5px 10px;
+      justify-content: space-around;
+      margin: 10px;
       font-size: 14px;
-      background: #222;
-      border-radius: 10px;
-      margin: 5px;
     }
-    #timerBarContainer {
-      flex-grow: 1;
-      height: 10px;
-      margin: 0 10px;
-      background: #444;
-      border-radius: 5px;
+    .stat {
+      line-height: 1.6;
+    }
+    .bar {
+      height: 12px;
+      background: #333;
+      border-radius: 6px;
       overflow: hidden;
+      margin-top: 3px;
     }
-    #timerBar {
+    .bar-inner {
       height: 100%;
-      width: 100%;
-      background: linear-gradient(90deg, #33ff33, #ffff00);
-      transition: width 1s linear;
+      transition: width 0.5s ease;
     }
-    #battleLog {
-      margin: 5px;
-      padding: 10px;
-      font-size: 14px;
-      min-height: 40px;
-      background: #222;
-      border-radius: 10px;
-      border-left: 3px solid #ffa500;
-    }
+    #spark { color: #ffff66; }
     #board {
-      display: none;
+      display: grid;
       grid-template-columns: repeat(6, 1fr);
       gap: 4px;
       width: 360px;
-      margin: 30px auto 10px auto;
-      transition: opacity 0.3s ease;
+      margin: 10px auto;
     }
     .cell {
       width: 58px;
       height: 58px;
       border-radius: 50%;
-      transition: transform 0.3s ease, opacity 1s ease;
-      position: relative;
-      overflow: hidden;
+      transition: transform 0.3s ease;
     }
-    .cell::after {
-      content: '';
-      position: absolute;
-      top: -10px;
-      left: -10px;
-      right: -10px;
-      bottom: -10px;
-      background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%);
-      opacity: 0;
-      transition: opacity 0.3s;
-    }
-    .cell:hover::after {
-      opacity: 0.3;
-    }
-    .red { background: radial-gradient(circle, #ff4d4d, #990000); }
-    .green { background: radial-gradient(circle, #66ff66, #006600); }
-    .blue { background: radial-gradient(circle, #66ccff, #003366); }
-    .purple { background: radial-gradient(circle, #dca0ff, #440066); }
-    .orange { background: radial-gradient(circle, #cc9955, #cc6600); }
-    .highlight { 
-      box-shadow: 0 0 15px 5px #ffffffaa;
-      transform: scale(1.1);
-    }
+    .red    { background: radial-gradient(circle, #ff4d4d, #990000); }
+    .green  { background: radial-gradient(circle, #66ff66, #006600); }
+    .blue   { background: radial-gradient(circle, #66ccff, #003366); }
+    .orange { background: radial-gradient(circle, #ffaa00, #993300); }
+    .purple { background: radial-gradient(circle, #cc99ff, #330066); }
+    .highlight { box-shadow: 0 0 8px 4px #fff5; }
     .fade { opacity: 0; }
-    .enemy-turn #board {
-      pointer-events: none;
-      opacity: 0.5;
-    }
-    #overlay, #endScreen {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.9);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      flex-direction: column;
-      z-index: 999;
-    }
-    .floatText {
-      position: absolute;
-      font-size: 14px;
-      font-weight: bold;
-      pointer-events: none;
-      animation: floatUp 1s ease forwards;
-      z-index: 100;
-    }
-    @keyframes floatUp {
-      from { opacity: 1; transform: translateY(0); }
-      to { opacity: 0; transform: translateY(-30px); }
-    }
-    #overlay input {
-      padding: 10px;
-      font-size: 16px;
-      border-radius: 5px;
-      border: none;
-      margin-top: 10px;
-      width: 200px;
-      text-align: center;
-    }
     button {
+      margin: 10px;
       padding: 10px 20px;
-      margin: 5px;
       font-size: 16px;
+      background: #444;
+      color: #fff;
       border: none;
       border-radius: 10px;
-      background: #6622cc;
-      color: white;
-      cursor: pointer;
-      transition: all 0.2s;
     }
-    button:hover {
-      transform: scale(1.05);
-      box-shadow: 0 0 10px #8844ff;
-    }
-    #lightningButton {
-      background: linear-gradient(#ffcc00, #ff9900);
-      color: #000;
-      font-weight: bold;
-    }
-    #shieldButton {
-      background: linear-gradient(#3399ff, #0066cc);
-      font-weight: bold;
-    }
-    .combo-display {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      font-size: 28px;
-      font-weight: bold;
-      color: gold;
-      text-shadow: 0 0 10px #000, 0 0 20px #ff6600;
-      opacity: 0;
-      transition: all 0.3s;
-      pointer-events: none;
-      z-index: 1000;
-    }
-    .combo-show {
-      opacity: 1;
-      transform: translate(-50%, -60%);
-    }
-    @keyframes attack {
-      0% { transform: translateX(0); }
-      25% { transform: translateX(20px); }
-      50% { transform: translateX(-20px); }
-      100% { transform: translateX(0); }
-    }
-    .attack-animation {
-      animation: attack 0.3s linear;
-    }
-    #stats {
-      background: rgba(0,0,0,0.7);
-      padding: 10px;
-      border-radius: 10px;
+    #result {
+      font-size: 14px;
       margin-top: 10px;
+      min-height: 20px;
     }
-    .ability-container {
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-      margin: 10px;
+    #depth {
+      font-size: 16px;
+      margin-bottom: 5px;
+      color: #aaa;
     }
   </style>
 </head>
 <body>
-  <h1>🔥 ИСКРА: Битва 🔥</h1>
+  <h1>⛏ Шахта Искры</h1>
+  <div id="depth">Глубина: 0 м</div>
   <div id="topBar">
-    <div>Вы:<br>❤️ <span id="hp">200</span>/200<br>🛡 <span id="shield">100</span>/100<br>🔮 <span id="mana">0</span>/100</div>
-    <div id="timerBarContainer"><div id="timerBar"></div></div>
-    <div>Монстр:<br>💀 <span id="enemyHp">500</span>/500<br>🛡 <span id="enemyShield">300</span>/300<br>🔮 <span id="enemyMana">0</span>/100</div>
-  </div>
-  <div id="battleLog">Соберите 3 или более одинаковых шара в ряд!</div>
-  <div id="board"></div>
-  <div class="ability-container">
-    <button id="lightningButton" onclick="useLightning()">⚡ Молния (20)</button>
-    <button id="shieldButton" onclick="useShield()">🛡 Щит (30)</button>
-  </div>
-  <div id="overlay">
-    <h2>Введите имя воина:</h2>
-    <input id="nickname" placeholder="Ваше имя" maxlength="12">
-    <button onclick="startGame()">Начать битву!</button>
-  </div>
-  <div id="endScreen" style="display:none;">
-    <h2 id="endMessage">Победа!</h2>
-    <div id="stats">
-      Уровень: <span id="level">1</span><br>
-      Победы: <span id="wins">0</span>
+    <div class="stat">
+      ⚡ Искра: <span id="spark">30</span>
     </div>
-    <button onclick="startGame()">Сразиться снова</button>
+    <div class="stat">
+      💨 Воздух
+      <div class="bar"><div id="airBar" class="bar-inner" style="width:100%;background:#00ffcc;"></div></div>
+    </div>
+    <div class="stat">
+      🧱 Свод
+      <div class="bar"><div id="roofBar" class="bar-inner" style="width:100%;background:#3399ff;"></div></div>
+    </div>
   </div>
+  <div id="board"></div>
+  <button onclick="startMiningTurn()">🔁 Следующий ход (-5 Искры)</button>
+  <div id="result"></div>
 
   <script>
-    // Конфигурация игры
-    const CONFIG = {
-      colors: ['red', 'green', 'blue', 'purple', 'orange'],
-      player: {
-        maxHp: 200,
-        maxShield: 100,
-        maxMana: 100
-      },
-      monster: {
-        maxHp: 500,
-        maxShield: 300,
-        maxMana: 100
-      },
-      combo: {
-        minMatch: 3,
-        damage: [0, 15, 25],
-        heal: [0, 8, 15],
-        shield: [0, 8, 15],
-        mana: [0, 15, 25]
-      },
-      abilities: {
-        lightning: {
-          cost: 20,
-          damage: 50
-        },
-        shield: {
-          cost: 30,
-          amount: 50
-        }
-      },
-      turnTime: 20
-    };
+    const colors = ['red', 'green', 'blue', 'orange', 'purple'];
+    const board = document.getElementById("board");
+    const sparkEl = document.getElementById("spark");
+    const airBar = document.getElementById("airBar");
+    const roofBar = document.getElementById("roofBar");
+    const result = document.getElementById("result");
+    const depthText = document.getElementById("depth");
 
-    // Элементы интерфейса
-    const elements = {
-      board: document.getElementById("board"),
-      hp: document.getElementById("hp"),
-      shield: document.getElementById("shield"),
-      mana: document.getElementById("mana"),
-      enemyHp: document.getElementById("enemyHp"),
-      enemyShield: document.getElementById("enemyShield"),
-      enemyMana: document.getElementById("enemyMana"),
-      timerBar: document.getElementById("timerBar"),
-      overlay: document.getElementById("overlay"),
-      endScreen: document.getElementById("endScreen"),
-      endMessage: document.getElementById("endMessage"),
-      battleLog: document.getElementById("battleLog"),
-      lightningBtn: document.getElementById("lightningButton"),
-      shieldBtn: document.getElementById("shieldButton"),
-      level: document.getElementById("level"),
-      wins: document.getElementById("wins"),
-      nickname: document.getElementById("nickname")
-    };
+    let spark = 30;
+    let dragging = null;
+    let grid = [];
+    let depth = 0;
 
-    // Игровые переменные
-    let gameState = {
-      grid: [],
-      isPlayerTurn: true,
-      player: {
-        hp: CONFIG.player.maxHp,
-        shield: CONFIG.player.maxShield,
-        mana: 0
-      },
-      monster: {
-        hp: CONFIG.monster.maxHp,
-        shield: CONFIG.monster.maxShield,
-        mana: 0
-      },
-      level: 1,
-      wins: 0,
-      turnTimer: null,
-      combo: {},
-      dragging: null,
-      lightningUsed: false
-    };
-
-    // Инициализация игры
-    function startGame() {
-      const nickname = elements.nickname.value || "Воин";
-      console.log(`Начало игры для: ${nickname}`);
-      
-      // Сброс состояния
-      gameState = {
-        ...gameState,
-        isPlayerTurn: true,
-        player: {
-          hp: CONFIG.player.maxHp,
-          shield: CONFIG.player.maxShield,
-          mana: 0
-        },
-        monster: {
-          hp: CONFIG.monster.maxHp * (1 + (gameState.level-1)*0.2),
-          shield: CONFIG.monster.maxShield * (1 + (gameState.level-1)*0.1),
-          mana: 0
-        },
-        lightningUsed: false
-      };
-      
-      updateUI();
-      createGrid();
-      elements.overlay.style.display = "none";
-      elements.endScreen.style.display = "none";
-      elements.board.style.display = "grid";
-      document.body.classList.remove("enemy-turn");
-      startTurn();
-    }
-
-    // Создание игрового поля
-    function createGrid() {
-      elements.board.innerHTML = "";
-      gameState.grid = [];
-      
+    function createBoard() {
+      board.innerHTML = "";
+      grid = [];
       for (let i = 0; i < 36; i++) {
         const cell = document.createElement("div");
-        const color = CONFIG.colors[Math.floor(Math.random() * CONFIG.colors.length)];
-        cell.className = `cell ${color}`;
-        cell.dataset.color = color;
-        gameState.grid.push(cell);
-        elements.board.appendChild(cell);
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        cell.className = "cell " + color;
+        board.appendChild(cell);
+        grid.push(cell);
       }
     }
 
-    // Начало хода
-    function startTurn() {
-      gameState.isPlayerTurn = true;
-      gameState.combo = { 
-        red: 0, green: 0, blue: 0, orange: 0, purple: 0, 
-        count: 0, total: 0 
-      };
-      gameState.lightningUsed = false;
-      document.body.classList.remove("enemy-turn");
-      elements.board.style.pointerEvents = "auto";
-      updateAbilityButtons();
-
-      let time = CONFIG.turnTime;
-      elements.timerBar.style.width = "100%";
-      elements.timerBar.style.background = "linear-gradient(90deg, #33ff33, #ffff00)";
-      clearInterval(gameState.turnTimer);
-      
-      gameState.turnTimer = setInterval(() => {
-        time--;
-        elements.timerBar.style.width = `${(time * 100 / CONFIG.turnTime)}%`;
-        
-        if (time <= CONFIG.turnTime/3) {
-          elements.timerBar.style.background = "linear-gradient(90deg, #ffff00, #ff3333)";
-        }
-        
-        if (time <= 0) {
-          clearInterval(gameState.turnTimer);
-          elements.board.style.pointerEvents = "none";
-          resolveCascade();
-        }
-      }, 1000);
+    function index(r, c) {
+      return r * 6 + c;
     }
 
-    // Обработка каскада совпадений
-    function resolveCascade() {
-      const matches = findMatches();
-      
-      if (matches.length === 0) {
-        applyComboEffects();
-        if (checkGameEnd()) return;
-        gameState.isPlayerTurn ? setTimeout(monsterTurn, 1000) : setTimeout(startTurn, 1000);
+    function getColor(el) {
+      return colors.find(c => el.classList.contains(c));
+    }
+
+    function startMiningTurn() {
+      if (spark < 5) {
+        alert("Недостаточно Искры!");
         return;
       }
-
-      // Подсветка совпадений
-      matches.forEach(group => {
-        const color = gameState.grid[group[0]].dataset.color;
-        gameState.combo[color] = (gameState.combo[color] || 0) + group.length;
-        gameState.combo.count += 1;
-        gameState.combo.total += group.length;
-        
-        group.forEach(idx => {
-          gameState.grid[idx].classList.add("highlight");
-        });
-      });
-
-      setTimeout(() => {
-        // Удаление совпадений
-        matches.flat().forEach(idx => {
-          gameState.grid[idx].classList.add("fade");
-        });
-        
-        setTimeout(() => {
-          // Заполнение пустот
-          matches.flat().forEach(idx => {
-            gameState.grid[idx].className = "cell";
-            gameState.grid[idx].dataset.color = "";
-          });
-          dropCells();
-          setTimeout(resolveCascade, 600);
-        }, 600);
-      }, 1000);
+      spark -= 5;
+      sparkEl.textContent = spark;
+      resolveCascade();
     }
 
-    // Поиск совпадений
-    function findMatches() {
+    function checkMatches() {
       const matches = [];
-      const checked = new Set();
-
-      // Проверка по горизонтали
-      for (let row = 0; row < 6; row++) {
-        for (let col = 0; col < 4; col++) {
-          const idx = row * 6 + col;
-          if (checked.has(idx)) continue;
-          
-          const color = gameState.grid[idx].dataset.color;
-          if (!color) continue;
-          
-          let match = [idx];
-          for (let k = 1; col + k < 6; k++) {
-            const next = row * 6 + (col + k);
-            if (gameState.grid[next].dataset.color === color) {
-              match.push(next);
-            } else break;
-          }
-          
-          if (match.length >= CONFIG.combo.minMatch) {
-            matches.push(match);
-            match.forEach(i => checked.add(i));
-          }
+      for (let r = 0; r < 6; r++) {
+        for (let c = 0; c < 4; c++) {
+          let i = index(r, c);
+          let a = grid[i], b = grid[i+1], c_ = grid[i+2];
+          if (getColor(a) === getColor(b) && getColor(b) === getColor(c_))
+            matches.push([i, i+1, i+2]);
         }
       }
-
-      // Проверка по вертикали
-      for (let col = 0; col < 6; col++) {
-        for (let row = 0; row < 4; row++) {
-          const idx = row * 6 + col;
-          if (checked.has(idx)) continue;
-          
-          const color = gameState.grid[idx].dataset.color;
-          if (!color) continue;
-          
-          let match = [idx];
-          for (let k = 1; row + k < 6; k++) {
-            const next = (row + k) * 6 + col;
-            if (gameState.grid[next].dataset.color === color) {
-              match.push(next);
-            } else break;
-          }
-          
-          if (match.length >= CONFIG.combo.minMatch) {
-            matches.push(match);
-            match.forEach(i => checked.add(i));
-          }
+      for (let c = 0; c < 6; c++) {
+        for (let r = 0; r < 4; r++) {
+          let i = index(r, c);
+          let a = grid[i], b = grid[i+6], c_ = grid[i+12];
+          if (getColor(a) === getColor(b) && getColor(b) === getColor(c_))
+            matches.push([i, i+6, i+12]);
         }
       }
-
       return matches;
     }
 
-    // Применение эффектов комбо
-    function applyComboEffects() {
-      const { red, green, blue, orange, purple, count, total } = gameState.combo;
-      
-      // Расчет эффектов
-      const effects = {
-        damage: red >= 5 ? CONFIG.combo.damage[2] : red >= 3 ? CONFIG.combo.damage[1] : 0,
-        heal: green >= 5 ? CONFIG.combo.heal[2] : green >= 3 ? CONFIG.combo.heal[1] : 0,
-        shield: blue >= 5 ? CONFIG.combo.shield[2] : blue >= 3 ? CONFIG.combo.shield[1] : 0,
-        mana: purple >= 5 ? CONFIG.combo.mana[2] : purple >= 3 ? CONFIG.combo.mana[1] : 0,
-        critChance: orange * 2
-      };
-
-      // Показ комбо
-      if (count > 0) showCombo(count, total);
-
-      if (gameState.isPlayerTurn) {
-        // Эффекты для игрока
-        gameState.player.mana += effects.mana;
-        if (gameState.player.mana > CONFIG.player.maxMana) {
-          gameState.player.mana = CONFIG.player.maxMana;
-        }
-
-        const isCrit = Math.random() * 100 < effects.critChance;
-        let damage = effects.damage * (isCrit ? 2 : 1);
-        
-        if (gameState.lightningUsed) {
-          damage += CONFIG.abilities.lightning.damage;
-        }
-
-        // Анимация атаки
-        animateAttack(elements.enemyHp.parentElement, true);
-        
-        // Нанесение урона
-        applyDamage(damage, false);
-        
-        // Лечение и защита
-        if (effects.heal > 0) {
-          gameState.player.hp += effects.heal;
-          if (gameState.player.hp > CONFIG.player.maxHp) {
-            gameState.player.hp = CONFIG.player.maxHp;
-          }
-          showFloatText(`+${effects.heal}`, elements.hp, "#00ff00");
-        }
-        
-        if (effects.shield > 0) {
-          gameState.player.shield += effects.shield;
-          if (gameState.player.shield > CONFIG.player.maxShield) {
-            gameState.player.shield = CONFIG.player.maxShield;
-          }
-          showFloatText(`+${effects.shield}`, elements.shield, "#3399ff");
-        }
-
-        // Лог битвы
-        let log = `<span style="color:#66ff66">Комбо ×${count} (${total}): `;
-        if (effects.damage > 0) log += `Урон: ${effects.damage}${isCrit ? ' (КРИТ!)' : ''}`;
-        if (gameState.lightningUsed) log += ` +${CONFIG.abilities.lightning.damage} от молнии`;
-        if (effects.heal > 0) log += `, Лечение: +${effects.heal}`;
-        if (effects.shield > 0) log += `, Щит: +${effects.shield}`;
-        if (effects.mana > 0) log += `, Мана: +${effects.mana}`;
-        elements.battleLog.innerHTML = log + "</span>";
-
-      } else {
-        // Эффекты для монстра
-        gameState.monster.mana += effects.mana;
-        if (gameState.monster.mana > CONFIG.monster.maxMana) {
-          gameState.monster.mana = CONFIG.monster.maxMana;
-        }
-
-        const isCrit = Math.random() * 100 < effects.critChance;
-        const damage = effects.damage * (isCrit ? 2 : 1);
-
-        // Анимация атаки
-        animateAttack(elements.hp.parentElement, false);
-        
-        // Нанесение урона
-        applyDamage(damage, true);
-        
-        // Лечение и защита монстра
-        if (effects.heal > 0) {
-          gameState.monster.hp += effects.heal;
-          if (gameState.monster.hp > CONFIG.monster.maxHp * (1 + (gameState.level-1)*0.2)) {
-            gameState.monster.hp = CONFIG.monster.maxHp * (1 + (gameState.level-1)*0.2);
-          }
-          showFloatText(`+${effects.heal}`, elements.enemyHp, "#00ff00");
-        }
-        
-        if (effects.shield > 0) {
-          gameState.monster.shield += effects.shield;
-          if (gameState.monster.shield > CONFIG.monster.maxShield * (1 + (gameState.level-1)*0.1)) {
-            gameState.monster.shield = CONFIG.monster.maxShield * (1 + (gameState.level-1)*0.1);
-          }
-          showFloatText(`+${effects.shield}`, elements.enemyShield, "#3399ff");
-        }
-
-        // Лог битвы
-        elements.battleLog.innerHTML = `<span style="color:#ff4444">Комбо монстра ×${count}: Урон: ${effects.damage}${isCrit ? ' (КРИТ!)' : ''}${effects.heal > 0 ? ', Лечение: +' + effects.heal : ''}${effects.shield > 0 ? ', Щит: +' + effects.shield : ''}</span>`;
+    function resolveCascade() {
+      const matches = checkMatches();
+      const tally = { red: 0, green: 0, blue: 0, orange: 0, purple: 0 };
+      if (matches.length === 0) {
+        result.textContent = "Комбинаций не найдено";
+        return;
       }
 
-      updateUI();
-      checkGameEnd();
-    }
+      matches.forEach(g => {
+        const color = getColor(grid[g[0]]);
+        tally[color] += g.length;
+        g.forEach(i => grid[i].classList.add("highlight"));
+      });
 
-    // Нанесение урона
-    function applyDamage(damage, toPlayer) {
-      if (toPlayer) {
-        const halfDamage = Math.floor(damage / 2);
-        
-        if (gameState.player.shield >= halfDamage) {
-          gameState.player.shield -= halfDamage;
-          gameState.player.hp -= (damage - halfDamage);
-        } else {
-          const remainingDamage = halfDamage - gameState.player.shield;
-          gameState.player.shield = 0;
-          gameState.player.hp -= (damage - halfDamage + remainingDamage);
-        }
-        
-        showFloatText(`-${damage}`, elements.hp, "#ff0000");
-      } else {
-        const halfDamage = Math.floor(damage / 2);
-        
-        if (gameState.monster.shield >= halfDamage) {
-          gameState.monster.shield -= halfDamage;
-          gameState.monster.hp -= (damage - halfDamage);
-        } else {
-          const remainingDamage = halfDamage - gameState.monster.shield;
-          gameState.monster.shield = 0;
-          gameState.monster.hp -= (damage - halfDamage + remainingDamage);
-        }
-        
-        showFloatText(`-${damage}`, elements.enemyHp, "#ff0000");
-      }
-    }
-
-    // Использование молнии
-    function useLightning() {
-      if (gameState.player.mana >= CONFIG.abilities.lightning.cost && 
-          gameState.isPlayerTurn && 
-          !gameState.lightningUsed) {
-        gameState.player.mana -= CONFIG.abilities.lightning.cost;
-        gameState.lightningUsed = true;
-        updateUI();
-        elements.battleLog.innerHTML += `<br><span style="color:#ffff00">⚡ Молния готова к удару!</span>`;
-      }
-    }
-
-    // Использование щита
-    function useShield() {
-      if (gameState.player.mana >= CONFIG.abilities.shield.cost && gameState.isPlayerTurn) {
-        gameState.player.mana -= CONFIG.abilities.shield.cost;
-        gameState.player.shield += CONFIG.abilities.shield.amount;
-        if (gameState.player.shield > CONFIG.player.maxShield) {
-          gameState.player.shield = CONFIG.player.maxShield;
-        }
-        updateUI();
-        showFloatText(`+${CONFIG.abilities.shield.amount}`, elements.shield, "#3399ff");
-        elements.battleLog.innerHTML += `<br><span style="color:#3399ff">🛡 Щит усилен!</span>`;
-      }
-    }
-
-    // Ход монстра
-    function monsterTurn() {
-      gameState.isPlayerTurn = false;
-      document.body.classList.add("enemy-turn");
-      updateAbilityButtons();
-      
       setTimeout(() => {
-        let moved = false;
-        
-        // Монстр ищет лучший ход
-        for (let i = 0; i < 36 && !moved; i++) {
-          for (let j = i + 1; j < 36 && !moved; j++) {
-            // Пробуем поменять местами
-            [gameState.grid[i].className, gameState.grid[j].className] =
+        matches.flat().forEach(i => {
+          grid[i].classList.remove("highlight");
+          grid[i].classList.add("fade");
+        });
+        setTimeout(() => {
+          matches.flat().forEach(i => {
+            const newColor = colors[Math.floor(Math.random() * colors.length)];
+            grid[i].className = "cell " + newColor;
+            grid[i].classList.remove("fade");
+          });
+          applyMiningEffects(tally);
+        }, 500);
+      }, 800);
+    }
+
+    function applyMiningEffects(tally) {
+      let air = parseInt(airBar.style.width) || 100;
+      let roof = parseInt(roofBar.style.width) || 100;
+      let loot = "";
+
+      if (tally.green >= 3) air += 5;
+      if (tally.green >= 5) air += 5;
+      if (tally.blue >= 3) roof += 5;
+      if (tally.blue >= 5) roof += 5;
+      air -= 3;
+      roof -= 2;
+
+      // глубина увеличивается за каждый ход с красными
+      if (tally.red >= 3) {
+        depth += 5;
+        if (tally.red >= 5) depth += 5;
+      }
+
+      // Лут
+      if (tally.red >= 7) loot = "🌟 Руда Искры";
+      else if (tally.red >= 5) loot = "🪨 Железная руда";
+      else if (tally.red >= 3) loot = "🗿 Камень";
+
+      air = Math.max(0, Math.min(100, air));
+      roof = Math.max(0, Math.min(100, roof));
+      airBar.style.width = air + "%";
+      roofBar.style.width = roof + "%";
+      depthText.textContent = `Глубина: ${depth} м`;
+
+      if (roof <= 10) {
+        result.textContent = "❌ Обвал! Шахта разрушена!";
+        spark = 0;
+        sparkEl.textContent = spark;
+        return;
+      }
+
+      result.textContent = loot ? `Добыто: ${loot}` : "Нет ресурсов";
+    }
+
+    board.addEventListener("touchstart", e => {
+      const t = e.touches[0];
+      const el = document.elementFromPoint(t.clientX, t.clientY);
+      if (el && el.classList.contains("cell")) dragging = el;
+    });
+    board.addEventListener("touchmove", e => {
+      if (!dragging) return;
+      const t = e.touches[0];
+      const el = document.elementFromPoint(t.clientX, t.clientY);
+      if (el && el.classList.contains("cell") && el !== dragging) {
+        [dragging.className, el.className] = [el.className, dragging.className];
+        dragging = el;
+      }
+    });
+    board.addEventListener("touchend", () => {
+      dragging = null;
+    });
+
+    createBoard();
+  </script>
+</body>
+</html>
