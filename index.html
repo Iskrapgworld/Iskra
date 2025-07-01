@@ -1,18 +1,35 @@
-<!DOCTYPE html><html lang="ru">
+<!DOCTYPE html>
+<html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>Шахта Искры</title>
+  <meta charset="UTF-8" />
+  <title>ИСКРА: Шахта</title>
   <style>
     body {
+      margin: 0;
       background: #111;
-      color: white;
+      color: #fff;
       font-family: sans-serif;
       text-align: center;
-      margin: 0;
     }
-    h1 {
-      margin: 10px;
-      color: #ffaa00;
+    h1 { color: #66ccff; margin: 10px 0; }
+    #topBar {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      padding: 5px;
+    }
+    #stabilityBarContainer {
+      width: 200px;
+      height: 12px;
+      background: #333;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    #stabilityBar {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(to right, green, yellow, red);
+      transition: width 0.5s ease;
     }
     #board {
       display: grid;
@@ -24,111 +41,151 @@
     .cell {
       width: 58px;
       height: 58px;
-      border-radius: 10px;
+      border-radius: 8px;
     }
-    .red    { background: radial-gradient(circle, #ff4d4d, #990000); }
-    .green  { background: radial-gradient(circle, #66ff66, #006600); }
-    .blue   { background: radial-gradient(circle, #66ccff, #003366); }
-    .purple { background: radial-gradient(circle, #dca0ff, #440066); }
-    .orange { background: radial-gradient(circle, #cc9955, #cc6600); }#inventory {
-  margin-top: 10px;
-  font-size: 18px;
-}
-
+    .red    { background: #aa3333; }
+    .green  { background: #33aa33; }
+    .blue   { background: #3399cc; }
+    .orange { background: #ffaa33; }
+    .purple { background: #9933cc; }
+    #log {
+      margin-top: 10px;
+      font-size: 14px;
+    }
+    .floatText {
+      position: absolute;
+      font-weight: bold;
+      color: white;
+      animation: floatUp 1s ease forwards;
+    }
+    @keyframes floatUp {
+      from { opacity: 1; transform: translateY(0); }
+      to { opacity: 0; transform: translateY(-30px); }
+    }
   </style>
 </head>
 <body>
-  <h1>⛏ Шахта Искры</h1>
+  <h1>Шахта Искры</h1>
+  <div id="topBar">
+    <div>⚡ Искра: <span id="energy">1000</span></div>
+    <div>
+      Устойчивость:
+      <div id="stabilityBarContainer">
+        <div id="stabilityBar"></div>
+      </div>
+    </div>
+    <div>⛏ Глубина: <span id="depth">0</span></div>
+  </div>
   <div id="board"></div>
-  <div id="inventory">📦 Инвентарь: 🪨 x0   💎 x0   🪙 x0</div>  <script>
-    const board = document.getElementById("board");
-    const inventoryEl = document.getElementById("inventory");
+  <div id="log">Собирай кристаллы, укрепляй шахту!</div>
 
-    const colors = ['red', 'green', 'blue', 'purple', 'orange'];
+  <script>
+    const board = document.getElementById("board");
+    const energyEl = document.getElementById("energy");
+    const depthEl = document.getElementById("depth");
+    const stabilityBar = document.getElementById("stabilityBar");
+    const log = document.getElementById("log");
+
     let grid = [];
     let dragging = null;
+    let energy = 1000;
+    let depth = 0;
+    let stability = 100; // проценты
 
-    let inventory = {
-      metal: 0,
-      crystal: 0,
-      gold: 0
-    };
+    const colors = ["red", "green", "blue", "orange", "purple"];
 
-    function createBoard() {
+    function createGrid() {
       board.innerHTML = "";
       grid = [];
       for (let i = 0; i < 36; i++) {
         const cell = document.createElement("div");
-        const color = colors[Math.floor(Math.random() * colors.length)];
-        cell.className = `cell ${color}`;
+        cell.className = "cell " + colors[Math.floor(Math.random() * colors.length)];
         board.appendChild(cell);
         grid.push(cell);
       }
     }
 
-    function getColor(el) {
-      return colors.find(c => el.classList.contains(c));
+    function updateUI() {
+      energyEl.textContent = energy;
+      depthEl.textContent = depth;
+      stabilityBar.style.width = stability + "%";
+      if (stability > 60) stabilityBar.style.background = "green";
+      else if (stability > 30) stabilityBar.style.background = "orange";
+      else stabilityBar.style.background = "red";
     }
 
     function checkMatches() {
       const matches = [];
       for (let r = 0; r < 6; r++) {
         for (let c = 0; c < 4; c++) {
-          let i = r * 6 + c;
-          let a = grid[i], b = grid[i + 1], c_ = grid[i + 2];
-          if (getColor(a) === getColor(b) && getColor(b) === getColor(c_))
+          const i = r * 6 + c;
+          const a = grid[i], b = grid[i + 1], c_ = grid[i + 2];
+          if (a && b && c_ && a.className === b.className && b.className === c_.className) {
             matches.push([i, i + 1, i + 2]);
-        }
-      }
-      for (let c = 0; c < 6; c++) {
-        for (let r = 0; r < 4; r++) {
-          let i = r * 6 + c;
-          let a = grid[i], b = grid[i + 6], c_ = grid[i + 12];
-          if (getColor(a) === getColor(b) && getColor(b) === getColor(c_))
-            matches.push([i, i + 6, i + 12]);
+          }
         }
       }
       return matches;
     }
 
-    function applyMatchRewards(matches) {
-      let addedMetal = 0;
-      let addedCrystal = 0;
-      let addedGold = 0;
-
-      for (let group of matches) {
-        const color = getColor(grid[group[0]]);
-        if (color === 'red' && Math.random() < 0.4) addedMetal++;
-        if ((color === 'purple' || color === 'orange') && Math.random() < 0.3) addedCrystal++;
-        if (Math.random() < 0.05) addedGold++;
+    function resolveTurn() {
+      if (energy < 5) {
+        log.textContent = "Недостаточно искры!";
+        return;
       }
 
-      inventory.metal += addedMetal;
-      inventory.crystal += addedCrystal;
-      inventory.gold += addedGold;
+      energy -= 5;
 
-      updateInventory();
-    }
-
-    function updateInventory() {
-      inventoryEl.textContent = `📦 Инвентарь: 🪨 x${inventory.metal}   💎 x${inventory.crystal}   🪙 x${inventory.gold}`;
-    }
-
-    board.addEventListener("mousedown", e => {
-      if (e.target.classList.contains("cell")) dragging = e.target;
-    });
-    board.addEventListener("mousemove", e => {
-      if (dragging && e.target.classList.contains("cell") && e.target !== dragging) {
-        [dragging.className, e.target.className] = [e.target.className, dragging.className];
-        dragging = null;
-        const matches = checkMatches();
-        if (matches.length > 0) {
-          applyMatchRewards(matches);
+      const matches = checkMatches();
+      if (matches.length === 0) {
+        log.textContent = "Нет комбинаций.";
+        stability -= 10;
+        if (stability <= 0) {
+          log.textContent = "💥 Обвал шахты! Потеряна часть ресурсов.";
+          depth = Math.floor(depth / 2);
+          stability = 100;
         }
+        updateUI();
+        return;
       }
-    });
-    board.addEventListener("mouseup", () => dragging = null);
 
-    createBoard();
-  </script></body>
+      let red = 0, green = 0, blue = 0, orange = 0, purple = 0;
+      matches.forEach(group => {
+        const color = colors.find(c => grid[group[0]].classList.contains(c));
+        group.forEach(i => {
+          grid[i].className = "cell";
+        });
+        if (color === "red") red += group.length;
+        if (color === "green") green += group.length;
+        if (color === "blue") blue += group.length;
+        if (color === "orange") orange += group.length;
+        if (color === "purple") purple += group.length;
+      });
+
+      depth += red;
+      stability += blue * 3;
+      if (stability > 100) stability = 100;
+
+      log.textContent = `⚒ Урон: ${red}, 💚 Лечение: ${green}, 🛡 Укрепление: ${blue}`;
+      createGrid();
+      updateUI();
+    }
+
+    board.addEventListener("click", resolveTurn);
+
+    createGrid();
+    updateUI();
+
+    // Автоматическое ухудшение устойчивости
+    setInterval(() => {
+      stability -= 10;
+      if (stability <= 0) {
+        log.textContent = "💥 Обвал шахты!";
+        stability = 100;
+        depth = Math.floor(depth / 2);
+      }
+      updateUI();
+    }, 20000);
+  </script>
+</body>
 </html>
