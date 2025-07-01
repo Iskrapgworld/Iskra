@@ -2,208 +2,331 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>ИСКРА: Битва</title>
   <style>
     body {
       margin: 0;
+      font-family: Arial, sans-serif;
       background-color: #111;
-      color: #fff;
-      font-family: sans-serif;
-      text-align: center;
-    }
-    h1 {
-      color: #ffa500;
-      margin: 10px 0;
-    }
-    #topBar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 5px 10px;
-      font-size: 14px;
-    }
-    #timerBarContainer {
-      flex-grow: 1;
-      height: 10px;
-      margin: 0 10px;
-      background: #444;
-      border-radius: 5px;
+      color: white;
       overflow: hidden;
     }
-    #timerBar {
-      height: 100%;
-      width: 100%;
-      background: linear-gradient(90deg, #33ff33, #ffff00);
-      transition: width 1s linear;
+
+    #overlay, #endScreen {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: black;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      z-index: 10;
     }
-    #battleLog {
-      margin: 5px;
-      padding: 4px;
-      font-size: 14px;
-      min-height: 30px;
-    }
+
     #board {
       display: grid;
       grid-template-columns: repeat(6, 1fr);
+      width: 90vw;
+      max-width: 400px;
+      margin: 0 auto;
       gap: 4px;
-      width: 360px;
-      margin: 20px auto 0 auto;
-      transition: opacity 0.3s ease;
+      margin-top: 20px;
     }
+
     .cell {
-      width: 58px;
-      height: 58px;
+      width: 100%;
+      padding-top: 100%;
       border-radius: 50%;
-      transition: transform 0.3s ease, opacity 1s ease;
+      position: relative;
+      background-color: grey;
+      cursor: pointer;
     }
-    .red    { background: radial-gradient(circle, #ff4d4d, #990000); }
-    .green  { background: radial-gradient(circle, #66ff66, #006600); }
-    .blue   { background: radial-gradient(circle, #66ccff, #003366); }
-    .orange { background: radial-gradient(circle, #ffaa33, #994400); }
-    .purple { background: radial-gradient(circle, #cc99ff, #550088); }
-    .highlight { box-shadow: 0 0 10px 4px #ffffff88; }
-    .fade { opacity: 0; }
-    .enemy-turn #board {
-      pointer-events: none;
-      opacity: 0.2;
+
+    .cell-inner {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      border-radius: 50%;
+      background-size: cover;
     }
-    #overlay, #endScreen {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.85);
+
+    .red { background: red; }
+    .green { background: green; }
+    .blue { background: blue; }
+    .orange { background: orange; }
+    .purple { background: purple; }
+
+    #stats, #enemyStats {
       display: flex;
-      justify-content: center;
-      align-items: center;
       flex-direction: column;
-      z-index: 999;
-    }
-    .floatText {
-      position: absolute;
+      gap: 4px;
       font-size: 14px;
+      margin: 10px;
+    }
+
+    #battleLog {
+      text-align: center;
+      font-size: 18px;
+      margin-top: 8px;
+      min-height: 24px;
+    }
+
+    .bar {
+      height: 10px;
+      background: green;
+      border-radius: 4px;
+      margin-top: 2px;
+    }
+
+    .bar-container {
+      background: #333;
+      border-radius: 4px;
+      width: 100%;
+    }
+
+    #turnIndicator {
+      text-align: center;
       font-weight: bold;
-      pointer-events: none;
-      animation: floatUp 2.5s ease forwards;
-    }
-    @keyframes floatUp {
-      from { opacity: 1; transform: translateY(0); }
-      to   { opacity: 0; transform: translateY(-30px); }
-    }
-    #overlay input {
-      padding: 10px;
-      font-size: 16px;
-      border-radius: 5px;
-      border: none;
       margin-top: 10px;
     }
-    button {
+
+    #lightningBtn {
+      margin: 20px auto;
+      display: block;
       padding: 10px 20px;
-      margin-top: 10px;
       font-size: 16px;
+      background-color: gold;
+      color: black;
       border: none;
-      border-radius: 10px;
-      background: #6622cc;
-      color: white;
+      border-radius: 8px;
+      cursor: pointer;
     }
-    #lightningButton {
-      display: none;
-      position: absolute;
-      bottom: 100px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #ffcc00;
-      color: #000;
-      font-weight: bold;
+
+    #lightningBtn:disabled {
+      background: #666;
+      color: #ccc;
+    }
+
+    .fade-effect {
+      animation: fadeOut 1s forwards;
+    }
+
+    @keyframes fadeOut {
+      from { opacity: 1; }
+      to { opacity: 0; }
     }
   </style>
 </head>
 <body>
-  <h1>🔥 ИСКРА: Битва 🔥</h1>
-  <div id="topBar">
-    <div>
-      ❤️ <span id="hp">200</span> <span id="healText"></span><br>
-      🛡 <span id="shield">100</span> <span id="defText"></span><br>
-      💎 <span id="mana">0</span>
-    </div>
-    <div id="timerBarContainer"><div id="timerBar"></div></div>
-    <div>
-      💀 <span id="enemyHp">100</span> <span id="enemyHealText"></span><br>
-      🛡 <span id="enemyShield">100</span> <span id="enemyDefText"></span><br>
-      💎 <span id="enemyMana">0</span>
-    </div>
-  </div>
-  <div id="battleLog">Комбо появится здесь...</div>
-  <div id="board"></div>
+<div id="overlay">
+  <h2>Введите имя:</h2>
+  <input type="text" id="nickname" placeholder="Ваше имя" />
+  <button onclick="startGame()">В бой!</button>
+</div>
 
-  <button id="lightningButton" onclick="useLightning()">⚡ Молния (-20 маны)</button>
+<h1 style="text-align:center;">🔥 ИСКРА: Битва 🔥</h1>
 
-  <div id="overlay">
-    <h2>Введите имя:</h2>
-    <input id="nickname" placeholder="Имя игрока">
-    <button onclick="startGame()">В бой!</button>
-  </div>
-  <div id="endScreen" style="display:none;">
-    <h2 id="endMessage">Победа!</h2>
-    <button onclick="startGame()">Сыграть снова</button>
+<div style="display: flex; justify-content: space-between; padding: 0 10px;">
+  <div id="stats">
+    <div>Вы: <br/>❤️ <span id="playerHp">200</span><br/>
+         🛡 <span id="playerShield">100</span><br/>
+         🔮 <span id="playerMana">0</span></div>
   </div>
 
-  <script>
-    // Здесь начинается JS — основной код
-    let hp = 200, shield = 100, mana = 0;
-    let enemyHp = 100, enemyShield = 100, enemyMana = 0;
-    let isPlayerTurn = true;
-    let lightningUsed = false;
+  <div id="enemyStats">
+    <div>Монстр:<br/>💀 <span id="enemyHp">100</span><br/>
+         🛡 <span id="enemyShield">100</span><br/>
+         🔮 <span id="enemyMana">0</span></div>
+  </div>
+</div>
 
-    const hpEl = document.getElementById("hp");
-    const shieldEl = document.getElementById("shield");
-    const manaEl = document.getElementById("mana");
-    const enemyHpEl = document.getElementById("enemyHp");
-    const enemyShieldEl = document.getElementById("enemyShield");
-    const enemyManaEl = document.getElementById("enemyMana");
-    const lightningBtn = document.getElementById("lightningButton");
-    const battleLog = document.getElementById("battleLog");
-    const board = document.getElementById("board");
-    const timerBar = document.getElementById("timerBar");
+<div id="battleLog">Комбо появится здесь...</div>
+<div id="board"></div>
+<button id="lightningBtn" onclick="useLightning()">⚡ Молния (20 маны)</button>
+<script>
+  let player = {
+    hp: 200,
+    shield: 100,
+    mana: 0,
+    crit: 0,
+    power: 1,
+    intellect: 1,
+    luck: 1
+  };
 
-    // Остальной JS-код — логика, передвижения, анимации, каскады, использование молнии, обновление статов, завершение боя
+  let enemy = {
+    hp: 100,
+    shield: 100,
+    mana: 0
+  };
 
-    // Пример логики отображения кнопки молнии:
-    function updateLightningButton() {
-      lightningBtn.style.display = isPlayerTurn && mana >= 20 ? "block" : "none";
+  const boardSize = 6;
+  const types = ['red', 'green', 'blue', 'orange', 'purple'];
+  let board = [];
+  let selected = null;
+  let playerTurn = true;
+
+  const playerHpEl = document.getElementById('playerHp');
+  const playerShieldEl = document.getElementById('playerShield');
+  const playerManaEl = document.getElementById('playerMana');
+  const enemyHpEl = document.getElementById('enemyHp');
+  const enemyShieldEl = document.getElementById('enemyShield');
+  const enemyManaEl = document.getElementById('enemyMana');
+  const boardEl = document.getElementById('board');
+  const battleLog = document.getElementById('battleLog');
+  const lightningBtn = document.getElementById('lightningBtn');
+
+  function startGame() {
+    document.getElementById('overlay').style.display = 'none';
+    initBoard();
+    renderBoard();
+    updateStats();
+  }
+
+  function initBoard() {
+    board = [];
+    do {
+      for (let i = 0; i < boardSize * boardSize; i++) {
+        board[i] = types[Math.floor(Math.random() * types.length)];
+      }
+    } while (checkMatches().length > 0);
+  }
+
+  function renderBoard() {
+    boardEl.innerHTML = '';
+    board.forEach((type, index) => {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      const inner = document.createElement('div');
+      inner.className = 'cell-inner ' + type;
+      cell.appendChild(inner);
+      cell.onclick = () => handleClick(index);
+      boardEl.appendChild(cell);
+    });
+  }
+
+  function updateStats() {
+    playerHpEl.textContent = player.hp;
+    playerShieldEl.textContent = player.shield;
+    playerManaEl.textContent = player.mana;
+    enemyHpEl.textContent = enemy.hp;
+    enemyShieldEl.textContent = enemy.shield;
+    enemyManaEl.textContent = enemy.mana;
+    lightningBtn.disabled = !playerTurn || player.mana < 20;
+  }
+
+  function handleClick(index) {
+    if (!playerTurn) return;
+    if (selected === null) {
+      selected = index;
+    } else {
+      swap(selected, index);
+      selected = null;
+      const matches = checkMatches();
+      if (matches.length > 0) {
+        handleMatches(matches);
+      } else {
+        swap(index, selected); // undo
+      }
+    }
+  }
+
+  function swap(i, j) {
+    [board[i], board[j]] = [board[j], board[i]];
+    renderBoard();
+  }
+
+  function checkMatches() {
+    const matches = [];
+    for (let y = 0; y < boardSize; y++) {
+      for (let x = 0; x < boardSize - 2; x++) {
+        const i = y * boardSize + x;
+        if (board[i] === board[i + 1] && board[i] === board[i + 2]) {
+          matches.push(i, i + 1, i + 2);
+        }
+      }
+    }
+    for (let x = 0; x < boardSize; x++) {
+      for (let y = 0; y < boardSize - 2; y++) {
+        const i = y * boardSize + x;
+        if (board[i] === board[i + boardSize] && board[i] === board[i + boardSize * 2]) {
+          matches.push(i, i + boardSize, i + boardSize * 2);
+        }
+      }
+    }
+    return [...new Set(matches)];
+  }
+
+  function handleMatches(matches) {
+    const colorCount = {};
+    matches.forEach(i => {
+      const type = board[i];
+      colorCount[type] = (colorCount[type] || 0) + 1;
+      board[i] = types[Math.floor(Math.random() * types.length)];
+    });
+
+    let totalDmg = 0;
+
+    if (colorCount['red']) {
+      const bonus = colorCount['red'] >= 5 ? 20 : 10;
+      totalDmg += bonus;
     }
 
-    function useLightning() {
-      if (mana < 20 || !isPlayerTurn) return;
-      mana -= 20;
+    if (colorCount['green']) {
+      const heal = colorCount['green'] >= 5 ? 10 : 5;
+      player.hp = Math.min(200, player.hp + heal);
+    }
+
+    if (colorCount['blue']) {
+      const shield = colorCount['blue'] >= 5 ? 10 : 5;
+      player.shield = Math.min(100, player.shield + shield);
+    }
+
+    if (colorCount['purple']) {
+      const mana = colorCount['purple'] >= 5 ? 20 : 10;
+      player.mana += mana;
+    }
+
+    applyDamageToEnemy(totalDmg);
+    updateStats();
+
+    setTimeout(() => {
+      playerTurn = false;
       updateStats();
-      log("⚡ Урон от молнии: 50");
-      applyDamage(50);
-      updateLightningButton();
-    }
+      enemyTurn();
+    }, 1000);
+  }
 
-    function applyDamage(dmg) {
-      let toShield = Math.min(dmg / 2, enemyShield);
-      enemyShield -= toShield;
-      enemyHp -= (dmg - toShield);
-      if (enemyShield < 0) enemyShield = 0;
-      if (enemyHp < 0) enemyHp = 0;
+  function applyDamageToEnemy(dmg) {
+    let shieldDmg = Math.min(dmg / 2, enemy.shield);
+    let hpDmg = dmg - shieldDmg;
+    enemy.shield -= shieldDmg;
+    enemy.hp -= hpDmg;
+    battleLog.textContent = `Комбо ×${dmg > 0 ? 1 : 0}, Урон: ${dmg}`;
+  }
+
+  function enemyTurn() {
+    setTimeout(() => {
+      const dmg = 10;
+      let shieldDmg = Math.min(dmg / 2, player.shield);
+      let hpDmg = dmg - shieldDmg;
+      player.shield -= shieldDmg;
+      player.hp -= hpDmg;
+      battleLog.textContent = `Монстр атакует: ${dmg}`;
+      playerTurn = true;
       updateStats();
-    }
+    }, 2000);
+  }
 
-    function updateStats() {
-      hpEl.textContent = Math.max(0, Math.floor(hp));
-      shieldEl.textContent = Math.floor(shield);
-      manaEl.textContent = mana;
-      enemyHpEl.textContent = Math.max(0, Math.floor(enemyHp));
-      enemyShieldEl.textContent = Math.floor(enemyShield);
-      enemyManaEl.textContent = enemyMana;
-    }
-
-    function log(text) {
-      battleLog.innerHTML = `<span style="color:${isPlayerTurn ? '#66ff66' : '#ff4444'}">${text}</span>`;
-    }
-
-    // Остальная логика боя, комбо, падений и т.п. — остаётся прежней
-  </script>
+  function useLightning() {
+    if (!playerTurn || player.mana < 20) return;
+    player.mana -= 20;
+    const dmg = 50;
+    applyDamageToEnemy(dmg);
+    battleLog.textContent += ` + ⚡ Молния: ${dmg}`;
+    updateStats();
+  }
+</script>
 </body>
 </html>
