@@ -1,5 +1,4 @@
-<!DOCTYPE html>
-<html lang="ru">
+<!DOCTYPE html><html lang="ru">
 <head>
   <meta charset="UTF-8" />
   <title>ИСКРА: Битва</title>
@@ -67,7 +66,7 @@
       pointer-events: none;
       opacity: 0.2;
     }
-    #overlay, #endScreen {
+    #overlay, #endScreen, #levelUpScreen {
       position: fixed;
       top: 0; left: 0;
       width: 100%; height: 100%;
@@ -83,18 +82,11 @@
       font-size: 14px;
       font-weight: bold;
       pointer-events: none;
-      animation: floatUp 1s ease forwards;
+      animation: floatUp 3s ease forwards;
     }
     @keyframes floatUp {
       from { opacity: 1; transform: translateY(0); }
       to   { opacity: 0; transform: translateY(-30px); }
-    }
-    #overlay input {
-      padding: 10px;
-      font-size: 16px;
-      border-radius: 5px;
-      border: none;
-      margin-top: 10px;
     }
     button {
       padding: 10px 20px;
@@ -105,24 +97,32 @@
       background: #6622cc;
       color: white;
     }
-    #lightningButton {
-      margin: 10px auto;
-      display: none;
-      background: #ffcc00;
-      color: #000;
+    #levelUpScreen .stat {
+      display: flex;
+      justify-content: space-between;
+      width: 200px;
+      margin: 5px;
+    }
+    #levelUpScreen h2 {
+      color: #66ff66;
+    }
+    .plusBtn {
+      background: #33cc33;
+      color: black;
+      padding: 2px 8px;
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
   <h1>🔥 ИСКРА: Битва 🔥</h1>
   <div id="topBar">
-    <div>Вы:<br>❤️ <span id="hp">200</span> <span id="healText"></span><br>🛡 <span id="shield">100</span> <span id="defText"></span><br>🔮 <span id="mana">0</span></div>
+    <div>Вы:<br>❤️ <span id="hp">200</span><br>🛡 <span id="shield">100</span><br>💫 <span id="mana">0</span></div>
     <div id="timerBarContainer"><div id="timerBar"></div></div>
-    <div>Монстр:<br>💀 <span id="enemyHp">500</span> <span id="enemyHealText"></span><br>🛡 <span id="enemyShield">300</span> <span id="enemyDefText"></span><br>🔮 <span id="enemyMana">0</span></div>
+    <div>Монстр:<br>💀 <span id="enemyHp">100</span><br>🛡 <span id="enemyShield">100</span><br>💫 <span id="enemyMana">0</span></div>
   </div>
-  <div id="battleLog">Комбо появится здесь...</div>
+  <div id="battleLog">Битва начинается!</div>
   <div id="board"></div>
-  <button id="lightningButton" onclick="useLightning()">⚡ Молния (20 маны)</button>
   <div id="overlay">
     <h2>Введите имя:</h2>
     <input id="nickname" placeholder="Имя игрока">
@@ -130,45 +130,68 @@
   </div>
   <div id="endScreen" style="display:none;">
     <h2 id="endMessage">Победа!</h2>
-    <button onclick="startGame()">Сыграть снова</button>
+    <button onclick="showLevelUp()">Распределить очки</button>
+  </div>
+  <div id="levelUpScreen" style="display:none;">
+    <h2>Уровень <span id="playerLevelDisplay">1</span></h2>
+    <div>XP: <span id="playerXPDisplay">0</span> / <span id="nextXPDisplay">50</span></div>
+    <h3>Характеристики (доступно: <span id="pointsDisplay">5</span>)</h3>
+    <div class="stat">Сила: <span id="statStrength">1</span> <button class="plusBtn" onclick="increaseStat('strength')">+</button></div>
+    <div class="stat">Ловкость: <span id="statAgility">1</span> <button class="plusBtn" onclick="increaseStat('agility')">+</button></div>
+    <div class="stat">Живучесть: <span id="statVitality">1</span> <button class="plusBtn" onclick="increaseStat('vitality')">+</button></div>
+    <div class="stat">Интеллект: <span id="statIntellect">1</span> <button class="plusBtn" onclick="increaseStat('intellect')">+</button></div>
+    <div class="stat">Удача: <span id="statLuck">1</span> <button class="plusBtn" onclick="increaseStat('luck')">+</button></div>
+    <button onclick="closeLevelUp()">Продолжить</button>
   </div>
   <script>
-    const board = document.getElementById("board");
+    // Сюда будет вставлен JS-код с логикой маны, уровней, опыта, характеристик и суперудара
+  </script>
+</body>
+</html>
+<script>
+const board = document.getElementById("board");
 const hpEl = document.getElementById("hp");
 const shieldEl = document.getElementById("shield");
+const manaEl = document.getElementById("mana");
 const enemyHpEl = document.getElementById("enemyHp");
 const enemyShieldEl = document.getElementById("enemyShield");
+const enemyManaEl = document.getElementById("enemyMana");
 const timerBar = document.getElementById("timerBar");
 const overlay = document.getElementById("overlay");
 const endScreen = document.getElementById("endScreen");
 const endMessage = document.getElementById("endMessage");
 const battleLog = document.getElementById("battleLog");
-const manaEl = document.getElementById("mana");
-const enemyManaEl = document.getElementById("enemyMana");
-const lightningBtn = document.getElementById("lightningButton");
+const lightningBtn = document.getElementById("lightningBtn");
+const levelUpScreen = document.getElementById("levelUpScreen");
+const statPointsText = document.getElementById("statPoints");
+const stats = {
+  strength: 1, dexterity: 1, vitality: 1, intellect: 1, luck: 1
+};
+let statPoints = 0;
 
-let mana = 0, enemyMana = 0;
-let lightningUsed = false;
-
-const colors = ['red', 'green', 'blue', 'purple', 'orange'];
+const colors = ['red', 'green', 'blue', 'orange', 'purple'];
 let grid = [], dragging = null;
 let isPlayerTurn = true;
-let hp = 200, shield = 100, enemyHp = 500, enemyShield = 300;
+let hp = 200, shield = 100, mana = 0, enemyHp = 100, enemyShield = 100, enemyMana = 0;
+let level = 1, exp = 0, expNeeded = 50;
+let lightningUsed = false;
 let playerName = "Игрок", turnTimer;
-let comboAccumulator = {};
+let comboAccumulator = { red: 0, green: 0, blue: 0, orange: 0, purple: 0, count: 0 };
 
 function startGame() {
   playerName = document.getElementById("nickname").value || "Игрок";
   hp = 200; shield = 100; mana = 0;
-  enemyHp = 500; enemyShield = 300; enemyMana = 0;
-  lightningUsed = false;
+  enemyHp = 100; enemyShield = 100; enemyMana = 0;
+  comboAccumulator = { red: 0, green: 0, blue: 0, orange: 0, purple: 0, count: 0 };
   updateStats();
   createGrid();
   overlay.style.display = "none";
   endScreen.style.display = "none";
+  levelUpScreen.style.display = "none";
   document.body.classList.remove("enemy-turn");
-  isPlayerTurn = true;
+  lightningUsed = false;
   lightningBtn.style.display = "none";
+  isPlayerTurn = true;
   startTurn();
 }
 
@@ -182,16 +205,14 @@ function updateStats() {
 }
 
 function createGrid() {
-  do {
-    board.innerHTML = "";
-    grid = [];
-    for (let i = 0; i < 36; i++) {
-      const cell = document.createElement("div");
-      cell.className = "cell " + colors[Math.floor(Math.random() * colors.length)];
-      board.appendChild(cell);
-      grid.push(cell);
-    }
-  } while (checkMatches().length > 0); // без стартовых комбинаций
+  board.innerHTML = "";
+  grid = [];
+  for (let i = 0; i < 36; i++) {
+    const cell = document.createElement("div");
+    cell.className = "cell " + colors[Math.floor(Math.random() * colors.length)];
+    board.appendChild(cell);
+    grid.push(cell);
+  }
 }
 
 function index(r, c) {
@@ -200,13 +221,14 @@ function index(r, c) {
 function getColor(el) {
   return colors.find(c => el.classList.contains(c));
 }
+
 function startTurn() {
   isPlayerTurn = true;
-  lightningUsed = false;
   comboAccumulator = { red: 0, green: 0, blue: 0, orange: 0, purple: 0, count: 0 };
+  lightningUsed = false;
+  lightningBtn.style.display = mana >= 20 ? "inline-block" : "none";
   document.body.classList.remove("enemy-turn");
   board.style.pointerEvents = "auto";
-  lightningBtn.style.display = mana >= 20 ? "inline-block" : "none";
   let time = 20;
   timerBar.style.width = "100%";
   clearInterval(turnTimer);
@@ -220,6 +242,24 @@ function startTurn() {
     }
   }, 1000);
 }
+
+function lightningStrike() {
+  if (!isPlayerTurn || mana < 20 || lightningUsed) return;
+  mana -= 20;
+  lightningUsed = true;
+  let damage = 50 + Math.floor(50 * stats.intellect / 100);
+  if (enemyShield >= damage / 2) {
+    enemyShield -= damage / 2;
+    enemyHp -= damage / 2;
+  } else {
+    let leftover = damage / 2 - enemyShield;
+    enemyShield = 0;
+    enemyHp -= damage / 2 + leftover;
+  }
+  battleLog.innerHTML += `<div style="color:#88f">⚡ Молния: ${damage} урона!</div>`;
+  updateStats();
+}
+
 function resolveCascade() {
   const matches = checkMatches();
   if (matches.length === 0) {
@@ -228,12 +268,14 @@ function resolveCascade() {
     isPlayerTurn ? setTimeout(monsterTurn, 800) : setTimeout(startTurn, 800);
     return;
   }
+
   matches.forEach(g => {
     const color = getColor(grid[g[0]]);
     comboAccumulator[color] = (comboAccumulator[color] || 0) + g.length;
     comboAccumulator.count += 1;
     g.forEach(i => grid[i].classList.add("highlight"));
   });
+
   setTimeout(() => {
     matches.flat().forEach(i => {
       grid[i].classList.remove("highlight");
@@ -246,87 +288,60 @@ function resolveCascade() {
     }, 600);
   }, 1000);
 }
+
 function applyEffects() {
   const { red, green, blue, orange, purple, count } = comboAccumulator;
-  let dmg = red >= 5 ? 20 : red >= 3 ? 10 : 0;
+
+  let damage = red >= 5 ? 20 : red >= 3 ? 10 : 0;
   let heal = green >= 5 ? 10 : green >= 3 ? 5 : 0;
   let def = blue >= 5 ? 10 : blue >= 3 ? 5 : 0;
-  let critChance = orange;
+  let crit = orange; // 1 камень = +1% крита
   let manaGain = purple >= 5 ? 20 : purple >= 3 ? 10 : 0;
 
-  if (isPlayerTurn) {
-    mana += manaGain;
-    if (mana > 100) mana = 100;
-  } else {
-    enemyMana += manaGain;
-    if (enemyMana > 100) enemyMana = 100;
-  }
+  // Применение бонусов характеристик
+  damage += Math.floor(damage * stats.strength / 100);
+  def += Math.floor(def * stats.dexterity / 100);
+  heal += Math.floor(heal * stats.vitality / 100);
+  crit += stats.luck;
+  manaGain += Math.floor(manaGain * stats.intellect / 100);
 
-  let isCrit = Math.random() * 100 < critChance;
-  let totalDmg = dmg + (isCrit ? dmg : 0);
-  if (isPlayerTurn && lightningUsed) totalDmg += 50;
+  let isCrit = Math.random() * 100 < crit;
+  if (isCrit) damage *= 2;
 
   if (isPlayerTurn) {
-    let half = Math.floor(totalDmg / 2);
-    if (enemyShield >= half) {
-      enemyShield -= half;
-      enemyHp -= (totalDmg - half);
+    if (enemyShield >= damage / 2) {
+      enemyShield -= damage / 2;
+      enemyHp -= damage / 2;
     } else {
-      let rem = half - enemyShield;
+      let rest = damage / 2 - enemyShield;
       enemyShield = 0;
-      enemyHp -= (totalDmg - half + rem);
+      enemyHp -= damage / 2 + rest;
     }
     shield += def;
     hp += heal;
+    mana += manaGain;
     if (hp > 200) hp = 200;
-
-    if (heal > 0) float("+" + heal, hpEl, "#00ff00");
-    if (def > 0) float("+" + def, shieldEl, "#3399ff");
-
-    battleLog.innerHTML = `<span style="color:#66ff66">Комбо ×${count}, Урон: ${dmg}${isCrit ? ' (КРИТ!)' : ''}${lightningUsed ? ', +50 от молнии' : ''}</span>`;
   } else {
-    let half = Math.floor(totalDmg / 2);
-    if (shield >= half) {
-      shield -= half;
-      hp -= (totalDmg - half);
+    if (shield >= damage / 2) {
+      shield -= damage / 2;
+      hp -= damage / 2;
     } else {
-      let rem = half - shield;
+      let rest = damage / 2 - shield;
       shield = 0;
-      hp -= (totalDmg - half + rem);
+      hp -= damage / 2 + rest;
     }
     enemyShield += def;
     enemyHp += heal;
-    if (enemyHp > 500) enemyHp = 500;
-    if (enemyShield > 300) enemyShield = 300;
-
-    if (heal > 0) float("+" + heal, enemyHpEl, "#00ff00");
-    if (def > 0) float("+" + def, enemyShieldEl, "#3399ff");
-
-    battleLog.innerHTML = `<span style="color:#ff4444">Комбо ×${count}, Урон: ${dmg}${isCrit ? ' (КРИТ!)' : ''}</span>`;
+    if (enemyShield > 100) enemyShield = 100;
+    if (enemyHp > 100) enemyHp = 100;
+    enemyMana += manaGain;
   }
+
+  battleLog.innerHTML = `<div style="color:${isPlayerTurn ? '#66ff66' : '#ff4444'}">Комбо ×${count}, Урон: ${damage}${isCrit ? ' (КРИТ!)' : ''}</div>`;
   updateStats();
-  lightningBtn.style.display = "none";
   checkEnd();
 }
-function useLightning() {
-  if (mana >= 20 && isPlayerTurn && !lightningUsed) {
-    lightningUsed = true;
-    mana -= 20;
-    updateStats();
-    lightningBtn.style.display = "none";
-  }
-}
-function float(text, target, color) {
-  const box = document.createElement("div");
-  box.className = "floatText";
-  box.textContent = text;
-  box.style.color = color;
-  const rect = target.getBoundingClientRect();
-  box.style.left = (rect.left + rect.width / 2) + "px";
-  box.style.top = (rect.top - 10) + "px";
-  document.body.appendChild(box);
-  setTimeout(() => box.remove(), 1500);
-}
+
 function checkEnd() {
   if (hp <= 0) {
     endMessage.textContent = "Победа монстра!";
@@ -334,12 +349,26 @@ function checkEnd() {
     return true;
   }
   if (enemyHp <= 0) {
-    endMessage.textContent = `Победа ${playerName}!`;
+    endMessage.textContent = "Победа игрока!";
     endScreen.style.display = "flex";
+    gainExp(mana); // опыт за оставшуюся ману
     return true;
   }
   return false;
 }
+
+function gainExp(amount) {
+  exp += amount;
+  while (exp >= expNeeded) {
+    exp -= expNeeded;
+    level++;
+    statPoints += 5;
+    expNeeded *= 2;
+    levelUpScreen.style.display = "flex";
+    statPointsText.textContent = statPoints;
+  }
+}
+
 function dropDown() {
   for (let c = 0; c < 6; c++) {
     for (let r = 5; r > 0; r--) {
@@ -364,6 +393,7 @@ function dropDown() {
     }
   }
 }
+
 function checkMatches() {
   const matches = [];
   for (let r = 0; r < 6; r++) {
@@ -384,10 +414,11 @@ function checkMatches() {
   }
   return matches;
 }
+
 function monsterTurn() {
   isPlayerTurn = false;
-  document.body.classList.add("enemy-turn");
   lightningBtn.style.display = "none";
+  document.body.classList.add("enemy-turn");
   setTimeout(() => {
     let moved = false;
     for (let i = 0; i < 36 && !moved; i++) {
@@ -404,6 +435,8 @@ function monsterTurn() {
     if (!moved) setTimeout(startTurn, 1000);
   }, 800 + Math.random() * 1000);
 }
+
+// Drag logic
 board.addEventListener("touchstart", e => {
   const t = e.touches[0];
   const el = document.elementFromPoint(t.clientX, t.clientY);
@@ -425,5 +458,3 @@ board.addEventListener("touchend", () => {
   resolveCascade();
 });
 </script>
-</body>
-</html>
