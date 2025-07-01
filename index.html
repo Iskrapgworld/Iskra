@@ -1,3 +1,4 @@
+Дядя Митя:
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -132,6 +133,7 @@ const hpEl = document.getElementById("hp");
 const shieldEl = document.getElementById("shield");
 const enemyHpEl = document.getElementById("enemyHp");
 const enemyShieldEl = document.getElementById("enemyShield");
+
 const timerBar = document.getElementById("timerBar");
 const overlay = document.getElementById("overlay");
 const endScreen = document.getElementById("endScreen");
@@ -247,8 +249,8 @@ function applyEffects() {
   const isCrit = Math.random() * 100 < critChance;
   if (isCrit) dmg *= 2;
 
-  const logText = `Комбо ×${count}, Урон: ${dmg}${isCrit ? ' (КРИТ!)' : ''}`;
-  battleLog.innerHTML = `<span style="color:${isPlayerTurn ? '#66ff66' : '#ff4444'}">${logText}</span>`;
+  const logText = Комбо ×${count}, Урон: ${dmg}${isCrit ? ' (КРИТ!)' : ''};
+  battleLog.innerHTML = <span style="color:${isPlayerTurn ? '#66ff66' : '#ff4444'}">${logText}</span>;
 
   if (isPlayerTurn) {
     let half = Math.floor(dmg / 2);
@@ -267,7 +269,7 @@ function applyEffects() {
     float("+ " + heal, hpEl, "#00ff00");
     float("+ " + def, shieldEl, "#3399ff");
 
-  } else {
+} else {
     let half = Math.floor(dmg / 2);
     if (shield >= half) {
       shield -= half;
