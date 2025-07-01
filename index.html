@@ -1,132 +1,274 @@
 <!DOCTYPE html><html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <title>ИСКРА: Битва — v1.1</title>
+  <meta charset="UTF-8">
+  <title>PG: Версия 1.4</title>
   <style>
     body {
       margin: 0;
+      font-family: sans-serif;
       background-color: #111;
       color: #fff;
-      font-family: sans-serif;
+    }
+    h1, h2 {
       text-align: center;
-    }
-    h1 {
       color: #ffa500;
-      margin: 10px 0;
     }
-    #mainMenu, #charStats, #endScreen, #battleSection {
+    .screen {
       display: none;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
       padding: 20px;
     }
-    .visible {
-      display: flex !important;
+    .active {
+      display: block;
     }
-    .statRow {
-      margin: 5px;
+    #menu, #characterScreen {
+      text-align: center;
     }
     button {
       padding: 10px 20px;
-      margin: 5px;
+      margin: 10px;
       font-size: 16px;
       border: none;
       border-radius: 10px;
       background: #6622cc;
       color: white;
-      cursor: pointer;
     }
-    .plusBtn {
-      background: #3399ff;
-      margin-left: 10px;
+    .stats {
+      margin: 20px auto;
+      text-align: center;
+      max-width: 300px;
     }
-    #version {
-      position: fixed;
-      bottom: 5px;
-      right: 10px;
-      font-size: 12px;
-      color: #666;
+    .stats div {
+      margin-bottom: 10px;
+      font-size: 18px;
     }
   </style>
 </head>
 <body>
-  <h1>🔥 ИСКРА: Битва 🔥</h1>  <div id="overlay" class="visible">
+  <div id="startScreen" class="screen active">
+    <h1>ИСКРА: Битва (v1.4)</h1>
     <h2>Введите имя:</h2>
     <input id="nickname" placeholder="Имя игрока">
-    <button onclick="showMainMenu()">Продолжить</button>
-  </div>  <div id="mainMenu">
-    <button onclick="startBattle()">В БОЙ!</button>
-    <button onclick="showCharStats()">Параметры персонажа</button>
-  </div>  <div id="charStats">
-    <h2>Параметры персонажа</h2>
-    <div id="charInfo"></div>
-    <button onclick="backToMenu()">Назад</button>
-  </div>  <div id="battleSection">
-    <!-- Тут будет бой -->
-    <p>БОЙ НАЧАЛСЯ (пока пусто, заглушка)</p>
-    <button onclick="backToMenu()">Выйти из боя</button>
-  </div>  <div id="version">Версия 1.1</div>  <script>
-    let player = {
-      name: "Игрок",
-      level: 1,
-      xp: 0,
-      xpToNext: 100,
-      freePoints: 5,
-      stats: {
-        strength: 1,
-        dexterity: 1,
-        vitality: 1,
-        intelligence: 1,
-        luck: 1
-      }
+    <br><br>
+    <button onclick="enterMenu()">Продолжить</button>
+  </div>  <div id="menu" class="screen">
+    <h1>Меню</h1>
+    <button onclick="startBattle()">В Бой</button>
+    <button onclick="openCharacter()">Параметры персонажа</button>
+  </div>  <div id="characterScreen" class="screen">
+    <h1>Параметры персонажа</h1>
+    <div>Опыт (Искра): <span id="expAmount">0</span></div>
+    <div class="stats">
+      <div>Сила: <span id="str">1</span> <button onclick="upgradeStat('str')">+</button></div>
+      <div>Ловкость: <span id="agi">1</span> <button onclick="upgradeStat('agi')">+</button></div>
+      <div>Живучесть: <span id="vit">1</span> <button onclick="upgradeStat('vit')">+</button></div>
+      <div>Интеллект: <span id="int">1</span> <button onclick="upgradeStat('int')">+</button></div>
+      <div>Удача: <span id="luck">1</span> <button onclick="upgradeStat('luck')">+</button></div>
+    </div>
+    <button onclick="goBack()">Назад</button>
+  </div>  <div id="battleScreen" class="screen">
+    <!-- Здесь будет игровое поле и логика боя (подключу в JS части) -->
+  </div>  <script>
+    let playerName = "Игрок";
+    let experience = 0;
+    let stats = {
+      str: 1,
+      agi: 1,
+      vit: 1,
+      int: 1,
+      luck: 1
     };
+    let unspentPoints = 0;
 
-    function showMainMenu() {
-      player.name = document.getElementById("nickname").value || "Игрок";
-      document.getElementById("overlay").classList.remove("visible");
-      document.getElementById("mainMenu").classList.add("visible");
-    }
-
-    function backToMenu() {
-      document.getElementById("charStats").classList.remove("visible");
-      document.getElementById("battleSection").classList.remove("visible");
-      document.getElementById("mainMenu").classList.add("visible");
-    }
-
-    function showCharStats() {
-      document.getElementById("mainMenu").classList.remove("visible");
-      document.getElementById("charStats").classList.add("visible");
-      renderCharStats();
+    function enterMenu() {
+      const nameInput = document.getElementById("nickname");
+      playerName = nameInput.value || "Игрок";
+      switchScreen("menu");
     }
 
     function startBattle() {
-      document.getElementById("mainMenu").classList.remove("visible");
-      document.getElementById("battleSection").classList.add("visible");
-      // Тут в будущем вставим боевую систему
+      switchScreen("battleScreen");
+      // Игровая логика боя будет здесь в JS-коде во второй части
     }
 
-    function renderCharStats() {
-      const info = document.getElementById("charInfo");
-      info.innerHTML = `
-        <div class='statRow'>Имя: ${player.name}</div>
-        <div class='statRow'>Уровень: ${player.level}</div>
-        <div class='statRow'>Опыт: ${player.xp} / ${player.xpToNext}</div>
-        <div class='statRow'>Свободные очки: ${player.freePoints}</div>
-        <div class='statRow'>Сила: ${player.stats.strength} <button class='plusBtn' onclick='upgradeStat("strength")'>+</button></div>
-        <div class='statRow'>Ловкость: ${player.stats.dexterity} <button class='plusBtn' onclick='upgradeStat("dexterity")'>+</button></div>
-        <div class='statRow'>Живучесть: ${player.stats.vitality} <button class='plusBtn' onclick='upgradeStat("vitality")'>+</button></div>
-        <div class='statRow'>Интеллект: ${player.stats.intelligence} <button class='plusBtn' onclick='upgradeStat("intelligence")'>+</button></div>
-        <div class='statRow'>Удача: ${player.stats.luck} <button class='plusBtn' onclick='upgradeStat("luck")'>+</button></div>
-      `;
+    function openCharacter() {
+      updateCharacterScreen();
+      switchScreen("characterScreen");
+    }
+
+    function goBack() {
+      switchScreen("menu");
+    }
+
+    function switchScreen(id) {
+      document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+      document.getElementById(id).classList.add("active");
+    }
+
+    function updateCharacterScreen() {
+      document.getElementById("expAmount").textContent = experience;
+      for (let stat in stats) {
+        document.getElementById(stat).textContent = stats[stat];
+      }
     }
 
     function upgradeStat(stat) {
-      if (player.freePoints > 0) {
-        player.stats[stat]++;
-        player.freePoints--;
-        renderCharStats();
+      if (experience >= 100) {
+        stats[stat]++;
+        experience -= 100;
+        updateCharacterScreen();
       }
     }
   </script></body>
 </html>
+<script>
+let stats = { strength: 1, agility: 1, vitality: 1, intellect: 1, luck: 1 };
+let experience = 0;
+
+function saveStats() {
+  localStorage.setItem("pg_stats", JSON.stringify(stats));
+  localStorage.setItem("pg_exp", experience);
+}
+
+function loadStats() {
+  const s = localStorage.getItem("pg_stats");
+  const e = localStorage.getItem("pg_exp");
+  if (s) stats = JSON.parse(s);
+  if (e) experience = parseInt(e);
+}
+
+function showMainMenu() {
+  document.getElementById("overlay").innerHTML = `
+    <h2>Добро пожаловать, ${playerName}</h2>
+    <button onclick="showBattle()">В бой</button>
+    <button onclick="showStats()">Параметры персонажа</button>
+  `;
+  document.getElementById("overlay").style.display = "flex";
+}
+
+function showStats() {
+  let available = Math.floor(experience / 100);
+  let html = `<h2>Параметры персонажа</h2>`;
+  html += `<div>Доступный опыт: ${experience}</div>`;
+  html += `<div>Доступно очков: ${available}</div>`;
+  for (let k in stats) {
+    html += `<div>${k.toUpperCase()}: ${stats[k]} <button onclick="upgrade('${k}')">+</button></div>`;
+  }
+  html += `<button onclick="showMainMenu()">Назад</button>`;
+  document.getElementById("overlay").innerHTML = html;
+}
+
+function upgrade(attr) {
+  if (experience >= 100) {
+    stats[attr]++;
+    experience -= 100;
+    saveStats();
+    showStats();
+  }
+}
+
+function startGame() {
+  playerName = document.getElementById("nickname").value || "Игрок";
+  loadStats();
+  showMainMenu();
+}
+
+function showBattle() {
+  document.getElementById("overlay").style.display = "none";
+  endScreen.style.display = "none";
+  document.body.classList.remove("enemy-turn");
+  isPlayerTurn = true;
+  lightningBtn.style.display = "none";
+  hp = 200; shield = 100; mana = 0;
+  enemyHp = 500; enemyShield = 300; enemyMana = 0;
+  updateStats();
+  createGrid();
+  startTurn();
+}
+
+function checkEnd() {
+  if (hp <= 0) {
+    endMessage.textContent = "Победа монстра!";
+    endScreen.style.display = "flex";
+    return true;
+  }
+  if (enemyHp <= 0) {
+    endMessage.textContent = "Победа игрока!";
+    endScreen.style.display = "flex";
+    experience += mana;
+    saveStats();
+    return true;
+  }
+  return false;
+}
+
+function applyEffects() {
+  const { red, green, blue, orange, purple, count } = comboAccumulator;
+  let dmg = red >= 5 ? 20 : red >= 3 ? 10 : 0;
+  let heal = green >= 5 ? 10 : green >= 3 ? 5 : 0;
+  let def = blue >= 5 ? 10 : blue >= 3 ? 5 : 0;
+  let critChance = orange + stats.luck;
+  let manaGain = purple >= 5 ? 20 : purple >= 3 ? 10 : 0;
+
+  dmg += Math.floor(dmg * stats.strength / 100);
+  def += Math.floor(def * stats.agility / 100);
+  heal += Math.floor(heal * stats.vitality / 100);
+
+  if (isPlayerTurn) {
+    mana += manaGain;
+    if (mana > 100) mana = 100;
+  } else {
+    enemyMana += manaGain;
+    if (enemyMana > 100) enemyMana = 100;
+  }
+
+  let isCrit = Math.random() * 100 < critChance;
+  let totalDmg = dmg + (isCrit ? dmg : 0);
+  if (isPlayerTurn && lightningUsed) {
+    totalDmg += 50 + Math.floor(50 * stats.intellect / 100);
+  }
+
+  if (isPlayerTurn) {
+    let half = Math.floor(totalDmg / 2);
+    if (enemyShield >= half) {
+      enemyShield -= half;
+      enemyHp -= (totalDmg - half);
+    } else {
+      let rem = half - enemyShield;
+      enemyShield = 0;
+      enemyHp -= (totalDmg - half + rem);
+    }
+    shield += def;
+    hp += heal;
+    if (hp > 200) hp = 200;
+
+    if (heal > 0) float("+" + heal, hpEl, "#00ff00");
+    if (def > 0) float("+" + def, shieldEl, "#3399ff");
+
+    battleLog.innerHTML = `<span style="color:#66ff66">Комбо ×${count}, Урон: ${dmg}${isCrit ? ' (КРИТ!)' : ''}${lightningUsed ? ', +Молния' : ''}</span>`;
+
+  } else {
+    let half = Math.floor(totalDmg / 2);
+    if (shield >= half) {
+      shield -= half;
+      hp -= (totalDmg - half);
+    } else {
+      let rem = half - shield;
+      shield = 0;
+      hp -= (totalDmg - half + rem);
+    }
+    enemyShield += def;
+    enemyHp += heal;
+    if (enemyHp > 500) enemyHp = 500;
+    if (enemyShield > 300) enemyShield = 300;
+
+    if (heal > 0) float("+" + heal, enemyHpEl, "#00ff00");
+    if (def > 0) float("+" + def, enemyShieldEl, "#3399ff");
+
+    battleLog.innerHTML = `<span style="color:#ff4444">Комбо ×${count}, Урон: ${dmg}${isCrit ? ' (КРИТ!)' : ''}</span>`;
+  }
+
+  updateStats();
+  lightningBtn.style.display = "none";
+  checkEnd();
+}
+</script>
