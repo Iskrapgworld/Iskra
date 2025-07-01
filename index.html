@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>ИСКРА: Шахта</title>
+  <title>ИСКРА: Битва</title>
   <style>
     body {
       margin: 0;
@@ -12,301 +12,253 @@
       text-align: center;
     }
     h1 {
-      color: #ffcc00;
-      margin-top: 10px;
+      color: #ffa500;
+      margin: 10px 0;
     }
     #topBar {
       display: flex;
-      justify-content: space-around;
-      margin: 10px;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 10px;
       font-size: 14px;
     }
-    .stat {
-      line-height: 1.6;
-    }
-    .bar {
-      height: 12px;
-      background: #333;
-      border-radius: 6px;
+    #timerBarContainer {
+      flex-grow: 1;
+      height: 10px;
+      margin: 0 10px;
+      background: #444;
+      border-radius: 5px;
       overflow: hidden;
-      margin-top: 3px;
     }
-    .bar-inner {
+    #timerBar {
       height: 100%;
-      transition: width 0.3s ease;
+      width: 100%;
+      background: linear-gradient(90deg, #33ff33, #ffff00);
+      transition: width 1s linear;
     }
-    #spark { color: #ffff66; }
+    #battleLog {
+      margin: 5px;
+      padding: 4px;
+      font-size: 14px;
+      min-height: 30px;
+    }
     #board {
       display: grid;
       grid-template-columns: repeat(6, 1fr);
       gap: 4px;
       width: 360px;
-      margin: 10px auto;
+      margin: 30px auto 10px auto;
+      transition: opacity 0.3s ease;
     }
     .cell {
       width: 58px;
       height: 58px;
       border-radius: 50%;
-      transition: transform 0.3s ease;
+      transition: transform 0.3s ease, opacity 1s ease;
     }
     .red    { background: radial-gradient(circle, #ff4d4d, #990000); }
     .green  { background: radial-gradient(circle, #66ff66, #006600); }
     .blue   { background: radial-gradient(circle, #66ccff, #003366); }
-    .orange { background: radial-gradient(circle, #ffaa00, #993300); }
-    .purple { background: radial-gradient(circle, #cc99ff, #330066); }
-    .highlight { box-shadow: 0 0 8px 4px #fff5; }
+    .purple { background: radial-gradient(circle, #dca0ff, #440066); }
+    .orange { background: radial-gradient(circle, #cc9955, #cc6600); }
+    .highlight { box-shadow: 0 0 10px 4px #ffffff88; }
     .fade { opacity: 0; }
-    button {
-      margin: 10px;
-      padding: 10px 20px;
+    .enemy-turn #board {
+      pointer-events: none;
+      opacity: 0.2;
+    }
+    #overlay, #endScreen, #mainMenu, #statsScreen {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.9);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      z-index: 999;
+    }
+    .floatText {
+      position: absolute;
+      font-size: 14px;
+      font-weight: bold;
+      pointer-events: none;
+      animation: floatUp 3s ease forwards;
+    }
+    @keyframes floatUp {
+      from { opacity: 1; transform: translateY(0); }
+      to   { opacity: 0; transform: translateY(-30px); }
+    }
+    input {
+      padding: 10px;
       font-size: 16px;
-      background: #444;
-      color: #fff;
+      border-radius: 5px;
+      border: none;
+      margin-top: 10px;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      font-size: 16px;
       border: none;
       border-radius: 10px;
+      background: #6622cc;
+      color: white;
     }
-    #result {
-      font-size: 14px;
-      margin-top: 10px;
-      min-height: 20px;
+    #lightningButton {
+      margin: 10px auto;
+      display: none;
+      background: #ffcc00;
+      color: #000;
     }
-    #depth {
-      font-size: 16px;
-      margin-bottom: 5px;
-      color: #aaa;
-    }
-    #timerBarContainer {
+    .stat-block {
+      background: #222;
+      padding: 10px;
+      margin: 5px;
+      border-radius: 10px;
       width: 300px;
-      height: 10px;
-      background: #333;
-      margin: 0 auto;
-      border-radius: 5px;
-      overflow: hidden;
-    }
-    #timerBar {
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(90deg, #33ff33, #ffff00);
-      transition: width 1s linear;
+      text-align: left;
     }
   </style>
 </head>
 <body>
-  <h1>⛏ Шахта Искры</h1>
-  <div id="depth">Глубина: 0 м (1 уровень)</div>
+  <h1>🔥 ИСКРА: Битва 🔥</h1>
+
   <div id="topBar">
-    <div class="stat">
-      ⚡ Искра: <span id="spark">1000</span>
-    </div>
-    <div class="stat">
-      💨 Воздух
-      <div class="bar"><div id="airBar" class="bar-inner" style="width:100%;background:#00ffcc;"></div></div>
-    </div>
-    <div class="stat">
-      🧱 Свод
-      <div class="bar"><div id="roofBar" class="bar-inner" style="width:100%;background:#3399ff;"></div></div>
-    </div>
+    <div>Вы:<br>❤️ <span id="hp">200</span> <span id="healText"></span><br>🛡 <span id="shield">100</span> <span id="defText"></span><br>🔮 <span id="mana">0</span></div>
+    <div id="timerBarContainer"><div id="timerBar"></div></div>
+    <div>Монстр:<br>💀 <span id="enemyHp">100</span> <span id="enemyHealText"></span><br>🛡 <span id="enemyShield">100</span> <span id="enemyDefText"></span><br>🔮 <span id="enemyMana">0</span></div>
   </div>
-  <div id="timerBarContainer"><div id="timerBar"></div></div>
+
+  <div id="battleLog">Комбо появится здесь...</div>
   <div id="board"></div>
-  <button onclick="startMiningTurn()">🔁 Следующий ход (-5 Искры)</button>
-  <div id="result"></div>
+  <button id="lightningButton" onclick="useLightning()">⚡ Молния (20 маны)</button>
 
+  <div id="overlay" style="display:flex;">
+    <h2>Введите имя:</h2>
+    <input id="nickname" placeholder="Имя игрока">
+    <button onclick="showMainMenu()">Продолжить</button>
+  </div>
+
+  <div id="mainMenu">
+    <h2>Привет, <span id="nickLabel"></span>!</h2>
+    <button onclick="startGame()">В бой</button>
+    <button onclick="showStats()">Параметры персонажа</button>
+  </div>
+
+  <div id="statsScreen">
+    <h2>Параметры персонажа</h2>
+    <div id="xpBlock"></div>
+    <div class="stat-block">
+      Сила: <span id="str">1</span> <button onclick="upgrade('str')">+</button><br>
+      Ловкость: <span id="agi">1</span> <button onclick="upgrade('agi')">+</button><br>
+      Живучесть: <span id="vit">1</span> <button onclick="upgrade('vit')">+</button><br>
+      Интеллект: <span id="int">1</span> <button onclick="upgrade('int')">+</button><br>
+      Удача: <span id="luck">1</span> <button onclick="upgrade('luck')">+</button>
+    </div>
+    <button onclick="showMainMenu()">Назад</button>
+  </div>
+
+  <div id="endScreen">
+    <h2 id="endMessage">Победа!</h2>
+    <button onclick="showMainMenu()">Продолжить</button>
+  </div>
   <script>
-    const colors = ['red', 'green', 'blue', 'orange', 'purple'];
-    const board = document.getElementById("board");
-    const sparkEl = document.getElementById("spark");
-    const airBar = document.getElementById("airBar");
-    const roofBar = document.getElementById("roofBar");
-    const result = document.getElementById("result");
-    const depthText = document.getElementById("depth");
-    const timerBar = document.getElementById("timerBar");
+    let hp = 200, shield = 100, enemyHp = 100, enemyShield = 100, mana = 0, enemyMana = 0;
+    let comboAccumulator = { red: 0, green: 0, blue: 0, orange: 0, purple: 0, count: 0 };
+    let xp = 0, str = 1, agi = 1, vit = 1, int = 1, luck = 1;
+    let isPlayerTurn = true, lightningUsed = false, turnTimer;
 
-    let spark = 1000;
-    let dragging = null;
-    let grid = [];
-    let depth = 0;
-    let air = 100;
-    let roof = 100;
-    let timer = 10;
-    let timerInterval, airInterval;
-    let level = 1;
+    const xpRequiredForLevel = [50, 100, 200]; // 100 опыта на первый уровень, и так далее
 
-    const layerHealth = {1: 100, 2: 150, 3: 300};
-    const layerLoot = {
-      1: {stone: 50, gold: 20, crystal: 5},
-      2: {stone: 70, gold: 30, crystal: 10},
-      3: {stone: 90, gold: 50, crystal: 20}
-    };
+    function showMainMenu() {
+      document.getElementById('overlay').style.display = 'none';
+      document.getElementById('mainMenu').style.display = 'flex';
+      document.getElementById('nickLabel').textContent = document.getElementById('nickname').value || "Игрок";
+    }
 
-    function createBoard() {
-      board.innerHTML = "";
-      grid = [];
-      for (let i = 0; i < 36; i++) {
-        const color = colors[Math.floor(Math.random() * colors.length)];
-        const cell = document.createElement("div");
-        cell.className = "cell " + color;
-        board.appendChild(cell);
-        grid.push(cell);
+    function showStats() {
+      document.getElementById('mainMenu').style.display = 'none';
+      document.getElementById('statsScreen').style.display = 'flex';
+      document.getElementById('xpBlock').innerHTML = `Опыт: ${xp} / ${xpRequiredForLevel[0]}`;
+    }
+
+    function upgrade(stat) {
+      const stats = { str, agi, vit, int, luck };
+      if (xp >= xpRequiredForLevel[0]) {
+        xp -= xpRequiredForLevel[0];
+        stats[stat] += 1;
+        updateStats();
       }
     }
 
-    function index(r, c) {
-      return r * 6 + c;
+    function updateStats() {
+      document.getElementById('str').textContent = str;
+      document.getElementById('agi').textContent = agi;
+      document.getElementById('vit').textContent = vit;
+      document.getElementById('int').textContent = int;
+      document.getElementById('luck').textContent = luck;
+      document.getElementById('xpBlock').innerHTML = `Опыт: ${xp} / ${xpRequiredForLevel[0]}`;
     }
 
-    function getColor(el) {
-      return colors.find(c => el.classList.contains(c));
+    function startGame() {
+      xp = 0;
+      hp = 200;
+      shield = 100;
+      enemyHp = 100;
+      enemyShield = 100;
+      mana = 0;
+      enemyMana = 0;
+      updateStats();
+      createGrid();
+      showMainMenu();
+      isPlayerTurn = true;
+      startTurn();
     }
 
-    function startMiningTurn() {
-      if (spark < 5) {
-        alert("Недостаточно Искры!");
-        return;
-      }
-      spark -= 5;
-      sparkEl.textContent = spark;
-      timer = 10;
-      timerBar.style.width = "100%";
-      if (timerInterval) clearInterval(timerInterval);
-      timerInterval = setInterval(() => {
-        timer--;
-        timerBar.style.width = (timer * 10) + "%";
-        if (timer <= 0) {
-          clearInterval(timerInterval);
-          resolveCascade();
-        }
-      }, 1000);
+    function createGrid() {
+      // your grid creation code here
     }
 
-    function startAirDrain() {
-      airInterval = setInterval(() => {
-        air -= 100 / 30; // 30 сек — 100%
-        if (air <= 0) {
-          air = 0;
-          clearInterval(airInterval);
-          result.textContent = "❌ Кончился воздух!";
-        }
-        airBar.style.width = air + "%";
-      }, 1000);
-    }
-
-    function checkMatches() {
-      const matches = [];
-      for (let r = 0; r < 6; r++) {
-        for (let c = 0; c < 4; c++) {
-          let i = index(r, c);
-          let a = grid[i], b = grid[i+1], c_ = grid[i+2];
-          if (getColor(a) === getColor(b) && getColor(b) === getColor(c_))
-            matches.push([i, i+1, i+2]);
-        }
-      }
-      for (let c = 0; c < 6; c++) {
-        for (let r = 0; r < 4; r++) {
-          let i = index(r, c);
-          let a = grid[i], b = grid[i+6], c_ = grid[i+12];
-          if (getColor(a) === getColor(b) && getColor(b) === getColor(c_))
-            matches.push([i, i+6, i+12]);
-        }
-      }
-      return matches;
+    function startTurn() {
+      // handle start of turn for player
     }
 
     function resolveCascade() {
-      const matches = checkMatches();
-      const tally = { red: 0, green: 0, blue: 0, orange: 0, purple: 0 };
-      if (matches.length === 0) {
-        result.textContent = "Комбинаций не найдено";
-        return;
-      }
-
-      matches.forEach(g => {
-        const color = getColor(grid[g[0]]);
-        tally[color] += g.length;
-        g.forEach(i => grid[i].classList.add("highlight"));
-      });
-
-      setTimeout(() => {
-        matches.flat().forEach(i => {
-          grid[i].classList.remove("highlight");
-          grid[i].classList.add("fade");
-        });
-        setTimeout(() => {
-          matches.flat().forEach(i => {
-            const newColor = colors[Math.floor(Math.random() * colors.length)];
-            grid[i].className = "cell " + newColor;
-            grid[i].classList.remove("fade");
-          });
-          applyMiningEffects(tally, matches.length);
-        }, 500);
-      }, 800);
+      // resolve matching combinations and effects
     }
 
-    function applyMiningEffects(tally, comboCount) {
-      let airGain = 0;
-      if (tally.green >= 3) airGain = 10 + (tally.green - 3) * 2;
-      air += airGain;
-      if (air > 100) air = 100;
-
-      roof -= 10; // рушится быстрее
-      if (tally.blue >= 3) roof += 10;
-      if (roof > 100) roof = 100;
-      if (roof < 0) roof = 0;
-
-      let healthMax = layerHealth[level];
-      let damage = (tally.red >= 5 ? 20 : tally.red >= 3 ? 10 : 0);
-      let comboBonus = Math.floor(comboCount * 0.05 * damage);
-      let total = damage + comboBonus;
-      let percent = Math.floor((total / healthMax) * 100);
-
-      depth += percent;
-      if (depth >= level * 100) {
-        level++;
-        depth = 0;
-        result.textContent = `🌟 Достигнут новый уровень шахты: ${level}`;
-      } else {
-        // добыча
-        let loot = "";
-        const chance = Math.random() * 100;
-        const lootTable = layerLoot[level] || {stone: 100, gold: 0, crystal: 0};
-        if (chance < lootTable.crystal) loot = "💎 Кристалл";
-        else if (chance < lootTable.gold) loot = "🥇 Золото";
-        else loot = "🪨 Железо";
-
-        result.textContent = `⛏ Раскопано: ${percent}% — Найдено: ${loot}`;
-      }
-
-      depthText.textContent = `Глубина: ${depth} м (${level} уровень)`;
-      airBar.style.width = air + "%";
-      roofBar.style.width = roof + "%";
-      sparkEl.textContent = spark;
-
-      if (roof <= 0) {
-        result.textContent = "❌ Обвал! Шахта разрушена!";
-        clearInterval(airInterval);
-      }
+    function applyEffects() {
+      // apply the effects after the player or enemy turns
     }
 
-    board.addEventListener("touchstart", e => {
-      const t = e.touches[0];
-      const el = document.elementFromPoint(t.clientX, t.clientY);
-      if (el && el.classList.contains("cell")) dragging = el;
-    });
-    board.addEventListener("touchmove", e => {
-      if (!dragging) return;
-      const t = e.touches[0];
-      const el = document.elementFromPoint(t.clientX, t.clientY);
-      if (el && el.classList.contains("cell") && el !== dragging) {
-        [dragging.className, el.className] = [el.className, dragging.className];
-        dragging = el;
-      }
-    });
-    board.addEventListener("touchend", () => {
-      dragging = null;
-    });
+    function monsterTurn() {
+      // monster's turn to play
+    }
 
-    createBoard();
-    startAirDrain();
+    function updateXP(manaGained) {
+      xp += manaGained;
+      if (xp >= xpRequiredForLevel[0]) {
+        xp = xp - xpRequiredForLevel[0];
+        upgrade('str'); // example of upgrading
+        xpRequiredForLevel.shift();
+      }
+      updateStats();
+    }
+
+    function float(text, target, color) {
+      const box = document.createElement("div");
+      box.className = "floatText";
+      box.textContent = text;
+      box.style.color = color;
+      const rect = target.getBoundingClientRect();
+      box.style.left = (rect.left + rect.width / 2) + "px";
+      box.style.top = (rect.top - 10) + "px";
+      document.body.appendChild(box);
+      setTimeout(() => box.remove(), 1500);
+    }
+
+    // More game logic goes here...
   </script>
 </body>
 </html>
