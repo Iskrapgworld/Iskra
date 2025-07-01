@@ -1,15 +1,49 @@
-<!DOCTYPE html><html lang="ru">
+<!DOCTYPE html>
+<html lang="ru">
 <head>
   <meta charset="UTF-8" />
   <title>ИСКРА: Шахта</title>
   <style>
-    body { margin:0; background:#111; color:#fff; font-family:sans-serif; text-align:center; }
-    h1 { color: #ffcc00; margin-top: 10px; }
-    #topBar { display:flex; justify-content: space-around; margin:10px; font-size:14px; }
-    .stat { line-height:1.6; }
-    .bar { height:12px; background:#333; border-radius:6px; overflow:hidden; margin-top:3px; }
-    .bar-inner { height:100%; transition:width 0.5s ease; }
-    #spark { color:#ffff66; }
+    body {
+      margin: 0;
+      background-color: #111;
+      color: #fff;
+      font-family: sans-serif;
+      text-align: center;
+    }
+    h1 {
+      color: #ffcc00;
+      margin-top: 10px;
+    }
+    #topBar {
+      display: flex;
+      justify-content: space-around;
+      margin: 10px;
+      font-size: 14px;
+    }
+    .stat {
+      line-height: 1.6;
+    }
+    .bar {
+      height: 12px;
+      background: #333;
+      border-radius: 6px;
+      overflow: hidden;
+      margin-top: 3px;
+    }
+    .bar-inner {
+      height: 100%;
+      transition: width 0.5s ease;
+    }
+    #spark { color: #ffff66; }
+
+    #turnTimerContainer {
+      width: 360px;
+      margin: 0 auto;
+      font-size: 14px;
+      color: #fff;
+    }
+
     #board {
       display: grid;
       grid-template-columns: repeat(6, 1fr);
@@ -18,7 +52,9 @@
       margin: 10px auto;
     }
     .cell {
-      width: 58px; height: 58px; border-radius: 50%;
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
       transition: transform 0.3s ease;
     }
     .red    { background: radial-gradient(circle, #ff4d4d, #990000); }
@@ -29,64 +65,123 @@
     .highlight { box-shadow: 0 0 8px 4px #fff5; }
     .fade { opacity: 0; }
     button {
-      margin: 10px; padding: 10px 20px; font-size: 16px;
-      background: #444; color: #fff; border: none; border-radius: 10px;
+      margin: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
+      background: #444;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
     }
-    #result { font-size:14px; margin-top:10px; min-height:20px; }
-    #depth, #progress { font-size:16px; margin: 5px 0; color: #aaa; }
+    #result {
+      font-size: 14px;
+      margin-top: 10px;
+      min-height: 20px;
+    }
+    #depth {
+      font-size: 16px;
+      margin-bottom: 5px;
+      color: #aaa;
+    }
   </style>
 </head>
 <body>
   <h1>⛏ Шахта Искры</h1>
   <div id="depth">Глубина: 0 м</div>
-  <div id="progress">Прогресс: 0%</div>
   <div id="topBar">
-    <div class="stat">⚡ Искра: <span id="spark">1000</span></div>
-    <div class="stat">💨 Воздух<div class="bar"><div id="airBar" class="bar-inner" style="width:100%;background:#00ffcc;"></div></div></div>
-    <div class="stat">🧱 Свод<div class="bar"><div id="roofBar" class="bar-inner" style="width:100%;background:#3399ff;"></div></div></div>
+    <div class="stat">
+      ⚡ Искра: <span id="spark">1000</span>
+    </div>
+    <div class="stat">
+      💨 Воздух
+      <div class="bar"><div id="airBar" class="bar-inner" style="width:100%;background:#00ffcc;"></div></div>
+    </div>
+    <div class="stat">
+      🧱 Свод
+      <div class="bar"><div id="roofBar" class="bar-inner" style="width:100%;background:#3399ff;"></div></div>
+    </div>
   </div>
+
+  <div id="turnTimerContainer">
+    ⏳ Ход: <span id="turnTime">10</span> сек
+    <div class="bar"><div id="turnTimerBar" class="bar-inner" style="width:100%;background:linear-gradient(90deg,#00ff00,#ff0000);"></div></div>
+  </div>
+
   <div id="board"></div>
   <button onclick="startMiningTurn()">🔁 Следующий ход (-5 Искры)</button>
-  <div id="result"></div>  <script>
-    const colors = ['red','green','blue','orange','purple'];
+  <div id="result"></div>
+
+  <script>
+    const colors = ['red', 'green', 'blue', 'orange', 'purple'];
     const board = document.getElementById("board");
     const sparkEl = document.getElementById("spark");
     const airBar = document.getElementById("airBar");
     const roofBar = document.getElementById("roofBar");
     const result = document.getElementById("result");
     const depthText = document.getElementById("depth");
-    const progressText = document.getElementById("progress");
+    const turnTimerBar = document.getElementById("turnTimerBar");
+    const turnTimeText = document.getElementById("turnTime");
 
-    let spark = 1000, dragging = null, grid = [], depth = 0, progress = 0;
-    let level = 1;
-    let rockHP = 100;
-
-    function setLevel(lvl) {
-      level = lvl;
-      if (lvl === 1) rockHP = 100;
-      if (lvl === 2) rockHP = 150;
-      if (lvl === 3) rockHP = 300;
-    }
+    let spark = 1000;
+    let dragging = null;
+    let grid = [];
+    let depth = 0;
+    let turnTimeLeft = 10;
+    let turnInterval = null;
+    let moveStarted = false;
 
     function createBoard() {
       board.innerHTML = "";
       grid = [];
       for (let i = 0; i < 36; i++) {
         const cell = document.createElement("div");
-        const color = colors[Math.floor(Math.random()*colors.length)];
+        const color = colors[Math.floor(Math.random() * colors.length)];
         cell.className = "cell " + color;
         board.appendChild(cell);
         grid.push(cell);
       }
     }
 
-    function index(r,c) { return r*6 + c; }
-    function getColor(el) { return colors.find(c => el.classList.contains(c)); }
+    function index(r, c) {
+      return r * 6 + c;
+    }
+
+    function getColor(el) {
+      return colors.find(c => el.classList.contains(c));
+    }
 
     function startMiningTurn() {
-      if (spark < 5) return alert("Недостаточно Искры!");
+      if (spark < 5) {
+        alert("Недостаточно Искры!");
+        return;
+      }
       spark -= 5;
       sparkEl.textContent = spark;
+      moveStarted = true;
+      startTurnTimer();
+    }
+
+    function startTurnTimer() {
+      clearInterval(turnInterval);
+      turnTimeLeft = 10;
+      turnTimeText.textContent = turnTimeLeft;
+      turnTimerBar.style.width = "100%";
+
+      turnInterval = setInterval(() => {
+        turnTimeLeft--;
+        turnTimeText.textContent = turnTimeLeft;
+        turnTimerBar.style.width = (turnTimeLeft * 10) + "%";
+
+        if (turnTimeLeft <= 0) {
+          clearInterval(turnInterval);
+          finishTurn();
+        }
+      }, 1000);
+    }
+
+    function finishTurn() {
+      turnTimerBar.style.width = "0%";
+      turnTimeText.textContent = "0";
       resolveCascade();
     }
 
@@ -94,18 +189,18 @@
       const matches = [];
       for (let r = 0; r < 6; r++) {
         for (let c = 0; c < 4; c++) {
-          let i = index(r,c);
-          let a=grid[i], b=grid[i+1], c_=grid[i+2];
+          let i = index(r, c);
+          let a = grid[i], b = grid[i+1], c_ = grid[i+2];
           if (getColor(a) === getColor(b) && getColor(b) === getColor(c_))
-            matches.push([i,i+1,i+2]);
+            matches.push([i, i+1, i+2]);
         }
       }
       for (let c = 0; c < 6; c++) {
         for (let r = 0; r < 4; r++) {
-          let i = index(r,c);
-          let a=grid[i], b=grid[i+6], c_=grid[i+12];
+          let i = index(r, c);
+          let a = grid[i], b = grid[i+6], c_ = grid[i+12];
           if (getColor(a) === getColor(b) && getColor(b) === getColor(c_))
-            matches.push([i,i+6,i+12]);
+            matches.push([i, i+6, i+12]);
         }
       }
       return matches;
@@ -113,17 +208,18 @@
 
     function resolveCascade() {
       const matches = checkMatches();
-      const tally = {red:0,green:0,blue:0,orange:0,purple:0, count:0};
+      const tally = { red: 0, green: 0, blue: 0, orange: 0, purple: 0 };
       if (matches.length === 0) {
-        result.textContent = "Нет комбинаций";
+        result.textContent = "Комбинаций не найдено";
         return;
       }
+
       matches.forEach(g => {
-        let color = getColor(grid[g[0]]);
+        const color = getColor(grid[g[0]]);
         tally[color] += g.length;
-        tally.count++;
         g.forEach(i => grid[i].classList.add("highlight"));
       });
+
       setTimeout(() => {
         matches.flat().forEach(i => {
           grid[i].classList.remove("highlight");
@@ -131,58 +227,50 @@
         });
         setTimeout(() => {
           matches.flat().forEach(i => {
-            let newColor = colors[Math.floor(Math.random()*colors.length)];
+            const newColor = colors[Math.floor(Math.random() * colors.length)];
             grid[i].className = "cell " + newColor;
+            grid[i].classList.remove("fade");
           });
           applyMiningEffects(tally);
         }, 500);
-      }, 1000);
+      }, 800);
     }
 
     function applyMiningEffects(tally) {
       let air = parseInt(airBar.style.width) || 100;
       let roof = parseInt(roofBar.style.width) || 100;
+      let loot = "";
 
+      air -= 15;
+      roof -= 10;
       if (tally.green >= 3) air += 5;
       if (tally.green >= 5) air += 5;
       if (tally.blue >= 3) roof += 5;
       if (tally.blue >= 5) roof += 5;
 
-      air -= 15; // воздух тратится быстрее
-      roof -= 10;
+      if (tally.red >= 3) {
+        depth += 5;
+        if (tally.red >= 5) depth += 5;
+      }
 
-      let dmg = tally.red >= 5 ? 20 : tally.red >= 3 ? 10 : 0;
-      let bonus = tally.count * 0.05; // 5% за комбо
-      let totalPercent = Math.floor(((dmg + (dmg * bonus)) / rockHP) * 100);
-
-      progress += totalPercent;
-      if (progress > 100) progress = 100;
-      progressText.textContent = `Прогресс: ${progress}%`;
+      if (tally.red >= 7) loot = "🌟 Руда Искры";
+      else if (tally.red >= 5) loot = "🪨 Железная руда";
+      else if (tally.red >= 3) loot = "🗿 Камень";
 
       air = Math.max(0, Math.min(100, air));
       roof = Math.max(0, Math.min(100, roof));
       airBar.style.width = air + "%";
       roofBar.style.width = roof + "%";
+      depthText.textContent = `Глубина: ${depth} м`;
 
-      if (roof <= 5) {
+      if (roof <= 10) {
         result.textContent = "❌ Обвал! Шахта разрушена!";
         spark = 0;
         sparkEl.textContent = spark;
         return;
       }
 
-      if (progress >= 100) {
-        depth += 10;
-        result.textContent = `✅ Пласт раскопан! Переход на глубину ${depth} м`;
-        setLevel(depth >= 30 ? 3 : depth >= 10 ? 2 : 1);
-        progress = 0;
-        progressText.textContent = `Прогресс: 0%`;
-      } else {
-        result.textContent = `+${totalPercent}% раскопано`;
-      }
-
-      depthText.textContent = `Глубина: ${depth} м`;
-      sparkEl.textContent = spark;
+      result.textContent = loot ? `Добыто: ${loot}` : "Нет ресурсов";
     }
 
     board.addEventListener("touchstart", e => {
@@ -199,9 +287,16 @@
         dragging = el;
       }
     });
-    board.addEventListener("touchend", () => { dragging = null; });
+    board.addEventListener("touchend", () => {
+      if (moveStarted) {
+        moveStarted = false;
+        clearInterval(turnInterval);
+        finishTurn();
+      }
+      dragging = null;
+    });
 
     createBoard();
-    setLevel(1);
-  </script></body>
-</html>
+  </script>
+</body>
+</html></html>
