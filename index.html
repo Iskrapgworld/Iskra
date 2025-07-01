@@ -33,17 +33,9 @@
     }
     .bar-inner {
       height: 100%;
-      transition: width 0.5s ease;
+      transition: width 0.3s ease;
     }
     #spark { color: #ffff66; }
-
-    #turnTimerContainer {
-      width: 360px;
-      margin: 0 auto;
-      font-size: 14px;
-      color: #fff;
-    }
-
     #board {
       display: grid;
       grid-template-columns: repeat(6, 1fr);
@@ -83,11 +75,25 @@
       margin-bottom: 5px;
       color: #aaa;
     }
+    #timerBarContainer {
+      width: 300px;
+      height: 10px;
+      background: #333;
+      margin: 0 auto;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+    #timerBar {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, #33ff33, #ffff00);
+      transition: width 1s linear;
+    }
   </style>
 </head>
 <body>
   <h1>⛏ Шахта Искры</h1>
-  <div id="depth">Глубина: 0 м</div>
+  <div id="depth">Глубина: 0 м (1 уровень)</div>
   <div id="topBar">
     <div class="stat">
       ⚡ Искра: <span id="spark">1000</span>
@@ -101,12 +107,7 @@
       <div class="bar"><div id="roofBar" class="bar-inner" style="width:100%;background:#3399ff;"></div></div>
     </div>
   </div>
-
-  <div id="turnTimerContainer">
-    ⏳ Ход: <span id="turnTime">10</span> сек
-    <div class="bar"><div id="turnTimerBar" class="bar-inner" style="width:100%;background:linear-gradient(90deg,#00ff00,#ff0000);"></div></div>
-  </div>
-
+  <div id="timerBarContainer"><div id="timerBar"></div></div>
   <div id="board"></div>
   <button onclick="startMiningTurn()">🔁 Следующий ход (-5 Искры)</button>
   <div id="result"></div>
@@ -119,23 +120,31 @@
     const roofBar = document.getElementById("roofBar");
     const result = document.getElementById("result");
     const depthText = document.getElementById("depth");
-    const turnTimerBar = document.getElementById("turnTimerBar");
-    const turnTimeText = document.getElementById("turnTime");
+    const timerBar = document.getElementById("timerBar");
 
     let spark = 1000;
     let dragging = null;
     let grid = [];
     let depth = 0;
-    let turnTimeLeft = 10;
-    let turnInterval = null;
-    let moveStarted = false;
+    let air = 100;
+    let roof = 100;
+    let timer = 10;
+    let timerInterval, airInterval;
+    let level = 1;
+
+    const layerHealth = {1: 100, 2: 150, 3: 300};
+    const layerLoot = {
+      1: {stone: 50, gold: 20, crystal: 5},
+      2: {stone: 70, gold: 30, crystal: 10},
+      3: {stone: 90, gold: 50, crystal: 20}
+    };
 
     function createBoard() {
       board.innerHTML = "";
       grid = [];
       for (let i = 0; i < 36; i++) {
-        const cell = document.createElement("div");
         const color = colors[Math.floor(Math.random() * colors.length)];
+        const cell = document.createElement("div");
         cell.className = "cell " + color;
         board.appendChild(cell);
         grid.push(cell);
@@ -157,32 +166,29 @@
       }
       spark -= 5;
       sparkEl.textContent = spark;
-      moveStarted = true;
-      startTurnTimer();
-    }
-
-    function startTurnTimer() {
-      clearInterval(turnInterval);
-      turnTimeLeft = 10;
-      turnTimeText.textContent = turnTimeLeft;
-      turnTimerBar.style.width = "100%";
-
-      turnInterval = setInterval(() => {
-        turnTimeLeft--;
-        turnTimeText.textContent = turnTimeLeft;
-        turnTimerBar.style.width = (turnTimeLeft * 10) + "%";
-
-        if (turnTimeLeft <= 0) {
-          clearInterval(turnInterval);
-          finishTurn();
+      timer = 10;
+      timerBar.style.width = "100%";
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        timer--;
+        timerBar.style.width = (timer * 10) + "%";
+        if (timer <= 0) {
+          clearInterval(timerInterval);
+          resolveCascade();
         }
       }, 1000);
     }
 
-    function finishTurn() {
-      turnTimerBar.style.width = "0%";
-      turnTimeText.textContent = "0";
-      resolveCascade();
+    function startAirDrain() {
+      airInterval = setInterval(() => {
+        air -= 100 / 30; // 30 сек — 100%
+        if (air <= 0) {
+          air = 0;
+          clearInterval(airInterval);
+          result.textContent = "❌ Кончился воздух!";
+        }
+        airBar.style.width = air + "%";
+      }, 1000);
     }
 
     function checkMatches() {
@@ -231,46 +237,54 @@
             grid[i].className = "cell " + newColor;
             grid[i].classList.remove("fade");
           });
-          applyMiningEffects(tally);
+          applyMiningEffects(tally, matches.length);
         }, 500);
       }, 800);
     }
 
-    function applyMiningEffects(tally) {
-      let air = parseInt(airBar.style.width) || 100;
-      let roof = parseInt(roofBar.style.width) || 100;
-      let loot = "";
+    function applyMiningEffects(tally, comboCount) {
+      let airGain = 0;
+      if (tally.green >= 3) airGain = 10 + (tally.green - 3) * 2;
+      air += airGain;
+      if (air > 100) air = 100;
 
-      air -= 15;
-      roof -= 10;
-      if (tally.green >= 3) air += 5;
-      if (tally.green >= 5) air += 5;
-      if (tally.blue >= 3) roof += 5;
-      if (tally.blue >= 5) roof += 5;
+      roof -= 10; // рушится быстрее
+      if (tally.blue >= 3) roof += 10;
+      if (roof > 100) roof = 100;
+      if (roof < 0) roof = 0;
 
-      if (tally.red >= 3) {
-        depth += 5;
-        if (tally.red >= 5) depth += 5;
+      let healthMax = layerHealth[level];
+      let damage = (tally.red >= 5 ? 20 : tally.red >= 3 ? 10 : 0);
+      let comboBonus = Math.floor(comboCount * 0.05 * damage);
+      let total = damage + comboBonus;
+      let percent = Math.floor((total / healthMax) * 100);
+
+      depth += percent;
+      if (depth >= level * 100) {
+        level++;
+        depth = 0;
+        result.textContent = `🌟 Достигнут новый уровень шахты: ${level}`;
+      } else {
+        // добыча
+        let loot = "";
+        const chance = Math.random() * 100;
+        const lootTable = layerLoot[level] || {stone: 100, gold: 0, crystal: 0};
+        if (chance < lootTable.crystal) loot = "💎 Кристалл";
+        else if (chance < lootTable.gold) loot = "🥇 Золото";
+        else loot = "🪨 Железо";
+
+        result.textContent = `⛏ Раскопано: ${percent}% — Найдено: ${loot}`;
       }
 
-      if (tally.red >= 7) loot = "🌟 Руда Искры";
-      else if (tally.red >= 5) loot = "🪨 Железная руда";
-      else if (tally.red >= 3) loot = "🗿 Камень";
-
-      air = Math.max(0, Math.min(100, air));
-      roof = Math.max(0, Math.min(100, roof));
+      depthText.textContent = `Глубина: ${depth} м (${level} уровень)`;
       airBar.style.width = air + "%";
       roofBar.style.width = roof + "%";
-      depthText.textContent = `Глубина: ${depth} м`;
+      sparkEl.textContent = spark;
 
-      if (roof <= 10) {
+      if (roof <= 0) {
         result.textContent = "❌ Обвал! Шахта разрушена!";
-        spark = 0;
-        sparkEl.textContent = spark;
-        return;
+        clearInterval(airInterval);
       }
-
-      result.textContent = loot ? `Добыто: ${loot}` : "Нет ресурсов";
     }
 
     board.addEventListener("touchstart", e => {
@@ -288,15 +302,11 @@
       }
     });
     board.addEventListener("touchend", () => {
-      if (moveStarted) {
-        moveStarted = false;
-        clearInterval(turnInterval);
-        finishTurn();
-      }
       dragging = null;
     });
 
     createBoard();
+    startAirDrain();
   </script>
 </body>
-</html></html>
+</html>
