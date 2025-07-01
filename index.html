@@ -47,7 +47,7 @@
       grid-template-columns: repeat(6, 1fr);
       gap: 4px;
       width: 360px;
-      margin: 0 auto;
+      margin: 0 auto 10px auto;
       transition: opacity 0.3s ease;
     }
     .cell {
@@ -99,21 +99,14 @@
       background: #6622cc;
       color: white;
     }
-    .hit-flash {
-      animation: flash 0.3s ease;
-    }
-    @keyframes flash {
-      0% { filter: brightness(2); }
-      100% { filter: brightness(1); }
-    }
   </style>
 </head>
 <body>
   <h1>🔥 ИСКРА: Битва 🔥</h1>
   <div id="topBar">
-    <div id="playerStats">Вы:<br>❤️ <span id="hp">200</span> 🛡 <span id="shield">100</span></div>
+    <div>Вы:<br>❤️ <span id="hp">200</span> <span id="healInfo"></span><br>🛡 <span id="shield">100</span> <span id="shieldInfo"></span></div>
     <div id="timerBarContainer"><div id="timerBar"></div></div>
-    <div id="enemyStats">Монстр:<br>💀 <span id="enemyHp">500</span> 🛡 <span id="enemyShield">300</span></div>
+    <div>Монстр:<br>💀 <span id="enemyHp">500</span> <span id="enemyHealInfo"></span><br>🛡 <span id="enemyShield">300</span> <span id="enemyShieldInfo"></span></div>
   </div>
   <div id="battleLog">Добро пожаловать в бой!</div>
   <div id="board"></div>
@@ -126,20 +119,8 @@
     <h2 id="endMessage">Победа!</h2>
     <button onclick="startGame()">Сыграть снова</button>
   </div>
-
-<script>
-const board = document.getElementById("board");
-const hpEl = document.getElementById("hp");
-const shieldEl = document.getElementById("shield");
-const enemyHpEl = document.getElementById("enemyHp");
-const enemyShieldEl = document.getElementById("enemyShield");
-const overlay = document.getElementById("overlay");
-const endScreen = document.getElementById("endScreen");
-const endMessage = document.getElementById("endMessage");
-const timerBar = document.getElementById("timerBar");
-const battleLog = document.getElementById("battleLog");
-
-const colors = ['red', 'green', 'blue', 'yellow', 'purple', 'orange'];
+  <script>
+    // …продолжение с <script>
 let grid = [];
 let dragging = null;
 let isPlayerTurn = true;
@@ -147,6 +128,15 @@ let hp = 200, shield = 100, enemyHp = 500, enemyShield = 300;
 let playerName = "Игрок";
 let turnTimer;
 let comboAccumulator = { red: 0, green: 0, blue: 0, orange: 0, count: 0 };
+const battleLog = document.getElementById("battleLog");
+const hpEl = document.getElementById("hp");
+const shieldEl = document.getElementById("shield");
+const enemyHpEl = document.getElementById("enemyHp");
+const enemyShieldEl = document.getElementById("enemyShield");
+const healInfo = document.getElementById("healInfo");
+const shieldInfo = document.getElementById("shieldInfo");
+const enemyHealInfo = document.getElementById("enemyHealInfo");
+const enemyShieldInfo = document.getElementById("enemyShieldInfo");
 
 function updateStats() {
   hpEl.textContent = hp;
@@ -155,11 +145,16 @@ function updateStats() {
   enemyShieldEl.textContent = enemyShield;
 }
 
+function flashHealOrShield(target, value, isShield = false) {
+  const el = isShield ? (target === 'player' ? shieldInfo : enemyShieldInfo)
+                      : (target === 'player' ? healInfo : enemyHealInfo);
+  el.textContent = `+${value}`;
+  setTimeout(() => el.textContent = '', 1500);
+}
+
 function startGame() {
-  const nameInput = document.getElementById("nickname");
-  playerName = nameInput.value.trim() || "Игрок";
+  playerName = document.getElementById("nickname").value || "Игрок";
   hp = 200; shield = 100; enemyHp = 500; enemyShield = 300;
-  comboAccumulator = { red: 0, green: 0, blue: 0, orange: 0, count: 0 };
   updateStats();
   createGrid();
   overlay.style.display = "none";
@@ -172,12 +167,14 @@ function startGame() {
 function createGrid() {
   board.innerHTML = "";
   grid = [];
-  for (let i = 0; i < 36; i++) {
-    const cell = document.createElement("div");
-    cell.className = "cell " + colors[Math.floor(Math.random() * colors.length)];
-    board.appendChild(cell);
-    grid.push(cell);
-  }
+  do {
+    for (let i = 0; i < 36; i++) {
+      const cell = document.createElement("div");
+      cell.className = "cell " + colors[Math.floor(Math.random() * colors.length)];
+      board.appendChild(cell);
+      grid.push(cell);
+    }
+  } while (checkMatches().length > 0);
 }
 
 function index(r, c) {
@@ -251,9 +248,14 @@ function applyEffects() {
   let isCrit = Math.random() * 100 < critChance;
   if (isCrit) damage *= 2;
 
+  const flash = () => {
+    board.style.boxShadow = "0 0 20px 10px #fff";
+    setTimeout(() => board.style.boxShadow = "none", 300);
+  };
+
+  flash();
+
   if (isPlayerTurn) {
-    document.getElementById("enemyStats").classList.add("hit-flash");
-    setTimeout(() => document.getElementById("enemyStats").classList.remove("hit-flash"), 300);
     let half = Math.floor(damage / 2);
     if (enemyShield >= half) {
       enemyShield -= half;
@@ -266,10 +268,10 @@ function applyEffects() {
     shield += def;
     hp += heal;
     if (hp > 200) hp = 200;
-    battleLog.innerHTML = `<span style="color:#66ff66">${playerName} нанёс ${damage}${isCrit ? " (КРИТ!)" : ""} урона, +${def} щит, +${heal} лечение, комбо: ${count}</span>`;
+    flashHealOrShield('player', heal, false);
+    flashHealOrShield('player', def, true);
+    battleLog.innerHTML = `<span style="color:#66ff66">Комбо x${count}<br>Урон: ${damage}${isCrit ? " (КРИТ!)" : ""}</span>`;
   } else {
-    document.getElementById("playerStats").classList.add("hit-flash");
-    setTimeout(() => document.getElementById("playerStats").classList.remove("hit-flash"), 300);
     let half = Math.floor(damage / 2);
     if (shield >= half) {
       shield -= half;
@@ -283,7 +285,9 @@ function applyEffects() {
     if (enemyShield > 300) enemyShield = 300;
     enemyHp += heal;
     if (enemyHp > 500) enemyHp = 500;
-    battleLog.innerHTML = `<span style="color:#ff4444">Монстр нанёс ${damage}${isCrit ? " (КРИТ!)" : ""} урона, +${def} щит, +${heal} лечение, комбо: ${count}</span>`;
+    flashHealOrShield('enemy', heal, false);
+    flashHealOrShield('enemy', def, true);
+    battleLog.innerHTML = `<span style="color:#ff4444">Комбо x${count}<br>Урон: ${damage}${isCrit ? " (КРИТ!)" : ""}</span>`;
   }
 
   updateStats();
