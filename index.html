@@ -6,186 +6,250 @@
   <style>
     body {
       margin: 0;
-      background: #111;
+      background-color: #111;
       color: #fff;
       font-family: sans-serif;
       text-align: center;
     }
-    h1 { color: #66ccff; margin: 10px 0; }
+    h1 {
+      color: #ffcc00;
+      margin-top: 10px;
+    }
     #topBar {
       display: flex;
       justify-content: space-around;
-      align-items: center;
-      padding: 5px;
+      margin: 10px;
+      font-size: 14px;
     }
-    #stabilityBarContainer {
-      width: 200px;
+    .stat {
+      line-height: 1.6;
+    }
+    .bar {
       height: 12px;
       background: #333;
       border-radius: 6px;
       overflow: hidden;
+      margin-top: 3px;
     }
-    #stabilityBar {
+    .bar-inner {
       height: 100%;
-      width: 100%;
-      background: linear-gradient(to right, green, yellow, red);
       transition: width 0.5s ease;
     }
+    #spark { color: #ffff66; }
     #board {
       display: grid;
       grid-template-columns: repeat(6, 1fr);
       gap: 4px;
       width: 360px;
-      margin: 20px auto;
+      margin: 10px auto;
     }
     .cell {
       width: 58px;
       height: 58px;
-      border-radius: 8px;
+      border-radius: 50%;
+      transition: transform 0.3s ease;
     }
-    .red    { background: #aa3333; }
-    .green  { background: #33aa33; }
-    .blue   { background: #3399cc; }
-    .orange { background: #ffaa33; }
-    .purple { background: #9933cc; }
-    #log {
-      margin-top: 10px;
+    .red    { background: radial-gradient(circle, #ff4d4d, #990000); }
+    .green  { background: radial-gradient(circle, #66ff66, #006600); }
+    .blue   { background: radial-gradient(circle, #66ccff, #003366); }
+    .orange { background: radial-gradient(circle, #ffaa00, #993300); }
+    .purple { background: radial-gradient(circle, #cc99ff, #330066); }
+    .highlight { box-shadow: 0 0 8px 4px #fff5; }
+    .fade { opacity: 0; }
+    button {
+      margin: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
+      background: #444;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+    }
+    #result {
       font-size: 14px;
+      margin-top: 10px;
+      min-height: 20px;
     }
-    .floatText {
-      position: absolute;
-      font-weight: bold;
-      color: white;
-      animation: floatUp 1s ease forwards;
-    }
-    @keyframes floatUp {
-      from { opacity: 1; transform: translateY(0); }
-      to { opacity: 0; transform: translateY(-30px); }
+    #depth {
+      font-size: 16px;
+      margin-bottom: 5px;
+      color: #aaa;
     }
   </style>
 </head>
 <body>
-  <h1>Шахта Искры</h1>
+  <h1>⛏ Шахта Искры</h1>
+  <div id="depth">Глубина: 0 м</div>
   <div id="topBar">
-    <div>⚡ Искра: <span id="energy">1000</span></div>
-    <div>
-      Устойчивость:
-      <div id="stabilityBarContainer">
-        <div id="stabilityBar"></div>
-      </div>
+    <div class="stat">
+      ⚡ Искра: <span id="spark">30</span>
     </div>
-    <div>⛏ Глубина: <span id="depth">0</span></div>
+    <div class="stat">
+      💨 Воздух
+      <div class="bar"><div id="airBar" class="bar-inner" style="width:100%;background:#00ffcc;"></div></div>
+    </div>
+    <div class="stat">
+      🧱 Свод
+      <div class="bar"><div id="roofBar" class="bar-inner" style="width:100%;background:#3399ff;"></div></div>
+    </div>
   </div>
   <div id="board"></div>
-  <div id="log">Собирай кристаллы, укрепляй шахту!</div>
+  <button onclick="startMiningTurn()">🔁 Следующий ход (-5 Искры)</button>
+  <div id="result"></div>
 
   <script>
+    const colors = ['red', 'green', 'blue', 'orange', 'purple'];
     const board = document.getElementById("board");
-    const energyEl = document.getElementById("energy");
-    const depthEl = document.getElementById("depth");
-    const stabilityBar = document.getElementById("stabilityBar");
-    const log = document.getElementById("log");
+    const sparkEl = document.getElementById("spark");
+    const airBar = document.getElementById("airBar");
+    const roofBar = document.getElementById("roofBar");
+    const result = document.getElementById("result");
+    const depthText = document.getElementById("depth");
 
-    let grid = [];
+    let spark = 3000;
     let dragging = null;
-    let energy = 1000;
+    let grid = [];
     let depth = 0;
-    let stability = 100; // проценты
 
-    const colors = ["red", "green", "blue", "orange", "purple"];
-
-    function createGrid() {
+    function createBoard() {
       board.innerHTML = "";
       grid = [];
       for (let i = 0; i < 36; i++) {
         const cell = document.createElement("div");
-        cell.className = "cell " + colors[Math.floor(Math.random() * colors.length)];
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        cell.className = "cell " + color;
         board.appendChild(cell);
         grid.push(cell);
       }
     }
 
-    function updateUI() {
-      energyEl.textContent = energy;
-      depthEl.textContent = depth;
-      stabilityBar.style.width = stability + "%";
-      if (stability > 60) stabilityBar.style.background = "green";
-      else if (stability > 30) stabilityBar.style.background = "orange";
-      else stabilityBar.style.background = "red";
+    function index(r, c) {
+      return r * 6 + c;
+    }
+
+    function getColor(el) {
+      return colors.find(c => el.classList.contains(c));
+    }
+
+    function startMiningTurn() {
+      if (spark < 5) {
+        alert("Недостаточно Искры!");
+        return;
+      }
+      spark -= 5;
+      sparkEl.textContent = spark;
+      resolveCascade();
     }
 
     function checkMatches() {
       const matches = [];
       for (let r = 0; r < 6; r++) {
         for (let c = 0; c < 4; c++) {
-          const i = r * 6 + c;
-          const a = grid[i], b = grid[i + 1], c_ = grid[i + 2];
-          if (a && b && c_ && a.className === b.className && b.className === c_.className) {
-            matches.push([i, i + 1, i + 2]);
-          }
+          let i = index(r, c);
+          let a = grid[i], b = grid[i+1], c_ = grid[i+2];
+          if (getColor(a) === getColor(b) && getColor(b) === getColor(c_))
+            matches.push([i, i+1, i+2]);
+        }
+      }
+      for (let c = 0; c < 6; c++) {
+        for (let r = 0; r < 4; r++) {
+          let i = index(r, c);
+          let a = grid[i], b = grid[i+6], c_ = grid[i+12];
+          if (getColor(a) === getColor(b) && getColor(b) === getColor(c_))
+            matches.push([i, i+6, i+12]);
         }
       }
       return matches;
     }
 
-    function resolveTurn() {
-      if (energy < 5) {
-        log.textContent = "Недостаточно искры!";
-        return;
-      }
-
-      energy -= 5;
-
+    function resolveCascade() {
       const matches = checkMatches();
+      const tally = { red: 0, green: 0, blue: 0, orange: 0, purple: 0 };
       if (matches.length === 0) {
-        log.textContent = "Нет комбинаций.";
-        stability -= 10;
-        if (stability <= 0) {
-          log.textContent = "💥 Обвал шахты! Потеряна часть ресурсов.";
-          depth = Math.floor(depth / 2);
-          stability = 100;
-        }
-        updateUI();
+        result.textContent = "Комбинаций не найдено";
         return;
       }
 
-      let red = 0, green = 0, blue = 0, orange = 0, purple = 0;
-      matches.forEach(group => {
-        const color = colors.find(c => grid[group[0]].classList.contains(c));
-        group.forEach(i => {
-          grid[i].className = "cell";
-        });
-        if (color === "red") red += group.length;
-        if (color === "green") green += group.length;
-        if (color === "blue") blue += group.length;
-        if (color === "orange") orange += group.length;
-        if (color === "purple") purple += group.length;
+      matches.forEach(g => {
+        const color = getColor(grid[g[0]]);
+        tally[color] += g.length;
+        g.forEach(i => grid[i].classList.add("highlight"));
       });
 
-      depth += red;
-      stability += blue * 3;
-      if (stability > 100) stability = 100;
-
-      log.textContent = `⚒ Урон: ${red}, 💚 Лечение: ${green}, 🛡 Укрепление: ${blue}`;
-      createGrid();
-      updateUI();
+      setTimeout(() => {
+        matches.flat().forEach(i => {
+          grid[i].classList.remove("highlight");
+          grid[i].classList.add("fade");
+        });
+        setTimeout(() => {
+          matches.flat().forEach(i => {
+            const newColor = colors[Math.floor(Math.random() * colors.length)];
+            grid[i].className = "cell " + newColor;
+            grid[i].classList.remove("fade");
+          });
+          applyMiningEffects(tally);
+        }, 500);
+      }, 800);
     }
 
-    board.addEventListener("click", resolveTurn);
+    function applyMiningEffects(tally) {
+      let air = parseInt(airBar.style.width) || 100;
+      let roof = parseInt(roofBar.style.width) || 100;
+      let loot = "";
 
-    createGrid();
-    updateUI();
+      if (tally.green >= 3) air += 5;
+      if (tally.green >= 5) air += 5;
+      if (tally.blue >= 3) roof += 5;
+      if (tally.blue >= 5) roof += 5;
+      air -= 3;
+      roof -= 2;
 
-    // Автоматическое ухудшение устойчивости
-    setInterval(() => {
-      stability -= 10;
-      if (stability <= 0) {
-        log.textContent = "💥 Обвал шахты!";
-        stability = 100;
-        depth = Math.floor(depth / 2);
+      // глубина увеличивается за каждый ход с красными
+      if (tally.red >= 3) {
+        depth += 5;
+        if (tally.red >= 5) depth += 5;
       }
-      updateUI();
-    }, 20000);
+
+      // Лут
+      if (tally.red >= 7) loot = "🌟 Руда Искры";
+      else if (tally.red >= 5) loot = "🪨 Железная руда";
+      else if (tally.red >= 3) loot = "🗿 Камень";
+
+      air = Math.max(0, Math.min(100, air));
+      roof = Math.max(0, Math.min(100, roof));
+      airBar.style.width = air + "%";
+      roofBar.style.width = roof + "%";
+      depthText.textContent = `Глубина: ${depth} м`;
+
+      if (roof <= 10) {
+        result.textContent = "❌ Обвал! Шахта разрушена!";
+        spark = 0;
+        sparkEl.textContent = spark;
+        return;
+      }
+
+      result.textContent = loot ? `Добыто: ${loot}` : "Нет ресурсов";
+    }
+
+    board.addEventListener("touchstart", e => {
+      const t = e.touches[0];
+      const el = document.elementFromPoint(t.clientX, t.clientY);
+      if (el && el.classList.contains("cell")) dragging = el;
+    });
+    board.addEventListener("touchmove", e => {
+      if (!dragging) return;
+      const t = e.touches[0];
+      const el = document.elementFromPoint(t.clientX, t.clientY);
+      if (el && el.classList.contains("cell") && el !== dragging) {
+        [dragging.className, el.className] = [el.className, dragging.className];
+        dragging = el;
+      }
+    });
+    board.addEventListener("touchend", () => {
+      dragging = null;
+    });
+
+    createBoard();
   </script>
 </body>
 </html>
