@@ -1,332 +1,239 @@
-<!DOCTYPE html>
-<html lang="ru">
+<!DOCTYPE html><html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>ИСКРА: Битва</title>
   <style>
     body {
       margin: 0;
-      font-family: Arial, sans-serif;
       background-color: #111;
-      color: white;
+      color: #fff;
+      font-family: sans-serif;
+      text-align: center;
+    }
+    h1 {
+      color: #ffa500;
+      margin: 10px 0;
+    }
+    #topBar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 10px;
+      font-size: 14px;
+    }
+    #timerBarContainer {
+      flex-grow: 1;
+      height: 10px;
+      margin: 0 10px;
+      background: #444;
+      border-radius: 5px;
       overflow: hidden;
     }
-
-    #overlay, #endScreen {
-      position: absolute;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: black;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-      z-index: 10;
+    #timerBar {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, #33ff33, #ffff00);
+      transition: width 1s linear;
     }
-
+    #battleLog {
+      margin: 5px;
+      padding: 4px;
+      font-size: 14px;
+      min-height: 30px;
+    }
     #board {
       display: grid;
       grid-template-columns: repeat(6, 1fr);
-      width: 90vw;
-      max-width: 400px;
-      margin: 0 auto;
       gap: 4px;
-      margin-top: 20px;
+      width: 360px;
+      margin: 30px auto 10px auto;
+      transition: opacity 0.3s ease;
     }
-
     .cell {
-      width: 100%;
-      padding-top: 100%;
+      width: 58px;
+      height: 58px;
       border-radius: 50%;
-      position: relative;
-      background-color: grey;
-      cursor: pointer;
+      transition: transform 0.3s ease, opacity 1s ease;
     }
-
-    .cell-inner {
-      position: absolute;
-      top: 0; left: 0; right: 0; bottom: 0;
-      border-radius: 50%;
-      background-size: cover;
+    .red    { background: radial-gradient(circle, #ff4d4d, #990000); }
+    .green  { background: radial-gradient(circle, #66ff66, #006600); }
+    .blue   { background: radial-gradient(circle, #66ccff, #003366); }
+    .purple { background: radial-gradient(circle, #dca0ff, #440066); }
+    .orange { background: radial-gradient(circle, #cc9955, #cc6600); }
+    .highlight { box-shadow: 0 0 10px 4px #ffffff88; }
+    .fade { opacity: 0; }
+    .enemy-turn #board {
+      pointer-events: none;
+      opacity: 0.2;
     }
-
-    .red { background: red; }
-    .green { background: green; }
-    .blue { background: blue; }
-    .orange { background: orange; }
-    .purple { background: purple; }
-
-    #stats, #enemyStats {
+    #overlay, #endScreen {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.85);
       display: flex;
+      justify-content: center;
+      align-items: center;
       flex-direction: column;
-      gap: 4px;
-      font-size: 14px;
-      margin: 10px;
+      z-index: 999;
     }
-
-    #battleLog {
-      text-align: center;
-      font-size: 18px;
-      margin-top: 8px;
-      min-height: 24px;
-    }
-
-    .bar {
-      height: 10px;
-      background: green;
-      border-radius: 4px;
-      margin-top: 2px;
-    }
-
-    .bar-container {
-      background: #333;
-      border-radius: 4px;
-      width: 100%;
-    }
-
-    #turnIndicator {
-      text-align: center;
-      font-weight: bold;
+    #overlay input {
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: none;
       margin-top: 10px;
     }
-
-    #lightningBtn {
-      margin: 20px auto;
-      display: block;
+    button {
       padding: 10px 20px;
+      margin-top: 10px;
       font-size: 16px;
-      background-color: gold;
-      color: black;
       border: none;
-      border-radius: 8px;
-      cursor: pointer;
+      border-radius: 10px;
+      background: #6622cc;
+      color: white;
     }
-
-    #lightningBtn:disabled {
-      background: #666;
-      color: #ccc;
+    .stat-panel {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #222;
+      padding: 10px;
+      border-radius: 10px;
+      display: none;
     }
-
-    .fade-effect {
-      animation: fadeOut 1s forwards;
+    .stat-panel.visible {
+      display: block;
     }
-
-    @keyframes fadeOut {
-      from { opacity: 1; }
-      to { opacity: 0; }
+    .stat-panel h3 {
+      margin-top: 0;
+    }
+    .stat-panel button {
+      background: #444;
+      margin: 3px;
+      padding: 4px 8px;
+      font-size: 14px;
     }
   </style>
 </head>
 <body>
-<div id="overlay">
-  <h2>Введите имя:</h2>
-  <input type="text" id="nickname" placeholder="Ваше имя" />
-  <button onclick="startGame()">В бой!</button>
-</div>
-
-<h1 style="text-align:center;">🔥 ИСКРА: Битва 🔥</h1>
-
-<div style="display: flex; justify-content: space-between; padding: 0 10px;">
-  <div id="stats">
-    <div>Вы: <br/>❤️ <span id="playerHp">200</span><br/>
-         🛡 <span id="playerShield">100</span><br/>
-         🔮 <span id="playerMana">0</span></div>
+  <h1>🔥 ИСКРА: Битва 🔥</h1>
+  <div id="topBar">
+    <div>Вы:<br>❤️ <span id="hp">200</span><br>🛡 <span id="shield">100</span><br>🔮 <span id="mana">0</span></div>
+    <div id="timerBarContainer"><div id="timerBar"></div></div>
+    <div>Монстр:<br>💀 <span id="enemyHp">100</span><br>🛡 <span id="enemyShield">100</span><br>🔮 <span id="enemyMana">0</span></div>
   </div>
-
-  <div id="enemyStats">
-    <div>Монстр:<br/>💀 <span id="enemyHp">100</span><br/>
-         🛡 <span id="enemyShield">100</span><br/>
-         🔮 <span id="enemyMana">0</span></div>
+  <div id="battleLog">Добро пожаловать в битву!</div>
+  <div id="board"></div>
+  <button id="lightningBtn" onclick="useLightning()" style="display:none;">⚡ Молния (20 маны)</button>
+  <div id="overlay">
+    <h2>Введите имя:</h2>
+    <input id="nickname" placeholder="Имя игрока">
+    <button onclick="startGame()">В бой!</button>
   </div>
-</div>
-
-<div id="battleLog">Комбо появится здесь...</div>
-<div id="board"></div>
-<button id="lightningBtn" onclick="useLightning()">⚡ Молния (20 маны)</button>
+  <div id="endScreen" style="display:none;">
+    <h2 id="endMessage">Победа!</h2>
+    <button onclick="openStats()">Повысить характеристики</button>
+  </div>
+  <div class="stat-panel" id="statsPanel">
+    <h3>Прокачка</h3>
+    <div>Очки: <span id="statPoints">5</span></div>
+    <div>Сила: <span id="str">1</span> <button onclick="upgradeStat('str')">+</button></div>
+    <div>Ловкость: <span id="agi">1</span> <button onclick="upgradeStat('agi')">+</button></div>
+    <div>Живучесть: <span id="vit">1</span> <button onclick="upgradeStat('vit')">+</button></div>
+    <div>Интеллект: <span id="int">1</span> <button onclick="upgradeStat('int')">+</button></div>
+    <div>Удача: <span id="luck">1</span> <button onclick="upgradeStat('luck')">+</button></div>
+    <button onclick="closeStats()">Готово</button>
+  </div>
 <script>
-  let player = {
-    hp: 200,
-    shield: 100,
-    mana: 0,
-    crit: 0,
-    power: 1,
-    intellect: 1,
-    luck: 1
-  };
-
-  let enemy = {
-    hp: 100,
-    shield: 100,
-    mana: 0
-  };
-
-  const boardSize = 6;
-  const types = ['red', 'green', 'blue', 'orange', 'purple'];
-  let board = [];
-  let selected = null;
-  let playerTurn = true;
-
-  const playerHpEl = document.getElementById('playerHp');
-  const playerShieldEl = document.getElementById('playerShield');
-  const playerManaEl = document.getElementById('playerMana');
-  const enemyHpEl = document.getElementById('enemyHp');
-  const enemyShieldEl = document.getElementById('enemyShield');
-  const enemyManaEl = document.getElementById('enemyMana');
-  const boardEl = document.getElementById('board');
-  const battleLog = document.getElementById('battleLog');
-  const lightningBtn = document.getElementById('lightningBtn');
-
-  function startGame() {
-    document.getElementById('overlay').style.display = 'none';
-    initBoard();
-    renderBoard();
-    updateStats();
-  }
-
-  function initBoard() {
-    board = [];
-    do {
-      for (let i = 0; i < boardSize * boardSize; i++) {
-        board[i] = types[Math.floor(Math.random() * types.length)];
-      }
-    } while (checkMatches().length > 0);
-  }
-
-  function renderBoard() {
-    boardEl.innerHTML = '';
-    board.forEach((type, index) => {
-      const cell = document.createElement('div');
-      cell.className = 'cell';
-      const inner = document.createElement('div');
-      inner.className = 'cell-inner ' + type;
-      cell.appendChild(inner);
-      cell.onclick = () => handleClick(index);
-      boardEl.appendChild(cell);
-    });
-  }
-
-  function updateStats() {
-    playerHpEl.textContent = player.hp;
-    playerShieldEl.textContent = player.shield;
-    playerManaEl.textContent = player.mana;
-    enemyHpEl.textContent = enemy.hp;
-    enemyShieldEl.textContent = enemy.shield;
-    enemyManaEl.textContent = enemy.mana;
-    lightningBtn.disabled = !playerTurn || player.mana < 20;
-  }
-
-  function handleClick(index) {
-    if (!playerTurn) return;
-    if (selected === null) {
-      selected = index;
-    } else {
-      swap(selected, index);
-      selected = null;
-      const matches = checkMatches();
-      if (matches.length > 0) {
-        handleMatches(matches);
-      } else {
-        swap(index, selected); // undo
-      }
-    }
-  }
-
-  function swap(i, j) {
-    [board[i], board[j]] = [board[j], board[i]];
-    renderBoard();
-  }
-
-  function checkMatches() {
-    const matches = [];
-    for (let y = 0; y < boardSize; y++) {
-      for (let x = 0; x < boardSize - 2; x++) {
-        const i = y * boardSize + x;
-        if (board[i] === board[i + 1] && board[i] === board[i + 2]) {
-          matches.push(i, i + 1, i + 2);
-        }
-      }
-    }
-    for (let x = 0; x < boardSize; x++) {
-      for (let y = 0; y < boardSize - 2; y++) {
-        const i = y * boardSize + x;
-        if (board[i] === board[i + boardSize] && board[i] === board[i + boardSize * 2]) {
-          matches.push(i, i + boardSize, i + boardSize * 2);
-        }
-      }
-    }
-    return [...new Set(matches)];
-  }
-
-  function handleMatches(matches) {
-    const colorCount = {};
-    matches.forEach(i => {
-      const type = board[i];
-      colorCount[type] = (colorCount[type] || 0) + 1;
-      board[i] = types[Math.floor(Math.random() * types.length)];
-    });
-
-    let totalDmg = 0;
-
-    if (colorCount['red']) {
-      const bonus = colorCount['red'] >= 5 ? 20 : 10;
-      totalDmg += bonus;
-    }
-
-    if (colorCount['green']) {
-      const heal = colorCount['green'] >= 5 ? 10 : 5;
-      player.hp = Math.min(200, player.hp + heal);
-    }
-
-    if (colorCount['blue']) {
-      const shield = colorCount['blue'] >= 5 ? 10 : 5;
-      player.shield = Math.min(100, player.shield + shield);
-    }
-
-    if (colorCount['purple']) {
-      const mana = colorCount['purple'] >= 5 ? 20 : 10;
-      player.mana += mana;
-    }
-
-    applyDamageToEnemy(totalDmg);
-    updateStats();
-
-    setTimeout(() => {
-      playerTurn = false;
-      updateStats();
-      enemyTurn();
-    }, 1000);
-  }
-
-  function applyDamageToEnemy(dmg) {
-    let shieldDmg = Math.min(dmg / 2, enemy.shield);
-    let hpDmg = dmg - shieldDmg;
-    enemy.shield -= shieldDmg;
-    enemy.hp -= hpDmg;
-    battleLog.textContent = `Комбо ×${dmg > 0 ? 1 : 0}, Урон: ${dmg}`;
-  }
-
-  function enemyTurn() {
-    setTimeout(() => {
-      const dmg = 10;
-      let shieldDmg = Math.min(dmg / 2, player.shield);
-      let hpDmg = dmg - shieldDmg;
-      player.shield -= shieldDmg;
-      player.hp -= hpDmg;
-      battleLog.textContent = `Монстр атакует: ${dmg}`;
-      playerTurn = true;
-      updateStats();
-    }, 2000);
-  }
-
-  function useLightning() {
-    if (!playerTurn || player.mana < 20) return;
-    player.mana -= 20;
-    const dmg = 50;
-    applyDamageToEnemy(dmg);
-    battleLog.textContent += ` + ⚡ Молния: ${dmg}`;
-    updateStats();
-  }
+// Продолжение кода будет отправлено во второй части
 </script>
 </body>
 </html>
+<script>
+function showLevelUpScreen() {
+  document.getElementById("levelUpScreen").style.display = "flex";
+  document.getElementById("statPoints").textContent = statPoints;
+  updateStatDisplay();
+}
+
+function hideLevelUpScreen() {
+  document.getElementById("levelUpScreen").style.display = "none";
+}
+
+function updateStatDisplay() {
+  document.getElementById("strength").textContent = stats.strength;
+  document.getElementById("agility").textContent = stats.agility;
+  document.getElementById("vitality").textContent = stats.vitality;
+  document.getElementById("intelligence").textContent = stats.intelligence;
+  document.getElementById("luck").textContent = stats.luck;
+}
+
+function increaseStat(stat) {
+  if (statPoints > 0) {
+    stats[stat]++;
+    statPoints--;
+    updateStatDisplay();
+    document.getElementById("statPoints").textContent = statPoints;
+  }
+}
+
+function getDamageModifier() {
+  return 1 + stats.strength / 100;
+}
+
+function getShieldModifier() {
+  return 1 + stats.agility / 100;
+}
+
+function getHealModifier() {
+  return 1 + stats.vitality / 100;
+}
+
+function getCritModifier() {
+  return stats.luck;
+}
+
+function getSuperModifier() {
+  return 1 + stats.intelligence / 100;
+}
+
+function resetLevelProgression() {
+  level = 1;
+  currentXP = 0;
+  nextLevelXP = 50;
+  statPoints = 0;
+  stats = {
+    strength: 1,
+    agility: 1,
+    vitality: 1,
+    intelligence: 1,
+    luck: 1
+  };
+}
+
+function gainXP(amount) {
+  currentXP += amount;
+  if (currentXP >= nextLevelXP) {
+    level++;
+    currentXP -= nextLevelXP;
+    nextLevelXP = nextLevelXP * 2;
+    statPoints += 5;
+    showLevelUpScreen();
+  }
+}
+</script>
+
+<!-- Экран прокачки -->
+<div id="levelUpScreen" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#000d; color:white; z-index:1000; justify-content:center; align-items:center; flex-direction:column;">
+  <h2>Повышение уровня!</h2>
+  <p>Очков характеристик: <span id="statPoints">0</span></p>
+  <div>
+    <button onclick="increaseStat('strength')">Сила: <span id="strength">1</span></button><br>
+    <button onclick="increaseStat('agility')">Ловкость: <span id="agility">1</span></button><br>
+    <button onclick="increaseStat('vitality')">Живучесть: <span id="vitality">1</span></button><br>
+    <button onclick="increaseStat('intelligence')">Интеллект: <span id="intelligence">1</span></button><br>
+    <button onclick="increaseStat('luck')">Удача: <span id="luck">1</span></button><br>
+  </div>
+  <button onclick="hideLevelUpScreen()">OK</button>
+</div>
