@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="ru">
+<!DOCTYPE html>
+<html lang="ru">
 <head>
   <meta charset="UTF-8" />
   <title>ИСКРА: Битва</title>
@@ -59,164 +60,112 @@
     .green  { background: radial-gradient(circle, #66ff66, #006600); }
     .blue   { background: radial-gradient(circle, #66ccff, #003366); }
     .orange { background: radial-gradient(circle, #ffbb66, #cc6600); }
-    .purple { background: radial-gradient(circle, #dca0ff, #440066); }.highlight { box-shadow: 0 0 10px 4px #ffffff88; }
-.fade { opacity: 0; }
-.enemy-turn #board {
-  pointer-events: none;
-  opacity: 0.2;
-}
-#overlay, #endScreen {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: rgba(0,0,0,0.85);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-direction: column;
-  z-index: 999;
-}
-.floatText {
-  position: absolute;
-  font-size: 14px;
-  font-weight: bold;
-  pointer-events: none;
-  animation: floatUp 3s ease forwards;
-}
-@keyframes floatUp {
-  from { opacity: 1; transform: translateY(0); }
-  to   { opacity: 0; transform: translateY(-30px); }
-}
-#overlay input {
-  padding: 10px;
-  font-size: 16px;
-  border-radius: 5px;
-  border: none;
-  margin-top: 10px;
-}
-button {
-  padding: 10px 20px;
-  margin-top: 10px;
-  font-size: 16px;
-  border: none;
-  border-radius: 10px;
-  background: #6622cc;
-  color: white;
-}
-#manaLine {
-  font-size: 13px;
-  margin-top: 3px;
-}
-#lightningBtn {
-  display: none;
-  margin-top: 5px;
-  padding: 6px 14px;
-  font-size: 14px;
-  background: #ffaa00;
-  color: #000;
-  border-radius: 8px;
-}
+    .purple { background: radial-gradient(circle, #dca0ff, #440066); }
 
+    .highlight { box-shadow: 0 0 10px 4px #ffffff88; }
+    .fade { opacity: 0; }
+    .enemy-turn #board {
+      pointer-events: none;
+      opacity: 0.2;
+    }
+    .floatText {
+      position: absolute;
+      font-size: 14px;
+      font-weight: bold;
+      pointer-events: none;
+      animation: floatUp 3s ease forwards;
+    }
+    @keyframes floatUp {
+      from { opacity: 1; transform: translateY(0); }
+      to   { opacity: 0; transform: translateY(-30px); }
+    }
+    button {
+      padding: 10px 20px;
+      margin-top: 10px;
+      font-size: 16px;
+      border: none;
+      border-radius: 10px;
+      background: #6622cc;
+      color: white;
+    }
+    #lightningBtn {
+      display: none;
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      z-index: 1000;
+      background: #ffcc00;
+      color: #000;
+    }
   </style>
 </head>
 <body>
   <h1>🔥 ИСКРА: Битва 🔥</h1>
   <div id="topBar">
-    <div>
-      Вы:<br>
-      ❤️ <span id="hp">200</span><br>
-      🔹 <span id="shield">100</span><br>
-      💧 <span id="mana">0</span><br>
-      <button id="lightningBtn" onclick="castLightning()">⚡️ Молния (20)</button>
-    </div>
+    <div>Вы:<br>❤️ <span id="hp">200</span> <span id="healText"></span><br>🛡 <span id="shield">100</span> <span id="defText"></span><br>🔮 <span id="mana">0</span></div>
     <div id="timerBarContainer"><div id="timerBar"></div></div>
-    <div>
-      Монстр:<br>
-      💀 <span id="enemyHp">500</span><br>
-      🔹 <span id="enemyShield">300</span><br>
-      💧 <span id="enemyMana">0</span>
-    </div>
+    <div>Монстр:<br>💀 <span id="enemyHp">500</span> <span id="enemyHealText"></span><br>🛡 <span id="enemyShield">300</span> <span id="enemyDefText"></span><br>🔮 <span id="enemyMana">0</span></div>
   </div>
   <div id="battleLog">Комбо появится здесь...</div>
   <div id="board"></div>
-  <div id="overlay">
-    <h2>Введите имя:</h2>
-    <input id="nickname" placeholder="Имя игрока">
-    <button onclick="startGame()">В бой!</button>
-  </div>
-  <div id="endScreen" style="display:none;">
-    <h2 id="endMessage">Победа!</h2>
-    <button onclick="startGame()">Сыграть снова</button>
-  </div>
-  <script src="logic.js"></script>
-</body>
-</html>
-<div id="endScreen" style="display:none;">
-    <h2 id="endMessage">Победа!</h2>
-    <button onclick="startGame()">Сыграть снова</button>
-  </div>
-  <button id="lightningBtn" onclick="useLightning()" style="display:none; position:fixed; bottom:20px; left:50%; transform:translateX(-50%); z-index:10;">⚡ Молния (-20 маны)</button>
+  <button id="lightningBtn" onclick="useLightning()">⚡ Молния (20 маны)</button>
   <script>
 const board = document.getElementById("board");
 const hpEl = document.getElementById("hp");
 const shieldEl = document.getElementById("shield");
 const enemyHpEl = document.getElementById("enemyHp");
 const enemyShieldEl = document.getElementById("enemyShield");
+const manaEl = document.getElementById("mana");
+const enemyManaEl = document.getElementById("enemyMana");
 const timerBar = document.getElementById("timerBar");
-const overlay = document.getElementById("overlay");
-const endScreen = document.getElementById("endScreen");
-const endMessage = document.getElementById("endMessage");
 const battleLog = document.getElementById("battleLog");
 const lightningBtn = document.getElementById("lightningBtn");
 
 const colors = ['red', 'green', 'blue', 'orange', 'purple'];
 let grid = [], dragging = null;
 let isPlayerTurn = true;
-let hp = 200, shield = 100, mana = 0;
-let enemyHp = 500, enemyShield = 300, enemyMana = 0;
-let lightningUsed = false;
-let playerName = "Игрок", turnTimer;
+let hp = 200, shield = 100, enemyHp = 500, enemyShield = 300;
+let mana = 0, enemyMana = 0, lightningUsed = false;
+let turnTimer;
 let comboAccumulator = { red: 0, green: 0, blue: 0, orange: 0, purple: 0, count: 0 };
-
-function startGame() {
-  playerName = document.getElementById("nickname").value || "Игрок";
-  hp = 200; shield = 100; enemyHp = 500; enemyShield = 300;
-  mana = 0; enemyMana = 0;
-  lightningUsed = false;
-  comboAccumulator = { red: 0, green: 0, blue: 0, orange: 0, purple: 0, count: 0 };
-  updateStats();
-  createGridWithoutMatches();
-  overlay.style.display = "none";
-  endScreen.style.display = "none";
-  document.body.classList.remove("enemy-turn");
-  isPlayerTurn = true;
-  startTurn();
-}
 
 function updateStats() {
   hpEl.textContent = hp;
   shieldEl.textContent = shield;
   enemyHpEl.textContent = enemyHp;
   enemyShieldEl.textContent = enemyShield;
-  lightningBtn.style.display = (mana >= 20 && isPlayerTurn && !lightningUsed) ? 'block' : 'none';
+  manaEl.textContent = mana;
+  enemyManaEl.textContent = enemyMana;
 }
 
-function useLightning() {
-  if (mana >= 20 && isPlayerTurn && !lightningUsed) {
-    mana -= 20;
-    lightningUsed = true;
-    comboAccumulator.red += 0; // для совместимости
-    comboAccumulator.bonusDamage = (comboAccumulator.bonusDamage || 0) + 50;
-    updateStats();
-  }
+function createGridWithoutMatches() {
+  let tries = 0;
+  do {
+    board.innerHTML = "";
+    grid = [];
+    for (let i = 0; i < 36; i++) {
+      const cell = document.createElement("div");
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      cell.className = "cell " + color;
+      board.appendChild(cell);
+      grid.push(cell);
+    }
+    tries++;
+    if (tries > 100) break;
+  } while (checkMatches().length > 0);
 }
+
+function index(r, c) { return r * 6 + c; }
+function getColor(el) { return colors.find(c => el.classList.contains(c)); }
 
 function startTurn() {
   isPlayerTurn = true;
   lightningUsed = false;
-  comboAccumulator = { red: 0, green: 0, blue: 0, orange: 0, purple: 0, count: 0, bonusDamage: 0 };
+  comboAccumulator = { red: 0, green: 0, blue: 0, orange: 0, purple: 0, count: 0 };
   document.body.classList.remove("enemy-turn");
   board.style.pointerEvents = "auto";
+  lightningBtn.style.display = mana >= 20 ? "block" : "none";
+
   let time = 20;
   timerBar.style.width = "100%";
   clearInterval(turnTimer);
@@ -261,7 +210,7 @@ function resolveCascade() {
 }
 
 function applyEffects() {
-  const { red, green, blue, orange, purple, count, bonusDamage } = comboAccumulator;
+  const { red, green, blue, orange, purple, count } = comboAccumulator;
   let dmg = red >= 5 ? 20 : red >= 3 ? 10 : 0;
   const heal = green >= 5 ? 10 : green >= 3 ? 5 : 0;
   const def = blue >= 5 ? 10 : blue >= 3 ? 5 : 0;
@@ -269,8 +218,23 @@ function applyEffects() {
   const manaGain = purple >= 5 ? 20 : purple >= 3 ? 10 : 0;
   const bonus = Math.round(dmg * (count * 0.05));
   dmg += bonus;
-  if (bonusDamage) dmg += bonusDamage;
-  const isCrit = Math.random() * 100 < critChance;
+
+  if (isPlayerTurn) {
+    mana += manaGain;
+    if (lightningUsed) {
+      dmg += 50;
+      mana -= 20;
+    }
+    lightningBtn.style.display = "none";
+  } else {
+    enemyMana += manaGain;
+    if (enemyMana >= 20) {
+      dmg += 50;
+      enemyMana -= 20;
+    }
+  }
+
+  let isCrit = Math.random() * 100 < critChance;
   if (isCrit) dmg *= 2;
 
   const logText = `Комбо ×${count}, Урон: ${dmg}${isCrit ? ' (КРИТ!)' : ''}`;
@@ -282,35 +246,41 @@ function applyEffects() {
       enemyShield -= half;
       enemyHp -= (dmg - half);
     } else {
-      const rem = half - enemyShield;
+      let rem = half - enemyShield;
       enemyShield = 0;
       enemyHp -= (dmg - half + rem);
     }
     shield += def;
     hp += heal;
-    mana += manaGain;
     if (hp > 200) hp = 200;
-    float("+ " + heal, hpEl, "#00ff00");
-    float("+ " + def, shieldEl, "#3399ff");
+    float("+" + heal, hpEl, "#00ff00");
+    float("+" + def, shieldEl, "#3399ff");
   } else {
     let half = Math.floor(dmg / 2);
     if (shield >= half) {
       shield -= half;
       hp -= (dmg - half);
     } else {
-      const rem = half - shield;
+      let rem = half - shield;
       shield = 0;
       hp -= (dmg - half + rem);
     }
     enemyShield += def;
+    if (enemyShield > 300) enemyShield = 300;
     enemyHp += heal;
-    enemyMana += manaGain;
     if (enemyHp > 500) enemyHp = 500;
-    float("+ " + heal, enemyHpEl, "#00ff00");
-    float("+ " + def, enemyShieldEl, "#3399ff");
+    float("+" + heal, enemyHpEl, "#00ff00");
+    float("+" + def, enemyShieldEl, "#3399ff");
   }
 
   updateStats();
+}
+
+function useLightning() {
+  if (mana >= 20 && isPlayerTurn) {
+    lightningUsed = true;
+    lightningBtn.style.display = "none";
+  }
 }
 
 function float(text, target, color) {
@@ -325,27 +295,13 @@ function float(text, target, color) {
   setTimeout(() => box.remove(), 3000);
 }
 
-function checkEnd() {
-  if (hp <= 0) {
-    endMessage.textContent = "Победа монстра!";
-    endScreen.style.display = "flex";
-    return true;
-  }
-  if (enemyHp <= 0) {
-    endMessage.textContent = "Победа игрока!";
-    endScreen.style.display = "flex";
-    return true;
-  }
-  return false;
-}
-
 function dropDown() {
   for (let c = 0; c < 6; c++) {
     for (let r = 5; r > 0; r--) {
-      let i = r * 6 + c;
+      let i = index(r, c);
       if (!getColor(grid[i])) {
         for (let k = r - 1; k >= 0; k--) {
-          let up = k * 6 + c;
+          let up = index(k, c);
           if (getColor(grid[up])) {
             grid[i].className = grid[up].className;
             grid[up].className = "cell";
@@ -355,7 +311,7 @@ function dropDown() {
       }
     }
     for (let r = 0; r < 6; r++) {
-      let i = r * 6 + c;
+      let i = index(r, c);
       if (!getColor(grid[i])) {
         const cls = colors[Math.floor(Math.random() * colors.length)];
         grid[i].className = "cell " + cls;
@@ -364,15 +320,11 @@ function dropDown() {
   }
 }
 
-function getColor(el) {
-  return colors.find(c => el.classList.contains(c));
-}
-
 function checkMatches() {
   const matches = [];
   for (let r = 0; r < 6; r++) {
     for (let c = 0; c < 4; c++) {
-      let i = r * 6 + c;
+      let i = index(r, c);
       let a = grid[i], b = grid[i + 1], c_ = grid[i + 2];
       if (getColor(a) === getColor(b) && getColor(b) === getColor(c_))
         matches.push([i, i + 1, i + 2]);
@@ -380,7 +332,7 @@ function checkMatches() {
   }
   for (let c = 0; c < 6; c++) {
     for (let r = 0; r < 4; r++) {
-      let i = r * 6 + c;
+      let i = index(r, c);
       let a = grid[i], b = grid[i + 6], c_ = grid[i + 12];
       if (getColor(a) === getColor(b) && getColor(b) === getColor(c_))
         matches.push([i, i + 6, i + 12]);
@@ -391,8 +343,8 @@ function checkMatches() {
 
 function monsterTurn() {
   isPlayerTurn = false;
-  document.body.classList.add("enemy-turn");
   lightningBtn.style.display = "none";
+  document.body.classList.add("enemy-turn");
   setTimeout(() => {
     let moved = false;
     for (let i = 0; i < 36 && !moved; i++) {
@@ -410,7 +362,18 @@ function monsterTurn() {
   }, 800 + Math.random() * 1000);
 }
 
-// Touch (мобильные устройства)
+function checkEnd() {
+  if (hp <= 0) {
+    alert("Победа монстра!");
+    return true;
+  }
+  if (enemyHp <= 0) {
+    alert("Победа игрока!");
+    return true;
+  }
+  return false;
+}
+
 board.addEventListener("touchstart", e => {
   const t = e.touches[0];
   const el = document.elementFromPoint(t.clientX, t.clientY);
@@ -431,6 +394,12 @@ board.addEventListener("touchend", () => {
   board.style.pointerEvents = "none";
   resolveCascade();
 });
-</script>
+
+window.onload = () => {
+  createGridWithoutMatches();
+  updateStats();
+  startTurn();
+};
+  </script>
 </body>
 </html>
