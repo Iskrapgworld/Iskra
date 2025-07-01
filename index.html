@@ -59,9 +59,9 @@
     .red    { background: radial-gradient(circle, #ff4d4d, #990000); }
     .green  { background: radial-gradient(circle, #66ff66, #006600); }
     .blue   { background: radial-gradient(circle, #66ccff, #003366); }
-    .yellow { background: radial-gradient(circle, #ffff88, #ffaa00); }
+    .orange { background: radial-gradient(circle, #ffbb66, #cc6600); }
     .purple { background: radial-gradient(circle, #dca0ff, #440066); }
-    .orange { background: radial-gradient(circle, #cc9955, #cc6600); }
+
     .highlight { box-shadow: 0 0 10px 4px #ffffff88; }
     .fade { opacity: 0; }
     .enemy-turn #board {
@@ -84,7 +84,7 @@
       font-size: 14px;
       font-weight: bold;
       pointer-events: none;
-      animation: floatUp 1s ease forwards;
+      animation: floatUp 3s ease forwards;
     }
     @keyframes floatUp {
       from { opacity: 1; transform: translateY(0); }
@@ -138,24 +138,19 @@ const endScreen = document.getElementById("endScreen");
 const endMessage = document.getElementById("endMessage");
 const battleLog = document.getElementById("battleLog");
 
-const healText = document.getElementById("healText");
-const defText = document.getElementById("defText");
-const enemyHealText = document.getElementById("enemyHealText");
-const enemyDefText = document.getElementById("enemyDefText");
-
-const colors = ['red', 'green', 'blue', 'yellow', 'purple', 'orange'];
+const colors = ['red', 'green', 'blue', 'orange', 'purple'];
 let grid = [], dragging = null;
 let isPlayerTurn = true;
 let hp = 200, shield = 100, enemyHp = 500, enemyShield = 300;
 let playerName = "Игрок", turnTimer;
-let comboAccumulator = { red: 0, green: 0, blue: 0, orange: 0, count: 0 };
+let comboAccumulator = { red: 0, green: 0, blue: 0, orange: 0, purple: 0, count: 0 };
 
 function startGame() {
   playerName = document.getElementById("nickname").value || "Игрок";
   hp = 200; shield = 100; enemyHp = 500; enemyShield = 300;
-  comboAccumulator = { red: 0, green: 0, blue: 0, orange: 0, count: 0 };
+  comboAccumulator = { red: 0, green: 0, blue: 0, orange: 0, purple: 0, count: 0 };
   updateStats();
-  createGrid();
+  createGridWithoutMatches();
   overlay.style.display = "none";
   endScreen.style.display = "none";
   document.body.classList.remove("enemy-turn");
@@ -170,17 +165,6 @@ function updateStats() {
   enemyShieldEl.textContent = enemyShield;
 }
 
-function createGrid() {
-  board.innerHTML = "";
-  grid = [];
-  for (let i = 0; i < 36; i++) {
-    const cell = document.createElement("div");
-    cell.className = "cell " + colors[Math.floor(Math.random() * colors.length)];
-    board.appendChild(cell);
-    grid.push(cell);
-  }
-}
-
 function index(r, c) {
   return r * 6 + c;
 }
@@ -188,9 +172,26 @@ function getColor(el) {
   return colors.find(c => el.classList.contains(c));
 }
 
+function createGridWithoutMatches() {
+  let tries = 0;
+  do {
+    board.innerHTML = "";
+    grid = [];
+    for (let i = 0; i < 36; i++) {
+      const cell = document.createElement("div");
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      cell.className = "cell " + color;
+      board.appendChild(cell);
+      grid.push(cell);
+    }
+    tries++;
+    if (tries > 100) break;
+  } while (checkMatches().length > 0);
+}
+
 function startTurn() {
   isPlayerTurn = true;
-  comboAccumulator = { red: 0, green: 0, blue: 0, orange: 0, count: 0 };
+  comboAccumulator = { red: 0, green: 0, blue: 0, orange: 0, purple: 0, count: 0 };
   document.body.classList.remove("enemy-turn");
   board.style.pointerEvents = "auto";
   let time = 20;
@@ -218,7 +219,7 @@ function resolveCascade() {
 
   matches.forEach(g => {
     const color = getColor(grid[g[0]]);
-    comboAccumulator[color] = (comboAccumulator[color] || 0) + g.length;
+    comboAccumulator[color] += g.length;
     comboAccumulator.count += 1;
     g.forEach(i => grid[i].classList.add("highlight"));
   });
@@ -237,28 +238,30 @@ function resolveCascade() {
 }
 
 function applyEffects() {
-  const { red, green, blue, orange, count } = comboAccumulator;
-  let dmg = (red + orange) * 10;
-  let heal = green * 5;
-  let def = blue * 5;
-  let bonus = Math.round(dmg * (count * 0.05));
-  dmg += bonus;
-  const critChance = Math.min(orange * 5, 100);
-  const isCrit = Math.random() * 100 < critChance;
-  if (isCrit) dmg *= 2;
+  const { red, green, blue, orange, purple, count } = comboAccumulator;
 
-  const logText = `Комбо ×${count}, Урон: ${dmg}${isCrit ? ' (КРИТ!)' : ''}`;
+  const dmg = red >= 5 ? 20 : red >= 3 ? 10 : 0;
+  const heal = green >= 5 ? 10 : green >= 3 ? 5 : 0;
+  const def = blue >= 5 ? 10 : blue >= 3 ? 5 : 0;
+  const critChance = orange;
+  const manaGain = purple >= 5 ? 20 : purple >= 3 ? 10 : 0;
+  const bonus = Math.round(dmg * (count * 0.05));
+  let finalDmg = dmg + bonus;
+  let isCrit = Math.random() * 100 < critChance;
+  if (isCrit) finalDmg *= 2;
+
+  const logText = `Комбо ×${count}, Урон: ${finalDmg}${isCrit ? ' (КРИТ!)' : ''}`;
   battleLog.innerHTML = `<span style="color:${isPlayerTurn ? '#66ff66' : '#ff4444'}">${logText}</span>`;
 
   if (isPlayerTurn) {
-    let half = Math.floor(dmg / 2);
+    let half = Math.floor(finalDmg / 2);
     if (enemyShield >= half) {
       enemyShield -= half;
-      enemyHp -= (dmg - half);
+      enemyHp -= (finalDmg - half);
     } else {
       const rem = half - enemyShield;
       enemyShield = 0;
-      enemyHp -= (dmg - half + rem);
+      enemyHp -= (finalDmg - half + rem);
     }
     shield += def;
     hp += heal;
@@ -266,16 +269,15 @@ function applyEffects() {
 
     float("+ " + heal, hpEl, "#00ff00");
     float("+ " + def, shieldEl, "#3399ff");
-
   } else {
-    let half = Math.floor(dmg / 2);
+    let half = Math.floor(finalDmg / 2);
     if (shield >= half) {
       shield -= half;
-      hp -= (dmg - half);
+      hp -= (finalDmg - half);
     } else {
       const rem = half - shield;
       shield = 0;
-      hp -= (dmg - half + rem);
+      hp -= (finalDmg - half + rem);
     }
     enemyShield += def;
     if (enemyShield > 300) enemyShield = 300;
@@ -287,7 +289,6 @@ function applyEffects() {
   }
 
   updateStats();
-  checkEnd();
 }
 
 function float(text, target, color) {
@@ -299,7 +300,7 @@ function float(text, target, color) {
   box.style.left = (rect.left + rect.width / 2) + "px";
   box.style.top = (rect.top - 10) + "px";
   document.body.appendChild(box);
-  setTimeout(() => box.remove(), 1000);
+  setTimeout(() => box.remove(), 3000);
 }
 
 function checkEnd() {
@@ -382,7 +383,6 @@ function monsterTurn() {
   }, 800 + Math.random() * 1000);
 }
 
-// Drag logic
 board.addEventListener("touchstart", e => {
   const t = e.touches[0];
   const el = document.elementFromPoint(t.clientX, t.clientY);
