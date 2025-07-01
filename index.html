@@ -59,7 +59,7 @@
     .red    { background: radial-gradient(circle, #ff4d4d, #990000); }
     .green  { background: radial-gradient(circle, #66ff66, #006600); }
     .blue   { background: radial-gradient(circle, #66ccff, #003366); }
-    .orange { background: radial-gradient(circle, #ffbb66, #cc6600); }
+    .orange { background: radial-gradient(circle, #ffcc88, #cc6600); }
     .purple { background: radial-gradient(circle, #dca0ff, #440066); }
     .highlight { box-shadow: 0 0 10px 4px #ffffff88; }
     .fade { opacity: 0; }
@@ -105,21 +105,29 @@
       background: #6622cc;
       color: white;
     }
+    #lightningBtn {
+      display: none;
+      margin-top: 10px;
+      font-size: 14px;
+      background: #ffcc00;
+      color: #000;
+    }
   </style>
 </head>
 <body>
   <h1>🔥 ИСКРА: Битва 🔥</h1>
   <div id="topBar">
-    <div>Вы:<br>❤️ <span id="hp">200</span> <span id="healText"></span><br>🛡 <span id="shield">100</span> <span id="defText"></span></div>
+    <div>Вы:<br>❤️ <span id="hp">200</span> <span id="healText"></span><br>🛡 <span id="shield">100</span> <span id="defText"></span><br>🔮 <span id="mana">0</span></div>
     <div id="timerBarContainer"><div id="timerBar"></div></div>
-    <div>Монстр:<br>💀 <span id="enemyHp">500</span> <span id="enemyHealText"></span><br>🛡 <span id="enemyShield">300</span> <span id="enemyDefText"></span></div>
+    <div>Монстр:<br>💀 <span id="enemyHp">500</span> <span id="enemyHealText"></span><br>🛡 <span id="enemyShield">300</span> <span id="enemyDefText"></span><br>🔮 <span id="enemyMana">0</span></div>
   </div>
   <div id="battleLog">Комбо появится здесь...</div>
   <div id="board"></div>
+  <button id="lightningBtn" onclick="castLightning()">⚡ Молния (20 маны)</button>
   <div id="overlay">
     <h2>Введите имя:</h2>
     <input id="nickname" placeholder="Имя игрока">
-    <button id="startButton">В бой!</button>
+    <button onclick="startGame()">В бой!</button>
   </div>
   <div id="endScreen" style="display:none;">
     <h2 id="endMessage">Победа!</h2>
@@ -129,30 +137,39 @@
 const board = document.getElementById("board");
 const hpEl = document.getElementById("hp");
 const shieldEl = document.getElementById("shield");
+const manaEl = document.getElementById("mana");
 const enemyHpEl = document.getElementById("enemyHp");
 const enemyShieldEl = document.getElementById("enemyShield");
+const enemyManaEl = document.getElementById("enemyMana");
 const timerBar = document.getElementById("timerBar");
 const overlay = document.getElementById("overlay");
 const endScreen = document.getElementById("endScreen");
 const endMessage = document.getElementById("endMessage");
 const battleLog = document.getElementById("battleLog");
-const startButton = document.getElementById("startButton");
+const lightningBtn = document.getElementById("lightningBtn");
+
+let healText = document.getElementById("healText");
+let defText = document.getElementById("defText");
+let enemyHealText = document.getElementById("enemyHealText");
+let enemyDefText = document.getElementById("enemyDefText");
 
 const colors = ['red', 'green', 'blue', 'orange', 'purple'];
 let grid = [], dragging = null;
 let isPlayerTurn = true;
-let hp = 200, shield = 100, enemyHp = 500, enemyShield = 300;
+let hp = 200, shield = 100, mana = 0;
+let enemyHp = 500, enemyShield = 300, enemyMana = 0;
 let playerName = "Игрок", turnTimer;
 let comboAccumulator = { red: 0, green: 0, blue: 0, orange: 0, purple: 0, count: 0 };
-
-startButton.addEventListener("click", startGame);
+let extraDamage = 0;
 
 function startGame() {
   playerName = document.getElementById("nickname").value || "Игрок";
-  hp = 200; shield = 100; enemyHp = 500; enemyShield = 300;
+  hp = 200; shield = 100; mana = 0;
+  enemyHp = 500; enemyShield = 300; enemyMana = 0;
   comboAccumulator = { red: 0, green: 0, blue: 0, orange: 0, purple: 0, count: 0 };
+  lightningBtn.style.display = "none";
   updateStats();
-  createGridWithoutMatches();
+  createGrid();
   overlay.style.display = "none";
   endScreen.style.display = "none";
   document.body.classList.remove("enemy-turn");
@@ -163,37 +180,40 @@ function startGame() {
 function updateStats() {
   hpEl.textContent = hp;
   shieldEl.textContent = shield;
+  manaEl.textContent = mana;
   enemyHpEl.textContent = enemyHp;
   enemyShieldEl.textContent = enemyShield;
+  enemyManaEl.textContent = enemyMana;
+  lightningBtn.style.display = isPlayerTurn && mana >= 20 ? "inline-block" : "none";
 }
 
-function index(r, c) {
-  return r * 6 + c;
-}
-function getColor(el) {
-  return colors.find(c => el.classList.contains(c));
+function castLightning() {
+  if (mana < 20 || !isPlayerTurn) return;
+  extraDamage += 50;
+  mana -= 20;
+  updateStats();
 }
 
-function createGridWithoutMatches() {
-  let tries = 0;
+function createGrid() {
+  board.innerHTML = "";
+  grid = [];
   do {
-    board.innerHTML = "";
-    grid = [];
     for (let i = 0; i < 36; i++) {
       const cell = document.createElement("div");
-      const color = colors[Math.floor(Math.random() * colors.length)];
-      cell.className = "cell " + color;
+      cell.className = "cell " + colors[Math.floor(Math.random() * colors.length)];
       board.appendChild(cell);
       grid.push(cell);
     }
-    tries++;
-    if (tries > 100) break;
   } while (checkMatches().length > 0);
 }
+
+function index(r, c) { return r * 6 + c; }
+function getColor(el) { return colors.find(c => el.classList.contains(c)); }
 
 function startTurn() {
   isPlayerTurn = true;
   comboAccumulator = { red: 0, green: 0, blue: 0, orange: 0, purple: 0, count: 0 };
+  extraDamage = 0;
   document.body.classList.remove("enemy-turn");
   board.style.pointerEvents = "auto";
   let time = 20;
@@ -221,7 +241,7 @@ function resolveCascade() {
 
   matches.forEach(g => {
     const color = getColor(grid[g[0]]);
-    comboAccumulator[color] += g.length;
+    comboAccumulator[color] = (comboAccumulator[color] || 0) + g.length;
     comboAccumulator.count += 1;
     g.forEach(i => grid[i].classList.add("highlight"));
   });
@@ -241,54 +261,64 @@ function resolveCascade() {
 
 function applyEffects() {
   const { red, green, blue, orange, purple, count } = comboAccumulator;
+  let dmg = 0;
+  if (red >= 5) dmg = 20;
+  else if (red >= 3) dmg = 10;
 
-  const dmg = red >= 5 ? 20 : red >= 3 ? 10 : 0;
-  const heal = green >= 5 ? 10 : green >= 3 ? 5 : 0;
-  const def = blue >= 5 ? 10 : blue >= 3 ? 5 : 0;
-  const critChance = orange;
-  const manaGain = purple >= 5 ? 20 : purple >= 3 ? 10 : 0;
-  const bonus = Math.round(dmg * (count * 0.05));
-  let finalDmg = dmg + bonus;
-  let isCrit = Math.random() * 100 < critChance;
-  if (isCrit) finalDmg *= 2;
+  dmg += extraDamage;
 
-  const logText = `Комбо ×${count}, Урон: ${finalDmg}${isCrit ? ' (КРИТ!)' : ''}`;
+  let heal = (green >= 5) ? 10 : (green >= 3 ? 5 : 0);
+  let def = (blue >= 5) ? 10 : (blue >= 3 ? 5 : 0);
+  let critChance = orange;
+  let manaGain = (purple >= 5) ? 20 : (purple >= 3 ? 10 : 0);
+
+  const isCrit = Math.random() * 100 < critChance;
+  if (isCrit) dmg *= 2;
+
+  const logText = `Комбо ×${count}, Урон: ${dmg}${isCrit ? ' (КРИТ!)' : ''}`;
   battleLog.innerHTML = `<span style="color:${isPlayerTurn ? '#66ff66' : '#ff4444'}">${logText}</span>`;
 
   if (isPlayerTurn) {
-    let half = Math.floor(finalDmg / 2);
+    mana += manaGain;
+    let half = Math.floor(dmg / 2);
     if (enemyShield >= half) {
       enemyShield -= half;
-      enemyHp -= (finalDmg - half);
+      enemyHp -= (dmg - half);
     } else {
       const rem = half - enemyShield;
       enemyShield = 0;
-      enemyHp -= (finalDmg - half + rem);
+      enemyHp -= (dmg - half + rem);
     }
     shield += def;
     hp += heal;
     if (hp > 200) hp = 200;
+    if (shield > 100) shield = 100;
+
     float("+ " + heal, hpEl, "#00ff00");
     float("+ " + def, shieldEl, "#3399ff");
+
   } else {
-    let half = Math.floor(finalDmg / 2);
+    enemyMana += manaGain;
+    let half = Math.floor(dmg / 2);
     if (shield >= half) {
       shield -= half;
-      hp -= (finalDmg - half);
+      hp -= (dmg - half);
     } else {
       const rem = half - shield;
       shield = 0;
-      hp -= (finalDmg - half + rem);
+      hp -= (dmg - half + rem);
     }
     enemyShield += def;
-    if (enemyShield > 300) enemyShield = 300;
     enemyHp += heal;
     if (enemyHp > 500) enemyHp = 500;
+    if (enemyShield > 300) enemyShield = 300;
+
     float("+ " + heal, enemyHpEl, "#00ff00");
     float("+ " + def, enemyShieldEl, "#3399ff");
   }
 
   updateStats();
+  checkEnd();
 }
 
 function float(text, target, color) {
