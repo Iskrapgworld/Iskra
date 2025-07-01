@@ -1,29 +1,144 @@
-<script>
-const board = document.getElementById('board');
-const hpEl = document.getElementById('hp');
-const shieldEl = document.getElementById('shield');
-const enemyHpEl = document.getElementById('enemyHp');
-const enemyShieldEl = document.getElementById('enemyShield');
-const timerBar = document.getElementById('timerBar');
-const overlay = document.getElementById('overlay');
-const turnText = document.getElementById('turnText');
-const logBox = document.getElementById('battleLog');
-const colors = ['red','green','blue','yellow','purple','orange'];
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>ИСКРА: Битва</title>
+  <style>
+    body {
+      margin: 0;
+      background-color: #111;
+      color: #fff;
+      font-family: sans-serif;
+      text-align: center;
+    }
+    h1 {
+      color: #ffa500;
+      margin: 10px 0;
+    }
+    #topBar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 10px;
+      font-size: 14px;
+    }
+    #timerBarContainer {
+      flex-grow: 1;
+      height: 10px;
+      margin: 0 10px;
+      background: #444;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+    #timerBar {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, #33ff33, #ffff00);
+      transition: width 1s linear;
+    }
+    #battleLog {
+      margin: 10px;
+      padding: 5px;
+      font-size: 14px;
+      min-height: 60px;
+    }
+    #board {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 4px;
+      width: 360px;
+      margin: 0 auto;
+      transition: opacity 0.3s ease;
+    }
+    .cell {
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      transition: transform 0.3s ease, opacity 1s ease;
+    }
+    .red { background: radial-gradient(circle, #ff4d4d, #990000); }
+    .green { background: radial-gradient(circle, #66ff66, #006600); }
+    .blue { background: radial-gradient(circle, #66ccff, #003366); }
+    .yellow { background: radial-gradient(circle, #ffff88, #ffaa00); }
+    .purple { background: radial-gradient(circle, #dca0ff, #440066); }
+    .orange { background: radial-gradient(circle, #cc9955, #cc6600); }
+    .highlight {
+      box-shadow: 0 0 10px 4px #ffffff88;
+    }
+    .fade {
+      opacity: 0;
+    }
+    .enemy-turn #board {
+      pointer-events: none;
+      opacity: 0.2;
+    }
+    #overlay, #endScreen {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.85);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      z-index: 999;
+    }
+    #overlay input {
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: none;
+      margin-top: 10px;
+    }
+    button {
+      padding: 10px 20px;
+      margin-top: 10px;
+      font-size: 16px;
+      border: none;
+      border-radius: 10px;
+      background: #6622cc;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔥 ИСКРА: Битва 🔥</h1>
+  <div id="topBar">
+    <div>Вы:<br>❤️ <span id="hp">200</span> 🛡 <span id="shield">100</span></div>
+    <div id="timerBarContainer"><div id="timerBar"></div></div>
+    <div>Монстр:<br>💀 <span id="enemyHp">500</span> 🛡 <span id="enemyShield">300</span></div>
+  </div>
+  <div id="battleLog">Добро пожаловать в бой!</div>
+  <div id="board"></div>
+  <div id="overlay">
+    <h2>Введите имя:</h2>
+    <input id="nickname" placeholder="Имя игрока">
+    <button onclick="startGame()">В бой!</button>
+  </div>
+  <div id="endScreen" style="display:none;">
+    <h2 id="endMessage">Победа!</h2>
+    <button onclick="startGame()">Сыграть снова</button>
+  </div>
+  <script>
+const board = document.getElementById("board");
+const hpEl = document.getElementById("hp");
+const shieldEl = document.getElementById("shield");
+const enemyHpEl = document.getElementById("enemyHp");
+const enemyShieldEl = document.getElementById("enemyShield");
+const overlay = document.getElementById("overlay");
+const endScreen = document.getElementById("endScreen");
+const endMessage = document.getElementById("endMessage");
+const timerBar = document.getElementById("timerBar");
+const battleLog = document.getElementById("battleLog");
 
+const colors = ['red', 'green', 'blue', 'yellow', 'purple', 'orange'];
+let grid = [];
+let dragging = null;
+let isPlayerTurn = true;
 let hp = 200, shield = 100, enemyHp = 500, enemyShield = 300;
-let grid = [], dragging = null, turnTimer, isPlayerTurn = true;
 let playerName = "Игрок";
-let totalCombos = 0;
-let pendingEffects = {dmg:0, heal:0, def:0, crit:false, combo:0};
-
-function startGame() {
-  playerName = document.getElementById('nickname').value || "Игрок";
-  overlay.style.display = 'none';
-  hp = 200; shield = 100; enemyHp = 500; enemyShield = 300;
-  updateStats();
-  createGrid();
-  startTurn();
-}
+let turnTimer;
+let comboAccumulator = { red: 0, green: 0, blue: 0, orange: 0, count: 0 };
 
 function updateStats() {
   hpEl.textContent = hp;
@@ -32,156 +147,191 @@ function updateStats() {
   enemyShieldEl.textContent = enemyShield;
 }
 
+function startGame() {
+  playerName = document.getElementById("nickname").value || "Игрок";
+  hp = 200; shield = 100; enemyHp = 500; enemyShield = 300;
+  comboAccumulator = { red: 0, green: 0, blue: 0, orange: 0, count: 0 };
+  updateStats();
+  createGrid();
+  overlay.style.display = "none";
+  endScreen.style.display = "none";
+  document.body.classList.remove("enemy-turn");
+  isPlayerTurn = true;
+  startTurn();
+}
+
 function createGrid() {
-  board.innerHTML = '';
+  board.innerHTML = "";
   grid = [];
-  for(let i=0;i<36;i++) {
-    const cell = document.createElement('div');
-    cell.className = 'cell ' + colors[Math.floor(Math.random()*colors.length)];
+  for (let i = 0; i < 36; i++) {
+    const cell = document.createElement("div");
+    cell.className = "cell " + colors[Math.floor(Math.random() * colors.length)];
     board.appendChild(cell);
     grid.push(cell);
   }
 }
 
-function index(r,c){ return r*6 + c; }
-function getColor(el){ return colors.find(c => el.classList.contains(c)); }
+function index(r, c) {
+  return r * 6 + c;
+}
+
+function getColor(el) {
+  return colors.find(c => el.classList.contains(c));
+}
 
 function startTurn() {
   isPlayerTurn = true;
-  document.body.classList.remove('enemy-turn');
-  board.style.pointerEvents = 'auto';
-  timerBar.style.width = '100%';
+  comboAccumulator = { red: 0, green: 0, blue: 0, orange: 0, count: 0 };
+  document.body.classList.remove("enemy-turn");
+  board.style.pointerEvents = "auto";
   let time = 20;
+  timerBar.style.width = "100%";
   clearInterval(turnTimer);
   turnTimer = setInterval(() => {
     time--;
-    timerBar.style.width = (time*5) + '%';
-    if(time<=0){
+    timerBar.style.width = (time * 5) + "%";
+    if (time <= 0) {
       clearInterval(turnTimer);
-      board.style.pointerEvents = 'none';
-      processCombos();
+      board.style.pointerEvents = "none";
+      resolveCascade();
     }
   }, 1000);
 }
 
-function processCombos() {
-  let matches = checkMatches();
-  if(matches.length===0){
-    applyFinalEffects();
+function resolveCascade() {
+  const matches = checkMatches();
+  if (matches.length === 0) {
+    applyEffects();
+    if (checkEnd()) return;
+    if (isPlayerTurn) {
+      setTimeout(monsterTurn, 1000);
+    } else {
+      setTimeout(startTurn, 1000);
+    }
     return;
   }
 
-  totalCombos += matches.length;
-
-  matches.forEach(g=>{
+  matches.forEach(g => {
     let color = getColor(grid[g[0]]);
-    if(color === 'red' || color === 'purple') pendingEffects.dmg += g.length * 10;
-    if(color === 'green') pendingEffects.heal += g.length * 5;
-    if(color === 'blue') pendingEffects.def += g.length * 5;
-    if(color === 'orange') pendingEffects.crit = Math.random() * 100 < g.length * 5;
-    g.forEach(i => grid[i].classList.add('highlight'));
+    comboAccumulator[color] = (comboAccumulator[color] || 0) + g.length;
+    comboAccumulator.count += 1;
+    g.forEach(i => grid[i].classList.add("highlight"));
   });
 
   setTimeout(() => {
     matches.flat().forEach(i => {
-      grid[i].classList.remove('highlight');
-      grid[i].classList.add('fade');
+      grid[i].classList.remove("highlight");
+      grid[i].classList.add("fade");
     });
-
     setTimeout(() => {
-      matches.flat().forEach(i => grid[i].className = 'cell');
+      matches.flat().forEach(i => grid[i].className = "cell");
       dropDown();
-      setTimeout(processCombos, 500);
-    }, 1000);
+      setTimeout(resolveCascade, 600);
+    }, 600);
   }, 1000);
 }
 
-function applyFinalEffects() {
-  let bonus = 1 + totalCombos * 0.05;
-  let dmg = Math.floor(pendingEffects.dmg * bonus);
-  if(pendingEffects.crit) dmg *= 2;
-  let heal = pendingEffects.heal;
-  let def = pendingEffects.def;
+function applyEffects() {
+  let { red, green, blue, orange, count } = comboAccumulator;
+  let damage = (red + orange) * 10;
+  let heal = green * 5;
+  let def = blue * 5;
+  let bonus = Math.round(damage * (count * 0.05));
+  damage += bonus;
+  let critChance = Math.min(orange * 5, 100);
+  let isCrit = Math.random() * 100 < critChance;
+  if (isCrit) damage *= 2;
 
-  // Вспышка урона
-  board.classList.add('highlight');
-  setTimeout(()=>board.classList.remove('highlight'), 300);
-
-  if(isPlayerTurn){
-    let shieldHit = Math.min(enemyShield, Math.floor(dmg/2));
-    enemyShield -= shieldHit;
-    let hpHit = dmg - shieldHit;
-    enemyHp -= hpHit;
-    if(enemyHp<0) enemyHp = 0;
+  if (isPlayerTurn) {
+    let half = Math.floor(damage / 2);
+    if (enemyShield >= half) {
+      enemyShield -= half;
+      enemyHp -= (damage - half);
+    } else {
+      let remainder = half - enemyShield;
+      enemyShield = 0;
+      enemyHp -= (damage - half + remainder);
+    }
     shield += def;
     hp += heal;
-    if(hp > 200) hp = 200;
-    if(enemyHp <= 0) return endGame(true);
-    showLog(totalCombos, dmg, isPlayerTurn);
-    showHeals(heal, def, true);
-    updateStats();
-    setTimeout(monsterTurn, 1000);
+    if (hp > 200) hp = 200;
+    battleLog.innerHTML = `<span style="color:#66ff66">${playerName} нанёс ${damage}${isCrit ? " (КРИТ!)" : ""} урона, +${def} щит, +${heal} лечение, комбо: ${count}</span>`;
   } else {
-    let shieldHit = Math.min(shield, Math.floor(dmg/2));
-    shield -= shieldHit;
-    let hpHit = dmg - shieldHit;
-    hp -= hpHit;
-    if(hp<0) hp = 0;
+    let half = Math.floor(damage / 2);
+    if (shield >= half) {
+      shield -= half;
+      hp -= (damage - half);
+    } else {
+      let remainder = half - shield;
+      shield = 0;
+      hp -= (damage - half + remainder);
+    }
     enemyShield += def;
-    if(enemyShield > 300) enemyShield = 300;
+    if (enemyShield > 300) enemyShield = 300;
     enemyHp += heal;
-    if(enemyHp > 500) enemyHp = 500;
-    if(hp <= 0) return endGame(false);
-    showLog(totalCombos, dmg, isPlayerTurn);
-    showHeals(heal, def, false);
-    updateStats();
-    setTimeout(startTurn, 1000);
+    if (enemyHp > 500) enemyHp = 500;
+    battleLog.innerHTML = `<span style="color:#ff4444">Монстр нанёс ${damage}${isCrit ? " (КРИТ!)" : ""} урона, +${def} щит, +${heal} лечение, комбо: ${count}</span>`;
   }
 
-  // Сброс
-  pendingEffects = {dmg:0, heal:0, def:0, crit:false, combo:0};
-  totalCombos = 0;
+  updateStats();
+  checkEnd();
+}
+
+function checkEnd() {
+  if (hp <= 0) {
+    endMessage.textContent = "Победа монстра!";
+    endScreen.style.display = "flex";
+    return true;
+  }
+  if (enemyHp <= 0) {
+    endMessage.textContent = "Победа игрока!";
+    endScreen.style.display = "flex";
+    return true;
+  }
+  return false;
 }
 
 function dropDown() {
-  for(let c=0;c<6;c++){
-    for(let r=5;r>0;r--){
-      let i=index(r,c);
-      if(!getColor(grid[i])){
-        for(let k=r-1;k>=0;k--){
-          let up=index(k,c);
-          if(getColor(grid[up])){
-            grid[i].className=grid[up].className;
-            grid[up].className='cell';
+  for (let c = 0; c < 6; c++) {
+    for (let r = 5; r > 0; r--) {
+      let i = index(r, c);
+      if (!getColor(grid[i])) {
+        for (let k = r - 1; k >= 0; k--) {
+          let up = index(k, c);
+          if (getColor(grid[up])) {
+            grid[i].className = grid[up].className;
+            grid[up].className = "cell";
             break;
           }
         }
       }
     }
-    for(let r=0;r<6;r++){
-      let i=index(r,c);
-      if(!getColor(grid[i])){
-        let cls = colors[Math.floor(Math.random()*colors.length)];
-        grid[i].className = 'cell ' + cls;
+    for (let r = 0; r < 6; r++) {
+      let i = index(r, c);
+      if (!getColor(grid[i])) {
+        let cls = colors[Math.floor(Math.random() * colors.length)];
+        grid[i].className = "cell " + cls;
       }
     }
   }
 }
 
-function checkMatches(){
-  const matches=[];
-  for(let r=0;r<6;r++){
-    for(let c=0;c<4;c++){
-      let i=index(r,c);
-      let a=grid[i],b=grid[i+1],c_=grid[i+2];
-      if(getColor(a)===getColor(b)&&getColor(b)===getColor(c_)) matches.push([i,i+1,i+2]);
+function checkMatches() {
+  const matches = [];
+  for (let r = 0; r < 6; r++) {
+    for (let c = 0; c < 4; c++) {
+      let i = index(r, c);
+      let a = grid[i], b = grid[i + 1], c_ = grid[i + 2];
+      if (getColor(a) === getColor(b) && getColor(b) === getColor(c_))
+        matches.push([i, i + 1, i + 2]);
     }
   }
-  for(let c=0;c<6;c++){
-    for(let r=0;r<4;r++){
-      let i=index(r,c);
-      let a=grid[i],b=grid[i+6],c_=grid[i+12];
-      if(getColor(a)===getColor(b)&&getColor(b)===getColor(c_)) matches.push([i,i+6,i+12]);
+  for (let c = 0; c < 6; c++) {
+    for (let r = 0; r < 4; r++) {
+      let i = index(r, c);
+      let a = grid[i], b = grid[i + 6], c_ = grid[i + 12];
+      if (getColor(a) === getColor(b) && getColor(b) === getColor(c_))
+        matches.push([i, i + 6, i + 12]);
     }
   }
   return matches;
@@ -189,71 +339,47 @@ function checkMatches(){
 
 function monsterTurn() {
   isPlayerTurn = false;
-  document.body.classList.add('enemy-turn');
-  board.style.pointerEvents = 'none';
-
+  document.body.classList.add("enemy-turn");
   setTimeout(() => {
-    for(let i=0;i<36;i++){
-      for(let j=i+1;j<36;j++){
-        let tmp = grid[i].className;
-        grid[i].className = grid[j].className;
-        grid[j].className = tmp;
-        if(checkMatches().length > 0){
-          setTimeout(()=>processCombos(), 300);
-          return;
+    let moved = false;
+    for (let i = 0; i < 36 && !moved; i++) {
+      for (let j = i + 1; j < 36 && !moved; j++) {
+        [grid[i].className, grid[j].className] = [grid[j].className, grid[i].className];
+        if (checkMatches().length > 0) {
+          moved = true;
+          setTimeout(() => resolveCascade(), 300);
+        } else {
+          [grid[j].className, grid[i].className] = [grid[i].className, grid[j].className];
         }
-        grid[j].className = grid[i].className;
-        grid[i].className = tmp;
       }
     }
-    setTimeout(startTurn, 1000);
-  }, 1000);
+    if (!moved) {
+      setTimeout(startTurn, 1000);
+    }
+  }, 800 + Math.random() * 1200);
 }
 
-function showLog(combo, dmg, isPlayer) {
-  logBox.innerHTML = `
-    <div style="color:${isPlayer ? '#66ff66' : '#ff4444'}">
-      Комбо ×${combo}<br>Урон: ${dmg}
-    </div>
-  `;
-}
-
-function showHeals(hpUp, shieldUp, isPlayer) {
-  const tag = isPlayer ? shieldEl : enemyShieldEl;
-  const hpTag = isPlayer ? hpEl : enemyHpEl;
-
-  if(hpUp > 0) hpTag.innerHTML = `${isPlayer ? hp : enemyHp} ❤️ <span style="color:#66ff66">+${hpUp}</span>`;
-  if(shieldUp > 0) tag.innerHTML = `${isPlayer ? shield : enemyShield} 🛡 <span style="color:#66ccff">+${shieldUp}</span>`;
-}
-
-function endGame(playerWon) {
-  overlay.style.display = 'flex';
-  turnText.innerHTML = playerWon ? '🎉 Победа!' : '💀 Поражение...';
-  document.getElementById('nickname').value = '';
-  document.getElementById('nickname').placeholder = 'Введите ник';
-}
+// Drag
 board.addEventListener("touchstart", e => {
   const t = e.touches[0];
   const el = document.elementFromPoint(t.clientX, t.clientY);
-  if(el && el.classList.contains('cell')) dragging = el;
+  if (el && el.classList.contains("cell")) dragging = el;
 });
 board.addEventListener("touchmove", e => {
-  if(!dragging)return;
+  if (!dragging) return;
   const t = e.touches[0];
   const el = document.elementFromPoint(t.clientX, t.clientY);
-  if(el && el.classList.contains('cell') && el!==dragging){
-    let tmp = dragging.className;
-    dragging.className = el.className;
-    el.className = tmp;
+  if (el && el.classList.contains("cell") && el !== dragging) {
+    [dragging.className, el.className] = [el.className, dragging.className];
     dragging = el;
   }
 });
 board.addEventListener("touchend", () => {
   dragging = null;
-  if(isPlayerTurn){
-    clearInterval(turnTimer);
-    board.style.pointerEvents = 'none';
-    processCombos();
-  }
+  clearInterval(turnTimer);
+  board.style.pointerEvents = "none";
+  resolveCascade();
 });
 </script>
+</body>
+</html>
