@@ -2,208 +2,469 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>ИСКРА: Шахта</title>
+  <title>ИСКРА: Битва</title>
   <style>
     body {
       margin: 0;
-      background: #111;
+      background-color: #111;
       color: #fff;
       font-family: sans-serif;
       text-align: center;
     }
-    h1 { color: #ffaa00; }
+    h1 {
+      color: #ffa500;
+      margin: 10px 0;
+    }
+    #topBar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 10px;
+      font-size: 14px;
+    }
+    #timerBarContainer {
+      flex-grow: 1;
+      height: 10px;
+      margin: 0 10px;
+      background: #444;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+    #timerBar {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, #33ff33, #ffff00);
+      transition: width 1s linear;
+    }
+    #battleLog {
+      margin: 5px;
+      padding: 4px;
+      font-size: 14px;
+      min-height: 30px;
+    }
     #board {
       display: grid;
       grid-template-columns: repeat(6, 1fr);
       gap: 4px;
       width: 360px;
-      margin: 20px auto;
+      margin: 30px auto 10px auto;
+      transition: opacity 0.3s ease;
     }
     .cell {
-      width: 58px; height: 58px;
+      width: 58px;
+      height: 58px;
       border-radius: 50%;
-      transition: transform 0.3s, opacity 0.6s ease;
+      transition: transform 0.3s ease, opacity 1s ease;
     }
     .red    { background: radial-gradient(circle, #ff4d4d, #990000); }
     .green  { background: radial-gradient(circle, #66ff66, #006600); }
     .blue   { background: radial-gradient(circle, #66ccff, #003366); }
-    .orange { background: radial-gradient(circle, #ffcc66, #cc6600); }
-    .purple { background: radial-gradient(circle, #cc99ff, #440066); }
-    .highlight { box-shadow: 0 0 10px 4px #fff8; }
+    .purple { background: radial-gradient(circle, #dca0ff, #440066); }
+    .orange { background: radial-gradient(circle, #cc9955, #cc6600); }
+    .highlight { box-shadow: 0 0 10px 4px #ffffff88; }
     .fade { opacity: 0; }
-    #log { margin: 10px auto; min-height: 20px; font-size: 14px; color: #ccc; }
-    #rockHP { font-size: 18px; margin-top: 10px; }
+    .enemy-turn #board {
+      pointer-events: none;
+      opacity: 0.2;
+    }
+    .floatText {
+      position: absolute;
+      font-size: 14px;
+      font-weight: bold;
+      pointer-events: none;
+      animation: floatUp 3s ease forwards;
+    }
+    @keyframes floatUp {
+      from { opacity: 1; transform: translateY(0); }
+      to   { opacity: 0; transform: translateY(-30px); }
+    }
+    #overlay, #endScreen, #levelUpScreen {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.85);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      z-index: 999;
+    }
+    #overlay input {
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: none;
+      margin-top: 10px;
+    }
     button {
-      padding: 8px 16px;
-      background: #5522aa;
+      padding: 10px 20px;
+      margin-top: 10px;
+      font-size: 16px;
+      border: none;
+      border-radius: 10px;
+      background: #6622cc;
       color: white;
+    }
+    .stat-button {
+      margin: 5px;
+      padding: 6px 12px;
+      font-size: 14px;
+      background: #228822;
       border: none;
       border-radius: 8px;
-      margin-top: 10px;
+    }
+    #lightningBtn {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 16px;
+      background: #ffaa00;
+      color: #000;
+      border-radius: 10px;
+      font-weight: bold;
+      display: none;
+      z-index: 1000;
     }
   </style>
 </head>
 <body>
-  <h1>⛏️ Шахта Искры</h1>
-  <div id="rockHP">Пласт шахты: 300 ❤️</div>
-  <div id="board"></div>
-  <div id="log">Собери кристаллы, чтобы добыть руду!</div>
-  <button onclick="restartMine()">Следующий пласт</button>
+<h1>🔥 ИСКРА: Битва 🔥</h1>
+<div id="topBar">
+  <div>Вы:<br>
+    ❤️ <span id="hp">200</span> <span id="healText"></span><br>
+    🛡 <span id="shield">100</span> <span id="defText"></span><br>
+    🔮 <span id="mana">0</span>
+  </div>
+  <div id="timerBarContainer"><div id="timerBar"></div></div>
+  <div>Монстр:<br>
+    💀 <span id="enemyHp">100</span> <span id="enemyHealText"></span><br>
+    🛡 <span id="enemyShield">100</span> <span id="enemyDefText"></span><br>
+    🔮 <span id="enemyMana">0</span>
+  </div>
+</div>
+<div id="battleLog">Комбо появится здесь...</div>
+<div id="board"></div>
 
+<button id="lightningBtn" onclick="useLightning()">⚡ Молния (-20 маны)</button>
+
+<div id="overlay">
+  <h2>Введите имя:</h2>
+  <input id="nickname" placeholder="Имя игрока">
+  <button onclick="startGame()">В бой!</button>
+</div>
+
+<div id="endScreen" style="display:none;">
+  <h2 id="endMessage">Победа!</h2>
+  <button onclick="startGame()">Сыграть снова</button>
+</div>
+
+<div id="levelUpScreen" style="display:none;">
+  <h2>Уровень повышен!</h2>
+  <p>Очки для распределения: <span id="pointsLeft">5</span></p>
+  <div>
+    <p>Сила: <span id="strVal">1</span> <button class="stat-button" onclick="incStat('str')">+</button></p>
+    <p>Ловкость: <span id="agiVal">1</span> <button class="stat-button" onclick="incStat('agi')">+</button></p>
+    <p>Живучесть: <span id="vitVal">1</span> <button class="stat-button" onclick="incStat('vit')">+</button></p>
+    <p>Интеллект: <span id="intVal">1</span> <button class="stat-button" onclick="incStat('int')">+</button></p>
+    <p>Удача: <span id="lukVal">1</span> <button class="stat-button" onclick="incStat('luk')">+</button></p>
+  </div>
+  <button onclick="closeLevelUp()">Продолжить</button>
+  </div>
   <script>
-    const board = document.getElementById("board");
-    const log = document.getElementById("log");
-    const hpBar = document.getElementById("rockHP");
+let grid = [], dragging = null;
+let isPlayerTurn = true;
+let playerName = "Игрок";
 
-    const colors = ['red', 'green', 'blue', 'orange', 'purple'];
-    let grid = [], dragging = null;
-    let rockHP = 300;
+let hp = 200, shield = 100, mana = 0;
+let enemyHp = 100, enemyShield = 100, enemyMana = 0;
 
-    function index(r, c) {
-      return r * 6 + c;
+let comboAccumulator = {};
+let turnTimer;
+
+let level = 1, exp = 0, nextLevel = 50, statPoints = 0;
+let stats = { str: 1, agi: 1, vit: 1, int: 1, luk: 1 };
+
+const hpEl = document.getElementById("hp");
+const shieldEl = document.getElementById("shield");
+const manaEl = document.getElementById("mana");
+const enemyHpEl = document.getElementById("enemyHp");
+const enemyShieldEl = document.getElementById("enemyShield");
+const enemyManaEl = document.getElementById("enemyMana");
+const battleLog = document.getElementById("battleLog");
+const board = document.getElementById("board");
+const timerBar = document.getElementById("timerBar");
+
+function updateStats() {
+  hpEl.textContent = hp;
+  shieldEl.textContent = shield;
+  manaEl.textContent = mana;
+  enemyHpEl.textContent = enemyHp;
+  enemyShieldEl.textContent = enemyShield;
+  enemyManaEl.textContent = enemyMana;
+}
+
+function startGame() {
+  playerName = document.getElementById("nickname").value || "Игрок";
+  hp = 200; shield = 100; mana = 0;
+  enemyHp = 100; enemyShield = 100; enemyMana = 0;
+  exp = 0; nextLevel = 50; level = 1;
+  stats = { str: 1, agi: 1, vit: 1, int: 1, luk: 1 };
+  statPoints = 0;
+  document.getElementById("overlay").style.display = "none";
+  document.getElementById("endScreen").style.display = "none";
+  createGrid();
+  updateStats();
+  isPlayerTurn = true;
+  startTurn();
+}
+
+function createGrid() {
+  board.innerHTML = "";
+  grid = [];
+  do {
+    for (let i = 0; i < 36; i++) {
+      const cell = document.createElement("div");
+      cell.className = "cell " + randomColor();
+      grid[i] = cell;
+      board.appendChild(cell);
     }
+  } while (checkMatches().length > 0);
+}
 
-    function getColor(el) {
-      return colors.find(c => el.classList.contains(c));
+function randomColor() {
+  const colors = ["red", "green", "blue", "orange", "purple"];
+  return colors[Math.floor(Math.random() * colors.length)];
+}
+
+function index(r, c) {
+  return r * 6 + c;
+}
+function getColor(el) {
+  return ["red","green","blue","orange","purple"].find(c => el.classList.contains(c));
+}
+
+function startTurn() {
+  isPlayerTurn = true;
+  document.body.classList.remove("enemy-turn");
+  board.style.pointerEvents = "auto";
+  comboAccumulator = { red: 0, green: 0, blue: 0, orange: 0, purple: 0, count: 0 };
+  let time = 20;
+  timerBar.style.width = "100%";
+  document.getElementById("lightningBtn").style.display = mana >= 20 ? "block" : "none";
+  clearInterval(turnTimer);
+  turnTimer = setInterval(() => {
+    time--;
+    timerBar.style.width = (time * 5) + "%";
+    if (time <= 0) {
+      clearInterval(turnTimer);
+      endTurn();
     }
+  }, 1000);
+}
 
-    function restartMine() {
-      rockHP = 300;
-      hpBar.textContent = `Пласт шахты: ${rockHP} ❤️`;
-      log.textContent = "Новый пласт найден. Продолжай копать!";
-      createGridWithoutMatches();
+function endTurn() {
+  board.style.pointerEvents = "none";
+  resolveCascade();
+}
+
+function checkMatches() {
+  const matches = [];
+  for (let r = 0; r < 6; r++) {
+    for (let c = 0; c < 4; c++) {
+      let i = index(r, c);
+      let a = grid[i], b = grid[i + 1], c_ = grid[i + 2];
+      if (getColor(a) === getColor(b) && getColor(b) === getColor(c_))
+        matches.push([i, i + 1, i + 2]);
     }
-
-    function createGridWithoutMatches() {
-      board.innerHTML = "";
-      grid = [];
-      let tries = 0;
-      do {
-        board.innerHTML = "";
-        grid = [];
-        for (let i = 0; i < 36; i++) {
-          const cell = document.createElement("div");
-          cell.className = "cell " + colors[Math.floor(Math.random() * colors.length)];
-          board.appendChild(cell);
-          grid.push(cell);
-        }
-        tries++;
-        if (tries > 100) break;
-      } while (checkMatches().length > 0);
+  }
+  for (let c = 0; c < 6; c++) {
+    for (let r = 0; r < 4; r++) {
+      let i = index(r, c);
+      let a = grid[i], b = grid[i + 6], c_ = grid[i + 12];
+      if (getColor(a) === getColor(b) && getColor(b) === getColor(c_))
+        matches.push([i, i + 6, i + 12]);
     }
+  }
+  return matches;
+}
 
-    function checkMatches() {
-      const matches = [];
-      for (let r = 0; r < 6; r++) {
-        for (let c = 0; c < 4; c++) {
-          let i = index(r, c);
-          let a = grid[i], b = grid[i + 1], c_ = grid[i + 2];
-          if (getColor(a) === getColor(b) && getColor(b) === getColor(c_))
-            matches.push([i, i + 1, i + 2]);
-        }
-      }
-      for (let c = 0; c < 6; c++) {
-        for (let r = 0; r < 4; r++) {
-          let i = index(r, c);
-          let a = grid[i], b = grid[i + 6], c_ = grid[i + 12];
-          if (getColor(a) === getColor(b) && getColor(b) === getColor(c_))
-            matches.push([i, i + 6, i + 12]);
-        }
-      }
-      return matches;
+function resolveCascade() {
+  const matches = checkMatches();
+  if (matches.length === 0) {
+    applyEffects();
+    if (checkEnd()) return;
+    if (isPlayerTurn) {
+      setTimeout(monsterTurn, 1000);
+    } else {
+      setTimeout(startTurn, 1000);
     }
+    return;
+  }
 
-    function resolveCascade() {
-      const matches = checkMatches();
-      if (matches.length === 0) return;
+  matches.forEach(group => {
+    let color = getColor(grid[group[0]]);
+    comboAccumulator[color] += group.length;
+    comboAccumulator.count += 1;
+    group.forEach(i => grid[i].classList.add("highlight"));
+  });
 
-      let comboCount = 0;
-      let redTotal = 0;
-
-      matches.forEach(g => {
-        const color = getColor(grid[g[0]]);
-        if (color === "red") redTotal += g.length;
-        comboCount++;
-        g.forEach(i => grid[i].classList.add("highlight"));
+  setTimeout(() => {
+    matches.flat().forEach(i => grid[i].classList.remove("highlight", "cell"));
+    setTimeout(() => {
+      matches.flat().forEach(i => {
+        grid[i].className = "cell " + randomColor();
       });
-
-      setTimeout(() => {
-        matches.flat().forEach(i => {
-          grid[i].classList.remove("highlight");
-          grid[i].classList.add("fade");
-        });
-
-        setTimeout(() => {
-          matches.flat().forEach(i => grid[i].className = "cell");
-          dropDown();
-          applyDamage(redTotal, comboCount);
-          setTimeout(resolveCascade, 600);
-        }, 600);
-      }, 800);
-    }
-
-    function applyDamage(redCount, combos) {
-      let dmg = redCount >= 5 ? 20 : redCount >= 3 ? 10 : 0;
-      let bonus = Math.floor(combos * 0.05 * dmg);
-      let total = dmg + bonus;
-      if (total > 0) {
-        rockHP -= total;
-        if (rockHP < 0) rockHP = 0;
-        hpBar.textContent = `Пласт шахты: ${rockHP} ❤️`;
-        log.textContent = `Ты пробил пласт на ${total} урона! (${combos} комбо)`;
-        if (rockHP === 0) {
-          log.textContent = `💥 Пласт разрушен! Найдена руда. Жми "Следующий пласт".`;
-        }
-      } else {
-        log.textContent = `Нет урона по пласту. Нужно больше красных!`;
-      }
-    }
-
-    function dropDown() {
-      for (let c = 0; c < 6; c++) {
-        for (let r = 5; r > 0; r--) {
-          let i = index(r, c);
-          if (!getColor(grid[i])) {
-            for (let k = r - 1; k >= 0; k--) {
-              let up = index(k, c);
-              if (getColor(grid[up])) {
-                grid[i].className = grid[up].className;
-                grid[up].className = "cell";
-                break;
-              }
-            }
-          }
-        }
-        for (let r = 0; r < 6; r++) {
-          let i = index(r, c);
-          if (!getColor(grid[i])) {
-            const cls = colors[Math.floor(Math.random() * colors.length)];
-            grid[i].className = "cell " + cls;
-          }
-        }
-      }
-    }
-
-    board.addEventListener("touchstart", e => {
-      const t = e.touches[0];
-      const el = document.elementFromPoint(t.clientX, t.clientY);
-      if (el && el.classList.contains("cell")) dragging = el;
-    });
-    board.addEventListener("touchmove", e => {
-      if (!dragging) return;
-      const t = e.touches[0];
-      const el = document.elementFromPoint(t.clientX, t.clientY);
-      if (el && el.classList.contains("cell") && el !== dragging) {
-        [dragging.className, el.className] = [el.className, dragging.className];
-        dragging = el;
-      }
-    });
-    board.addEventListener("touchend", () => {
-      dragging = null;
       resolveCascade();
-    });
+    }, 500);
+  }, 1000);
+}
 
-    createGridWithoutMatches();
-  </script>
+function applyEffects() {
+  let { red, green, blue, orange, purple, count } = comboAccumulator;
+  let damage = 0;
+  if (red >= 5) damage = 20;
+  else if (red >= 3) damage = 10;
+
+  let heal = green >= 5 ? 10 : green >= 3 ? 5 : 0;
+  let shieldAdd = blue >= 5 ? 10 : blue >= 3 ? 5 : 0;
+  let crit = orange;
+  let manaGain = purple >= 5 ? 20 : purple >= 3 ? 10 : 0;
+
+  damage += Math.floor(damage * stats.str / 100);
+  shieldAdd += Math.floor(shieldAdd * stats.agi / 100);
+  heal += Math.floor(heal * stats.vit / 100);
+
+  if (isPlayerTurn) {
+    let critChance = Math.min(crit + stats.luk, 100);
+    if (Math.random() * 100 < critChance) damage *= 2;
+
+    let half = Math.floor(damage / 2);
+    if (enemyShield >= half) {
+      enemyShield -= half;
+      enemyHp -= (damage - half);
+    } else {
+      let rem = half - enemyShield;
+      enemyShield = 0;
+      enemyHp -= (damage - half + rem);
+    }
+
+    shield += shieldAdd;
+    hp += heal;
+    mana += manaGain;
+
+    if (hp > 200) hp = 200;
+    if (shield > 200) shield = 200;
+    if (mana > 999) mana = 999;
+
+    document.getElementById("lightningBtn").style.display = mana >= 20 ? "block" : "none";
+    battleLog.innerHTML = `<span style="color:#66ff66">Комбо ×${count}, Урон: ${damage}</span>`;
+  } else {
+    // монстр лечится, атакует
+    let half = Math.floor(damage / 2);
+    if (shield >= half) {
+      shield -= half;
+      hp -= (damage - half);
+    } else {
+      let rem = half - shield;
+      shield = 0;
+      hp -= (damage - half + rem);
+    }
+
+    enemyShield += shieldAdd;
+    enemyHp += heal;
+    enemyMana += manaGain;
+
+    if (enemyHp > 100) enemyHp = 100;
+    if (enemyShield > 100) enemyShield = 100;
+    if (enemyMana > 999) enemyMana = 999;
+
+    battleLog.innerHTML = `<span style="color:#ff4444">Комбо ×${count}, Урон: ${damage}</span>`;
+  }
+
+  updateStats();
+}
+
+function useLightning() {
+  if (isPlayerTurn && mana >= 20) {
+    mana -= 20;
+    let lightningDamage = 50 + Math.floor(50 * stats.int / 100);
+    let half = Math.floor(lightningDamage / 2);
+    if (enemyShield >= half) {
+      enemyShield -= half;
+      enemyHp -= (lightningDamage - half);
+    } else {
+      let rem = half - enemyShield;
+      enemyShield = 0;
+      enemyHp -= (lightningDamage - half + rem);
+    }
+    battleLog.innerHTML += `<br><span style="color:#ffff00">⚡ Молния: ${lightningDamage}</span>`;
+    document.getElementById("lightningBtn").style.display = "none";
+    updateStats();
+  }
+}
+
+function checkEnd() {
+  if (hp <= 0) {
+    document.getElementById("endMessage").textContent = "Победа монстра!";
+    document.getElementById("endScreen").style.display = "flex";
+    return true;
+  }
+  if (enemyHp <= 0) {
+    document.getElementById("endMessage").textContent = "Победа игрока!";
+    document.getElementById("endScreen").style.display = "flex";
+    let rewardExp = mana;
+    gainExp(rewardExp);
+    return true;
+  }
+  return false;
+}
+
+function gainExp(xp) {
+  exp += xp;
+  if (exp >= nextLevel) {
+    level++;
+    statPoints += 5;
+    exp = 0;
+    nextLevel *= 2;
+    document.getElementById("levelUpScreen").style.display = "flex";
+    document.getElementById("pointsLeft").textContent = statPoints;
+  }
+}
+
+function incStat(stat) {
+  if (statPoints > 0) {
+    stats[stat]++;
+    statPoints--;
+    document.getElementById(stat + "Val").textContent = stats[stat];
+    document.getElementById("pointsLeft").textContent = statPoints;
+  }
+}
+
+function closeLevelUp() {
+  document.getElementById("levelUpScreen").style.display = "none";
+}
+
+// drag
+board.addEventListener("touchstart", e => {
+  const t = e.touches[0];
+  const el = document.elementFromPoint(t.clientX, t.clientY);
+  if (el && el.classList.contains("cell")) dragging = el;
+});
+board.addEventListener("touchmove", e => {
+  if (!dragging) return;
+  const t = e.touches[0];
+  const el = document.elementFromPoint(t.clientX, t.clientY);
+  if (el && el.classList.contains("cell") && el !== dragging) {
+    [dragging.className, el.className] = [el.className, dragging.className];
+    dragging = el;
+  }
+});
+board.addEventListener("touchend", () => {
+  dragging = null;
+  clearInterval(turnTimer);
+  endTurn();
+});
+</script>
 </body>
 </html>
