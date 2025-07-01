@@ -1,235 +1,61 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <title>⛏️ Шахта Искры</title>
+  <title>Искра World</title>
   <style>
-    body {
-      margin: 0;
-      background-color: #000;
-      color: #fff;
-      font-family: sans-serif;
-      text-align: center;
-    }
-    h1 {
-      color: gold;
-      margin: 10px 0;
-    }
-    #topStats {
-      display: flex;
-      justify-content: space-around;
-      align-items: center;
-      font-size: 14px;
-      padding: 6px;
-    }
-    .stat-block {
-      text-align: center;
-    }
-    #statusMsg {
-      margin: 5px 0;
-      color: #ccc;
-    }
-    #board {
-      display: grid;
-      grid-template-columns: repeat(6, 1fr);
-      gap: 4px;
-      width: 360px;
-      margin: 10px auto;
-    }
-    .cell {
-      width: 58px;
-      height: 58px;
-      border-radius: 50%;
-    }
-    .red    { background: radial-gradient(circle, #ff4d4d, #990000); }
-    .green  { background: radial-gradient(circle, #66ff66, #006600); }
-    .blue   { background: radial-gradient(circle, #66ccff, #003366); }
-    .purple { background: radial-gradient(circle, #dca0ff, #440066); }
-    .orange { background: radial-gradient(circle, #ffcc66, #cc6600); }
-
-    .highlight { box-shadow: 0 0 10px 4px #fff6; }
-    .fade { opacity: 0; transition: opacity 1s ease; }
-
-    #gameOver {
+    #overlay {
       position: fixed;
       top: 0; left: 0;
       width: 100%; height: 100%;
-      background: rgba(0,0,0,0.9);
-      display: none;
+      background: rgba(0,0,0,0.8);
+      display: flex;
+      flex-direction: column;
       justify-content: center;
       align-items: center;
-      flex-direction: column;
-      z-index: 10;
-      color: #ff6666;
-      font-size: 20px;
+      color: white;
     }
-
-    #startBtn {
-      margin-top: 10px;
-      padding: 10px 20px;
-      font-size: 16px;
-      background: gold;
-      border: none;
-      border-radius: 10px;
-      color: #000;
+    #board {
+      display: none;
+      grid-template-columns: repeat(6, 50px);
+      gap: 5px;
+    }
+    .cell {
+      width: 50px;
+      height: 50px;
+      background: #333;
+      border-radius: 5px;
     }
   </style>
 </head>
 <body>
-  <h1>⛏️ Шахта Искры</h1>
-  <div id="topStats">
-    <div class="stat-block">⚡ Искра: <span id="spark">30</span></div>
-    <div class="stat-block">💨 Воздух: <span id="air">100%</span></div>
-    <div class="stat-block">🧱 Укрепление: <span id="support">100%</span></div>
-    <div class="stat-block">⏬ Глубина: <span id="depth">0 м</span></div>
+  <div id="overlay">
+    <h2>Введите имя воина:</h2>
+    <input id="nickname" placeholder="Ваше имя">
+    <button onclick="startGame()">Начать битву!</button>
   </div>
-  <div id="statusMsg">Добудь ресурсы и не погибни...</div>
-  <button id="startBtn" onclick="startTurn()">Начать добычу</button>
+
   <div id="board"></div>
 
-  <div id="gameOver">
-    <div>Шахта обрушилась или закончился воздух!</div>
-    <button onclick="location.reload()" style="margin-top:10px; padding:10px 20px; background: orange; color:#000; border:none; border-radius:10px;">Выйти</button>
-  </div>
-
   <script>
-    const colors = ['red', 'green', 'blue', 'purple', 'orange'];
-    const board = document.getElementById("board");
-    let grid = [], air = 100, support = 100, depth = 0, spark = 30;
-    let comboData = {};
-
-    function $(id) { return document.getElementById(id); }
-
-    function createGrid() {
-      board.innerHTML = "";
-      grid = [];
+    function startGame() {
+      const name = document.getElementById("nickname").value || "Игрок";
+      console.log("Старт игры для:", name);
+      
+      // Скрываем overlay
+      document.getElementById("overlay").style.display = "none";
+      
+      // Создаем игровое поле
+      const board = document.getElementById("board");
+      board.style.display = "grid";
+      
       for (let i = 0; i < 36; i++) {
         const cell = document.createElement("div");
-        cell.className = "cell " + colors[Math.floor(Math.random() * colors.length)];
+        cell.className = "cell";
         board.appendChild(cell);
-        grid.push(cell);
       }
+      
+      alert("Игра началась! Имя: " + name);
     }
-
-    function getColor(el) {
-      return colors.find(c => el.classList.contains(c));
-    }
-
-    function checkMatches() {
-      const matches = [];
-      for (let r = 0; r < 6; r++) {
-        for (let c = 0; c < 4; c++) {
-          let i = r * 6 + c;
-          let a = grid[i], b = grid[i + 1], c_ = grid[i + 2];
-          if (getColor(a) === getColor(b) && getColor(b) === getColor(c_))
-            matches.push([i, i + 1, i + 2]);
-        }
-      }
-      for (let c = 0; c < 6; c++) {
-        for (let r = 0; r < 4; r++) {
-          let i = r * 6 + c;
-          let a = grid[i], b = grid[i + 6], c_ = grid[i + 12];
-          if (getColor(a) === getColor(b) && getColor(b) === getColor(c_))
-            matches.push([i, i + 6, i + 12]);
-        }
-      }
-      return matches;
-    }
-
-    function dropDown() {
-      for (let c = 0; c < 6; c++) {
-        for (let r = 5; r > 0; r--) {
-          let i = r * 6 + c;
-          if (!getColor(grid[i])) {
-            for (let k = r - 1; k >= 0; k--) {
-              let up = k * 6 + c;
-              if (getColor(grid[up])) {
-                grid[i].className = grid[up].className;
-                grid[up].className = "cell";
-                break;
-              }
-            }
-          }
-        }
-        for (let r = 0; r < 6; r++) {
-          let i = r * 6 + c;
-          if (!getColor(grid[i])) {
-            const cls = colors[Math.floor(Math.random() * colors.length)];
-            grid[i].className = "cell " + cls;
-          }
-        }
-      }
-    }
-
-    function resolve() {
-      const matches = checkMatches();
-      if (matches.length === 0) {
-        applyEffects();
-        return;
-      }
-
-      matches.forEach(g => {
-        const color = getColor(grid[g[0]]);
-        comboData[color] = (comboData[color] || 0) + g.length;
-        g.forEach(i => grid[i].classList.add("highlight"));
-      });
-
-      setTimeout(() => {
-        matches.flat().forEach(i => {
-          grid[i].classList.remove("highlight");
-          grid[i].classList.add("fade");
-        });
-        setTimeout(() => {
-          matches.flat().forEach(i => grid[i].className = "cell");
-          dropDown();
-          setTimeout(resolve, 600);
-        }, 600);
-      }, 800);
-    }
-
-    function applyEffects() {
-      spark -= 5;
-      air -= 10;
-      support -= 5;
-
-      let dmg = comboData.red >= 5 ? 20 : comboData.red >= 3 ? 10 : 0;
-      let heal = comboData.green >= 5 ? 10 : comboData.green >= 3 ? 5 : 0;
-      let def = comboData.blue >= 5 ? 10 : comboData.blue >= 3 ? 5 : 0;
-
-      air += heal;
-      support += def;
-      depth += dmg;
-
-      if (air > 100) air = 100;
-      if (support > 100) support = 100;
-      if (depth < 0) depth = 0;
-
-      updateStats();
-
-      if (spark <= 0 || air <= 0 || support <= 0) {
-        document.getElementById("gameOver").style.display = "flex";
-      } else {
-        comboData = {};
-        setTimeout(() => startTurn(), 1000);
-      }
-    }
-
-    function updateStats() {
-      $("spark").textContent = spark;
-      $("air").textContent = air + "%";
-      $("support").textContent = support + "%";
-      $("depth").textContent = depth + " м";
-    }
-
-    function startTurn() {
-      $("startBtn").style.display = "none";
-      comboData = {};
-      resolve();
-    }
-
-    // Start
-    createGrid();
-    updateStats();
   </script>
 </body>
 </html>
