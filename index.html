@@ -61,7 +61,6 @@
     .blue   { background: radial-gradient(circle, #66ccff, #003366); }
     .orange { background: radial-gradient(circle, #ffbb66, #cc6600); }
     .purple { background: radial-gradient(circle, #dca0ff, #440066); }
-
     .highlight { box-shadow: 0 0 10px 4px #ffffff88; }
     .fade { opacity: 0; }
     .enemy-turn #board {
@@ -120,7 +119,7 @@
   <div id="overlay">
     <h2>Введите имя:</h2>
     <input id="nickname" placeholder="Имя игрока">
-    <button onclick="startGame()">В бой!</button>
+    <button id="startButton">В бой!</button>
   </div>
   <div id="endScreen" style="display:none;">
     <h2 id="endMessage">Победа!</h2>
@@ -137,6 +136,7 @@ const overlay = document.getElementById("overlay");
 const endScreen = document.getElementById("endScreen");
 const endMessage = document.getElementById("endMessage");
 const battleLog = document.getElementById("battleLog");
+const startButton = document.getElementById("startButton");
 
 const colors = ['red', 'green', 'blue', 'orange', 'purple'];
 let grid = [], dragging = null;
@@ -144,6 +144,8 @@ let isPlayerTurn = true;
 let hp = 200, shield = 100, enemyHp = 500, enemyShield = 300;
 let playerName = "Игрок", turnTimer;
 let comboAccumulator = { red: 0, green: 0, blue: 0, orange: 0, purple: 0, count: 0 };
+
+startButton.addEventListener("click", startGame);
 
 function startGame() {
   playerName = document.getElementById("nickname").value || "Игрок";
@@ -266,7 +268,6 @@ function applyEffects() {
     shield += def;
     hp += heal;
     if (hp > 200) hp = 200;
-
     float("+ " + heal, hpEl, "#00ff00");
     float("+ " + def, shieldEl, "#3399ff");
   } else {
@@ -283,7 +284,6 @@ function applyEffects() {
     if (enemyShield > 300) enemyShield = 300;
     enemyHp += heal;
     if (enemyHp > 500) enemyHp = 500;
-
     float("+ " + heal, enemyHpEl, "#00ff00");
     float("+ " + def, enemyShieldEl, "#3399ff");
   }
