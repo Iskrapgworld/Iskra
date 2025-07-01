@@ -1,33 +1,18 @@
-<!DOCTYPE html>
-<html lang="ru">
+<!DOCTYPE html><html lang="ru">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Шахта Искры</title>
   <style>
     body {
-      margin: 0;
-      background-color: #1a1a1a;
-      color: #eee;
+      background: #111;
+      color: white;
       font-family: sans-serif;
       text-align: center;
+      margin: 0;
     }
     h1 {
-      margin: 10px 0;
-      color: #ffcc00;
-    }
-    #hud {
-      display: flex;
-      justify-content: space-around;
-      padding: 10px;
-      background: #111;
-      font-size: 14px;
-    }
-    #inventory {
-      display: flex;
-      justify-content: space-around;
-      padding: 10px;
-      background: #222;
-      font-size: 14px;
+      margin: 10px;
+      color: #ffaa00;
     }
     #board {
       display: grid;
@@ -39,54 +24,43 @@
     .cell {
       width: 58px;
       height: 58px;
-      border-radius: 50%;
+      border-radius: 10px;
     }
     .red    { background: radial-gradient(circle, #ff4d4d, #990000); }
-    .purple { background: radial-gradient(circle, #cc99ff, #5500aa); }
-    .orange { background: radial-gradient(circle, #ffbb66, #cc6600); }
-    .yellow { background: radial-gradient(circle, #ffff66, #ccaa00); }
-    .fade { opacity: 0.2; }
+    .green  { background: radial-gradient(circle, #66ff66, #006600); }
+    .blue   { background: radial-gradient(circle, #66ccff, #003366); }
+    .purple { background: radial-gradient(circle, #dca0ff, #440066); }
+    .orange { background: radial-gradient(circle, #cc9955, #cc6600); }#inventory {
+  margin-top: 10px;
+  font-size: 18px;
+}
+
   </style>
 </head>
 <body>
-  <h1>⚒️ Шахта Искры</h1>
-  <div id="hud">
-    <div>🔋 Искра: <span id="spark">1000</span></div>
-    <div>⛏️ Глубина: <span id="depth">0</span></div>
-  </div>
-  <div id="inventory">
-    <div>🪨 Металл: <span id="metal">0</span></div>
-    <div>💎 Кристаллы: <span id="crystal">0</span></div>
-    <div>🪙 Золото: <span id="gold">0</span></div>
-  </div>
+  <h1>⛏ Шахта Искры</h1>
   <div id="board"></div>
-
-  <script>
+  <div id="inventory">📦 Инвентарь: 🪨 x0   💎 x0   🪙 x0</div>  <script>
     const board = document.getElementById("board");
-    const sparkEl = document.getElementById("spark");
-    const depthEl = document.getElementById("depth");
-    const metalEl = document.getElementById("metal");
-    const crystalEl = document.getElementById("crystal");
-    const goldEl = document.getElementById("gold");
+    const inventoryEl = document.getElementById("inventory");
 
-    let spark = 1000, depth = 0, metal = 0, crystal = 0, gold = 0;
-    const colors = ['red', 'purple', 'orange', 'yellow'];
-    let grid = [], dragging = null;
+    const colors = ['red', 'green', 'blue', 'purple', 'orange'];
+    let grid = [];
+    let dragging = null;
 
-    function updateHUD() {
-      sparkEl.textContent = spark;
-      depthEl.textContent = depth;
-      metalEl.textContent = metal;
-      crystalEl.textContent = crystal;
-      goldEl.textContent = gold;
-    }
+    let inventory = {
+      metal: 0,
+      crystal: 0,
+      gold: 0
+    };
 
-    function createGrid() {
+    function createBoard() {
       board.innerHTML = "";
       grid = [];
       for (let i = 0; i < 36; i++) {
         const cell = document.createElement("div");
-        cell.className = "cell " + colors[Math.floor(Math.random() * colors.length)];
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        cell.className = `cell ${color}`;
         board.appendChild(cell);
         grid.push(cell);
       }
@@ -117,65 +91,44 @@
       return matches;
     }
 
-    function applyEffects(combo) {
-      let type = getColor(grid[combo[0]]);
-      let length = combo.length;
+    function applyMatchRewards(matches) {
+      let addedMetal = 0;
+      let addedCrystal = 0;
+      let addedGold = 0;
 
-      if (type === 'red') metal += length;
-      if (type === 'purple' || type === 'orange') crystal += length;
-      if (type === 'yellow') {
-        gold += Math.floor(Math.random() * length);
+      for (let group of matches) {
+        const color = getColor(grid[group[0]]);
+        if (color === 'red' && Math.random() < 0.4) addedMetal++;
+        if ((color === 'purple' || color === 'orange') && Math.random() < 0.3) addedCrystal++;
+        if (Math.random() < 0.05) addedGold++;
       }
+
+      inventory.metal += addedMetal;
+      inventory.crystal += addedCrystal;
+      inventory.gold += addedGold;
+
+      updateInventory();
     }
 
-    function resolveTurn() {
-      if (spark < 5) return alert("Нет искры!");
-
-      spark -= 5;
-      depth += 1;
-
-      const matches = checkMatches();
-      if (matches.length === 0) return;
-
-      matches.forEach(g => {
-        applyEffects(g);
-        g.forEach(i => {
-          grid[i].classList.add("fade");
-        });
-      });
-
-      setTimeout(() => {
-        matches.flat().forEach(i => {
-          const newColor = colors[Math.floor(Math.random() * colors.length)];
-          grid[i].className = "cell " + newColor;
-        });
-        updateHUD();
-      }, 500);
+    function updateInventory() {
+      inventoryEl.textContent = `📦 Инвентарь: 🪨 x${inventory.metal}   💎 x${inventory.crystal}   🪙 x${inventory.gold}`;
     }
 
-    board.addEventListener("touchstart", e => {
-      const t = e.touches[0];
-      const el = document.elementFromPoint(t.clientX, t.clientY);
-      if (el && el.classList.contains("cell")) dragging = el;
+    board.addEventListener("mousedown", e => {
+      if (e.target.classList.contains("cell")) dragging = e.target;
     });
-
-    board.addEventListener("touchmove", e => {
-      if (!dragging) return;
-      const t = e.touches[0];
-      const el = document.elementFromPoint(t.clientX, t.clientY);
-      if (el && el.classList.contains("cell") && el !== dragging) {
-        [dragging.className, el.className] = [el.className, dragging.className];
-        dragging = el;
+    board.addEventListener("mousemove", e => {
+      if (dragging && e.target.classList.contains("cell") && e.target !== dragging) {
+        [dragging.className, e.target.className] = [e.target.className, dragging.className];
+        dragging = null;
+        const matches = checkMatches();
+        if (matches.length > 0) {
+          applyMatchRewards(matches);
+        }
       }
     });
+    board.addEventListener("mouseup", () => dragging = null);
 
-    board.addEventListener("touchend", () => {
-      dragging = null;
-      resolveTurn();
-    });
-
-    createGrid();
-    updateHUD();
-  </script>
-</body>
+    createBoard();
+  </script></body>
 </html>
