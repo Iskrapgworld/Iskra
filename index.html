@@ -2,90 +2,275 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>🔥 ИСКРА: Битва v1.4 🔥</title>
+  <title>🔥 ИСКРА: Битва TG-мини 🔥</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <style>
     body { margin: 0; background: #111; color: #fff; font-family: sans-serif; text-align: center; }
-    h1 { color: #ffa500; margin: 10px 0; }
-    #topBar { display: flex; justify-content: space-between; align-items: center; padding: 5px 10px; font-size: 14px; }
-    #timerBarContainer { flex-grow: 1; height: 10px; margin: 0 10px; background: #444; border-radius: 5px; overflow: hidden; }
-    #timerBar { height: 100%; width: 100%; background: linear-gradient(90deg, #33ff33, #ffff00); transition: width 1s linear; }
-    #battleLog { margin: 5px; padding: 4px; font-size: 16px; min-height: 32px; }
-    #board { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; width: 360px; margin: 30px auto 10px auto; transition: opacity 0.3s ease; }
-    .cell { width: 58px; height: 58px; border-radius: 50%; transition: transform 0.3s ease, opacity 1s ease; }
-    .red    { background: radial-gradient(circle, #ff4d4d, #990000); }
-    .green  { background: radial-gradient(circle, #66ff66, #006600); }
-    .blue   { background: radial-gradient(circle, #66ccff, #003366); }
-    .purple { background: radial-gradient(circle, #dca0ff, #440066); }
-    .orange { background: radial-gradient(circle, #cc9955, #cc6600); }
-    .highlight { box-shadow: 0 0 10px 4px #ffffff88; }
-    .fade { opacity: 0; }
-    .enemy-turn #board { pointer-events: none; opacity: 0.2; }
-    #overlay, #endScreen, #mainMenu, #characterMenu {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.9); display: flex; justify-content: center; align-items: center; flex-direction: column; z-index: 999;
+    h1 { color: #ffa500; margin: 18px 0 8px 0; font-size: 2.1em; letter-spacing: 2px;}
+    #topBar { display: flex; justify-content: space-between; align-items: flex-end; padding: 10px 18px 0 18px; font-size: 15px; }
+    .side-block { text-align: left; min-width: 100px; }
+    .side-block.monster { text-align: right; }
+    .stat-row { display: flex; align-items: center; margin: 4px 0;}
+    .stat-icon { font-size: 1.2em; margin-right: 7px;}
+    .bar-bg { width: 90px; height: 11px; background: #222; border-radius: 7px; overflow: hidden; margin-left: 4px; margin-right: 0; display: inline-block;}
+    .bar { height: 100%; border-radius: 7px; transition: width 0.4s; display: block;}
+    .bar-hp { background: linear-gradient(90deg,#54ff63,#ffe35c);}
+    .bar-sh { background: linear-gradient(90deg,#79e6ff,#465dc6);}
+    .bar-mn { background: linear-gradient(90deg,#cfafff,#5534a9);}
+    #battleLog { margin: 10px 0 0 0; padding: 7px; font-size: 18px; min-height: 30px; color: #fff; text-shadow: 0 1px 2px #000b;}
+    #timerBarContainer { width: 95%; max-width:370px; margin: 9px auto 0 auto; background:#222; border-radius:7px; height:11px; overflow:hidden;}
+    #timerBar { height:100%; width:100%; background:linear-gradient(90deg,#33ff33,#ffff00); transition: width 1s linear;}
+    #board { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; width: 340px; max-width:96vw; margin: 18px auto 10px auto; transition: opacity 0.3s;}
+    .cell { width: 46px; height: 46px; border-radius: 16%; transition: transform 0.23s, opacity 0.7s;}
+    .red    { background: linear-gradient(135deg, #ff5a36 55%, #a00015 100%);}
+    .green  { background: linear-gradient(135deg, #57ffab 60%, #00801a 100%);}
+    .blue   { background: linear-gradient(135deg, #74e7ff 60%, #184b86 100%);}
+    .purple { background: linear-gradient(135deg, #e3a8ff 60%, #441166 100%);}
+    .orange { background: linear-gradient(135deg, #ffd97c 60%, #ff9500 100%);}
+    .highlight { box-shadow: 0 0 10px 4px #fff8;}
+    .fade { opacity: 0.1; }
+    .enemy-turn #board { pointer-events: none; opacity: 0.3;}
+    .floatText { position: absolute; font-size: 15px; font-weight: bold; pointer-events: none; animation: floatUp 1.1s ease forwards;}
+    @keyframes floatUp { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-28px); } }
+    /* overlay */
+    #overlay, #mainMenu, #characterMenu, #endScreen {
+      position: fixed; top:0; left:0; width:100vw; height:100vh;
+      background: rgba(0,0,0,0.96);
+      display: flex; justify-content: center; align-items: center; flex-direction: column; z-index: 999;
     }
-    #mainMenu, #characterMenu { display: none; }
-    .floatText { position: absolute; font-size: 14px; font-weight: bold; pointer-events: none; animation: floatUp 1s ease forwards; }
-    @keyframes floatUp { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-30px); } }
-    #overlay input {
-      padding: 10px; font-size: 16px; border-radius: 5px; border: none; margin-top: 10px;
-    }
-    .menu-btn, button { padding: 10px 20px; margin-top: 10px; font-size: 16px; border: none; border-radius: 10px; background: #6622cc; color: white; }
-    #lightningButton { margin: 10px auto; display: none; background: #ffcc00; color: #000; }
-    .login-box { background: #24123b; border-radius: 24px; box-shadow: 0 0 40px #000a; padding: 40px 24px 28px 24px; display: flex; flex-direction: column; align-items: center; min-width: 310px; }
-    .login-box h2 { margin: 0 0 18px 0; color: #fff; font-size: 2em; font-weight: 700; letter-spacing: 1px; }
-    .login-input { margin-bottom: 14px; width: 210px; padding: 12px; font-size: 1.13em; border: none; border-radius: 7px; background: #181826; color: #fff; outline: none; box-shadow: 0 1px 0 #3c2d57 inset; }
-    .login-btn { background: #892fff; color: #fff; border: none; border-radius: 11px; padding: 12px 38px; font-size: 1.25em; font-weight: 700; margin-top: 8px; cursor: pointer; box-shadow: 0 2px 16px #3400af70; transition: background .16s; }
-    .login-btn:active { background: #5d19b8; }
+    #mainMenu, #characterMenu, #endScreen { display:none;}
+    #overlay input {padding: 11px; font-size: 16px; border-radius: 7px; border: none; margin-top: 10px;}
+    .overlay-btn {padding: 11px 32px; font-size:18px; border:none; border-radius:11px; background: #892fff; color:white; margin-top:15px;}
+    .overlay-btn:active {background:#5d19b8;}
+    #lightningButton { margin:10px auto; display:none; background:#ffcc00; color:#000;}
   </style>
 </head>
 <body>
-  <h1>🔥 ИСКРА: Битва v1.4 🔥</h1>
+  <h1>🔥 ИСКРА: Битва TG-мини 🔥</h1>
   <div id="topBar">
-    <div>Вы:<br>❤️ <span id="hp">200</span> <span id="healText"></span><br>🛡 <span id="shield">100</span> <span id="defText"></span><br>🔮 <span id="mana">0</span></div>
-    <div id="timerBarContainer"><div id="timerBar"></div></div>
-    <div>Монстр:<br>💀 <span id="enemyHp">100</span> <span id="enemyHealText"></span><br>🛡 <span id="enemyShield">100</span> <span id="enemyDefText"></span><br>🔮 <span id="enemyMana">0</span></div>
+    <div class="side-block">
+      <div>Вы:</div>
+      <div class="stat-row"><span class="stat-icon">❤️</span><span id="hpVal">200</span>
+        <span class="bar-bg"><span id="hpBar" class="bar bar-hp" style="width:100%"></span></span>
+      </div>
+      <div class="stat-row"><span class="stat-icon">🛡</span><span id="shieldVal">100</span>
+        <span class="bar-bg"><span id="shieldBar" class="bar bar-sh" style="width:100%"></span></span>
+      </div>
+      <div class="stat-row"><span class="stat-icon">🔮</span><span id="manaVal">0</span>
+        <span class="bar-bg"><span id="manaBar" class="bar bar-mn" style="width:0%"></span></span>
+      </div>
+    </div>
+    <div class="side-block monster">
+      <div>Монстр:</div>
+      <div class="stat-row"><span class="stat-icon">💀</span><span id="enemyHpVal">100</span>
+        <span class="bar-bg"><span id="enemyHpBar" class="bar bar-hp" style="width:100%"></span></span>
+      </div>
+      <div class="stat-row"><span class="stat-icon">🛡</span><span id="enemyShieldVal">100</span>
+        <span class="bar-bg"><span id="enemyShieldBar" class="bar bar-sh" style="width:100%"></span></span>
+      </div>
+      <div class="stat-row"><span class="stat-icon">🔮</span><span id="enemyManaVal">0</span>
+        <span class="bar-bg"><span id="enemyManaBar" class="bar bar-mn" style="width:0%"></span></span>
+      </div>
+    </div>
   </div>
-  <div id="battleLog">Комбо появится здесь...</div>
+  <div id="timerBarContainer"><div id="timerBar"></div></div>
+  <div id="battleLog">Комбо появится здесь…</div>
   <div id="board"></div>
   <button id="lightningButton" onclick="useLightning()">⚡ Молния (20 маны)</button>
+  <!-- Overlay для логина -->
   <div id="overlay">
-    <form class="login-box" id="nameForm" autocomplete="off">
-      <h2>Введите имя:</h2>
-      <input class="login-input" id="nickname" placeholder="Имя игрока" required maxlength="18" autofocus>
-      <button class="login-btn" id="goBtn" type="submit">Далее</button>
-    </form>
+    <h2 style="margin-bottom:14px; font-size:2em; color:#fff;">Введите имя:</h2>
+    <input id="nickname" placeholder="Имя игрока">
+    <button class="overlay-btn" id="goNext">Далее</button>
   </div>
+  <!-- Меню -->
   <div id="mainMenu">
-    <h2>Меню</h2>
-    <button class="menu-btn" onclick="startGame()">В бой!</button>
-    <button class="menu-btn" onclick="showCharacterMenu()">Параметры персонажа</button>
+    <h2 style="font-size:2em; color:#fff;">Меню</h2>
+    <button class="overlay-btn" id="toBattle">В бой!</button>
+    <button class="overlay-btn" id="toChar">Параметры персонажа</button>
   </div>
+  <!-- Прокачка -->
   <div id="characterMenu">
-    <h2>Параметры персонажа</h2>
-    <div>Опыт: <span id="xp">0</span> | Очки навыков: <span id="skillPoints">0</span></div>
+    <h2 style="font-size:2em; color:#fff;">Параметры персонажа</h2>
+    <div>Опыт: <span id="xp">0</span> | Очки: <span id="skillPoints">0</span></div>
     <div>Сила: <span id="str">1</span> <button onclick="upgrade('str')">+</button></div>
     <div>Ловкость: <span id="agi">1</span> <button onclick="upgrade('agi')">+</button></div>
     <div>Интеллект: <span id="int">1</span> <button onclick="upgrade('int')">+</button></div>
     <div>Живучесть: <span id="vit">1</span> <button onclick="upgrade('vit')">+</button></div>
     <div>Удача: <span id="luck">1</span> <button onclick="upgrade('luck')">+</button></div>
-    <button onclick="backToMenu()">Назад</button>
+    <button class="overlay-btn" onclick="backToMenu()">Назад</button>
   </div>
-  <div id="endScreen" style="display:none;">
-    <h2 id="endMessage">Победа!</h2>
-    <button onclick="showMainMenu()">В меню</button>
+  <!-- Конец боя -->
+  <div id="endScreen">
+    <h2 id="endMessage" style="font-size:2em; color:#fff;">Победа!</h2>
+    <button class="overlay-btn" onclick="showMainMenu()">В меню</button>
   </div>
-  <script>
-    // Исправленный обработчик для overlay!
-    document.getElementById("nameForm").addEventListener("submit", function(e) {
-      e.preventDefault();
-      document.getElementById("overlay").style.display = "none";
-      document.getElementById("mainMenu").style.display = "flex";
-    });
-
-    // --- ВСЯ ОСТАЛЬНАЯ ЛОГИКА (копируй свой рабочий код отсюда!) ---
-    // ...Вставляй остальной JS (боевка, грид, анимации, статы, т.д.)...
-    // Если нужен — вставлю сюда всю твою рабочую боевую часть.
-  </script>
-</body>
-</html>
+<script>
+  // ======= Меню и логика переходов ======
+  const overlay = document.getElementById("overlay");
+  const mainMenu = document.getElementById("mainMenu");
+  const charMenu = document.getElementById("characterMenu");
+  const endScreen = document.getElementById("endScreen");
+  document.getElementById("goNext").addEventListener("click", () => {
+    overlay.style.display = "none";
+    mainMenu.style.display = "flex";
+  });
+  document.getElementById("toBattle").addEventListener("click", () => {
+    mainMenu.style.display = "none";
+    startGame();
+  });
+  document.getElementById("toChar").addEventListener("click", () => {
+    mainMenu.style.display = "none";
+    charMenu.style.display = "flex";
+    updateCharacterUI();
+  });
+  function showMainMenu() {
+    mainMenu.style.display = "flex";
+    charMenu.style.display = "none";
+    endScreen.style.display = "none";
+  }
+  function backToMenu() {
+    charMenu.style.display = "none";
+    mainMenu.style.display = "flex";
+  }
+  // Прокачка
+  let attributes = { str: 1, agi: 1, int: 1, vit: 1, luck: 1 };
+  let xp = 0, skillPoints = 0;
+  const xpEl = document.getElementById("xp");
+  const skillPointsEl = document.getElementById("skillPoints");
+  const attrEls = {
+    str: document.getElementById("str"),
+    agi: document.getElementById("agi"),
+    int: document.getElementById("int"),
+    vit: document.getElementById("vit"),
+    luck: document.getElementById("luck")
+  };
+  function updateCharacterUI() {
+    xpEl.textContent = xp;
+    skillPointsEl.textContent = skillPoints;
+    for (let key in attributes) attrEls[key].textContent = attributes[key];
+  }
+  function upgrade(attr) {
+    if (skillPoints > 0) {
+      attributes[attr]++;
+      skillPoints--;
+      updateCharacterUI();
+    }
+  }
+  // ======= БОЕВАЯ ЛОГИКА =======
+  const hpEl = document.getElementById("hpVal");
+  const shieldEl = document.getElementById("shieldVal");
+  const manaEl = document.getElementById("manaVal");
+  const enemyHpEl = document.getElementById("enemyHpVal");
+  const enemyShieldEl = document.getElementById("enemyShieldVal");
+  const enemyManaEl = document.getElementById("enemyManaVal");
+  const hpBar = document.getElementById("hpBar");
+  const shieldBar = document.getElementById("shieldBar");
+  const manaBar = document.getElementById("manaBar");
+  const enemyHpBar = document.getElementById("enemyHpBar");
+  const enemyShieldBar = document.getElementById("enemyShieldBar");
+  const enemyManaBar = document.getElementById("enemyManaBar");
+  const board = document.getElementById("board");
+  const battleLog = document.getElementById("battleLog");
+  const timerBar = document.getElementById("timerBar");
+  const lightningBtn = document.getElementById("lightningButton");
+  const endMessage = document.getElementById("endMessage");
+  // Начальные параметры
+  let hp = 200, shield = 100, mana = 0;
+  let enemyHp = 100, enemyShield = 100, enemyMana = 0;
+  let grid = [], dragging = null, isPlayerTurn = true, turnTimer;
+  let comboAccumulator = [], bonusPercent = 0;
+  let lightningUsed = false;
+  const colors = ['red', 'green', 'blue', 'purple', 'orange'];
+  // Обновление статов
+  function updateStats() {
+    hpEl.textContent = hp;
+    shieldEl.textContent = shield;
+    manaEl.textContent = mana;
+    enemyHpEl.textContent = enemyHp;
+    enemyShieldEl.textContent = enemyShield;
+    enemyManaEl.textContent = enemyMana;
+    hpBar.style.width = (hp/200*100)+"%";
+    shieldBar.style.width = (shield/100*100)+"%";
+    manaBar.style.width = (mana/100*100)+"%";
+    enemyHpBar.style.width = (enemyHp/100*100)+"%";
+    enemyShieldBar.style.width = (enemyShield/100*100)+"%";
+    enemyManaBar.style.width = (enemyMana/100*100)+"%";
+  }
+  // Начало боя
+  function startGame() {
+    hp = 200; shield = 100; mana = 0;
+    enemyHp = 100; enemyShield = 100; enemyMana = 0;
+    lightningUsed = false;
+    updateStats();
+    createGrid();
+    endScreen.style.display = "none";
+    document.body.classList.remove("enemy-turn");
+    isPlayerTurn = true;
+    lightningBtn.style.display = "none";
+    startTurn();
+  }
+  // Создание поля 6x6 без стартовых комбо
+  function createGrid() {
+    board.innerHTML = "";
+    grid = [];
+    do {
+      board.innerHTML = "";
+      grid = [];
+      for (let i = 0; i < 36; i++) {
+        const cell = document.createElement("div");
+        cell.className = "cell " + colors[Math.floor(Math.random() * colors.length)];
+        board.appendChild(cell);
+        grid.push(cell);
+      }
+    } while (checkMatches().length > 0);
+  }
+  function index(r, c) { return r * 6 + c; }
+  function getColor(el) { return colors.find(c => el.classList.contains(c)); }
+  // ==== ХОД ИГРОКА ====
+  function startTurn() {
+    isPlayerTurn = true; lightningUsed = false;
+    comboAccumulator = [];
+    document.body.classList.remove("enemy-turn");
+    board.style.pointerEvents = "auto";
+    lightningBtn.style.display = mana >= 20 ? "inline-block" : "none";
+    let time = 20;
+    timerBar.style.width = "100%";
+    clearInterval(turnTimer);
+    turnTimer = setInterval(() => {
+      time--;
+      timerBar.style.width = (time * 5) + "%";
+      if (time <= 0) {
+        clearInterval(turnTimer);
+        board.style.pointerEvents = "none";
+        resolveCascade();
+      }
+    }, 1000);
+  }
+  // ==== СЛОВЛИВАЕМ ВСЕ КОМБО (КАСКАДЫ) ====
+  function resolveCascade(bonusFromCascade=0, wasMove=false) {
+    let matches = checkMatches();
+    if (!wasMove && matches.length===0) return; // ничего не делаем
+    if (matches.length === 0) {
+      // Считаем эффекты (все накопленные за все комбо)
+      let summary = {red:0,green:0,blue:0,orange:0,purple:0,count:0, chain:0};
+      for (let arr of comboAccumulator) {
+        for (let k in summary) if (arr[k]) summary[k] += arr[k];
+        summary.count += arr.count||0;
+        summary.chain++;
+      }
+      // Суммируем бонус за все цепи (по 5% за каждую доп.комбу)
+      let comboBonus = Math.max(0, summary.chain-1)*0.05;
+      let dmg = summary.red >= 5 ? 20 : summary.red >= 3 ? 10 : 0;
+      dmg += Math.round(dmg * comboBonus);
+      let heal = summary.green >= 5 ? 10 : summary.green >= 3 ? 5 : 0;
+      heal += Math.round(heal * comboBonus);
+      let def = summary.blue >= 5 ? 10 : summary.blue >= 3 ? 5 : 0;
+      def += Math.round(def * comboBonus);
+      let manaGain = summary.purple >= 5 ? 20 : summary.purple >= 3 ? 10 : 0;
+      manaGain += Math.round(manaGain * comboBonus);
+      if (isPlayerTurn) {
+        mana += manaGain;
+        if (mana > 100) mana = 100;
+      } else {
+        enemyMana +=
