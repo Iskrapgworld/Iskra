@@ -2,6 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ИСКРА: Битва v1.4</title>
   <style>
     body {
@@ -10,10 +11,12 @@
       color: #fff;
       font-family: sans-serif;
       text-align: center;
+      touch-action: manipulation;
     }
     h1 {
       color: #ffa500;
       margin: 10px 0;
+      font-size: 1.5rem;
     }
     #topBar {
       display: flex;
@@ -35,6 +38,7 @@
       width: 100%;
       background: linear-gradient(90deg, #33ff33, #ffff00);
       transition: width 1s linear;
+      will-change: width;
     }
     #battleLog {
       margin: 5px;
@@ -47,14 +51,18 @@
       grid-template-columns: repeat(6, 1fr);
       gap: 4px;
       width: 360px;
+      max-width: 100%;
       margin: 30px auto 10px auto;
       transition: opacity 0.3s ease;
+      will-change: transform;
     }
     .cell {
       width: 58px;
       height: 58px;
       border-radius: 50%;
       transition: transform 0.3s ease, opacity 1s ease;
+      will-change: transform, opacity;
+      user-select: none;
     }
     .red    { background: radial-gradient(circle, #ff4d4d, #990000); }
     .green  { background: radial-gradient(circle, #66ff66, #006600); }
@@ -67,7 +75,7 @@
       pointer-events: none;
       opacity: 0.2;
     }
-    #endScreen, #mainMenu, #characterMenu {
+    #overlay, #endScreen, #mainMenu, #characterMenu {
       position: fixed;
       top: 0; left: 0;
       width: 100%; height: 100%;
@@ -87,10 +95,20 @@
       font-weight: bold;
       pointer-events: none;
       animation: floatUp 1s ease forwards;
+      z-index: 1000;
     }
     @keyframes floatUp {
       from { opacity: 1; transform: translateY(0); }
       to   { opacity: 0; transform: translateY(-30px); }
+    }
+    #overlay input {
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: none;
+      margin-top: 10px;
+      width: 80%;
+      max-width: 300px;
     }
     button {
       padding: 10px 20px;
@@ -100,12 +118,19 @@
       border-radius: 10px;
       background: #6622cc;
       color: white;
+      cursor: pointer;
     }
     #lightningButton {
       margin: 10px auto;
       display: none;
       background: #ffcc00;
       color: #000;
+      font-weight: bold;
+    }
+    .skill-btn {
+      margin-left: 10px;
+      padding: 5px 10px;
+      font-size: 14px;
     }
   </style>
 </head>
@@ -119,6 +144,11 @@
   <div id="battleLog">Комбо появится здесь...</div>
   <div id="board"></div>
   <button id="lightningButton" onclick="useLightning()">⚡ Молния (20 маны)</button>
+  <div id="overlay">
+    <h2>Введите имя:</h2>
+    <input id="nickname" placeholder="Имя игрока">
+    <button onclick="showMainMenu()">Далее</button>
+  </div>
   <div id="mainMenu">
     <h2>Меню</h2>
     <button onclick="startGame()">В бой!</button>
@@ -127,11 +157,11 @@
   <div id="characterMenu">
     <h2>Параметры персонажа</h2>
     <div>Опыт: <span id="xp">0</span> | Очки навыков: <span id="skillPoints">0</span></div>
-    <div>Сила: <span id="str">1</span> <button onclick="upgrade('str')">+</button></div>
-    <div>Ловкость: <span id="agi">1</span> <button onclick="upgrade('agi')">+</button></div>
-    <div>Интеллект: <span id="int">1</span> <button onclick="upgrade('int')">+</button></div>
-    <div>Живучесть: <span id="vit">1</span> <button onclick="upgrade('vit')">+</button></div>
-    <div>Удача: <span id="luck">1</span> <button onclick="upgrade('luck')">+</button></div>
+    <div>Сила: <span id="str">1</span> <button class="skill-btn" onclick="upgrade('str')">+</button></div>
+    <div>Ловкость: <span id="agi">1</span> <button class="skill-btn" onclick="upgrade('agi')">+</button></div>
+    <div>Интеллект: <span id="int">1</span> <button class="skill-btn" onclick="upgrade('int')">+</button></div>
+    <div>Живучесть: <span id="vit">1</span> <button class="skill-btn" onclick="upgrade('vit')">+</button></div>
+    <div>Удача: <span id="luck">1</span> <button class="skill-btn" onclick="upgrade('luck')">+</button></div>
     <button onclick="backToMenu()">Назад</button>
   </div>
   <div id="endScreen" style="display:none;">
@@ -139,22 +169,21 @@
     <button onclick="showMainMenu()">В меню</button>
   </div>
   <script>
-window.onload = function() {
-  document.getElementById("mainMenu").style.display = "flex";
-};
-
 const board = document.getElementById("board");
 const hpEl = document.getElementById("hp");
 const shieldEl = document.getElementById("shield");
 const enemyHpEl = document.getElementById("enemyHp");
 const enemyShieldEl = document.getElementById("enemyShield");
 const timerBar = document.getElementById("timerBar");
+const overlay = document.getElementById("overlay");
 const endScreen = document.getElementById("endScreen");
 const endMessage = document.getElementById("endMessage");
 const battleLog = document.getElementById("battleLog");
 const manaEl = document.getElementById("mana");
 const enemyManaEl = document.getElementById("enemyMana");
 const lightningBtn = document.getElementById("lightningButton");
+const nicknameInput = document.getElementById("nickname");
+
 const mainMenu = document.getElementById("mainMenu");
 const charMenu = document.getElementById("characterMenu");
 const xpEl = document.getElementById("xp");
@@ -166,8 +195,10 @@ const attrEls = {
   vit: document.getElementById("vit"),
   luck: document.getElementById("luck")
 };
+
 let attributes = { str: 1, agi: 1, int: 1, vit: 1, luck: 1 };
 let xp = 0, skillPoints = 0;
+
 let mana = 0, enemyMana = 0;
 let lightningUsed = false;
 let grid = [], dragging = null;
@@ -175,12 +206,15 @@ let isPlayerTurn = true;
 let hp = 200, shield = 100, enemyHp = 100, enemyShield = 100;
 let playerName = "Игрок", turnTimer;
 let comboAccumulator = {};
+
 const colors = ['red', 'green', 'blue', 'purple', 'orange'];
 
 function showMainMenu() {
+  playerName = nicknameInput.value.trim() || "Игрок";
+  overlay.style.display = "none";
   mainMenu.style.display = "flex";
   endScreen.style.display = "none";
-  charMenu.style.display = "none";
+  updateCharacterUI();
 }
 
 function showCharacterMenu() {
@@ -197,11 +231,13 @@ function backToMenu() {
 function updateCharacterUI() {
   xpEl.textContent = xp;
   skillPointsEl.textContent = skillPoints;
-  for (let key in attributes) attrEls[key].textContent = attributes[key];
+  for (let key in attributes) {
+    attrEls[key].textContent = attributes[key];
+  }
 }
 
 function upgrade(attr) {
-  if (skillPoints > 0) {
+  if (skillPoints > 0 && attributes[attr] < 10) {
     attributes[attr]++;
     skillPoints--;
     updateCharacterUI();
@@ -209,14 +245,17 @@ function upgrade(attr) {
 }
 
 function startGame() {
-  hp = 200; shield = 100; mana = 0;
-  enemyHp = 100; enemyShield = 100; enemyMana = 0;
+  hp = 200 + (attributes.vit * 10); 
+  shield = 100; 
+  mana = 0;
+  enemyHp = 100 + Math.floor(xp/10); 
+  enemyShield = 100; 
+  enemyMana = 0;
   lightningUsed = false;
   updateStats();
   createGrid();
   endScreen.style.display = "none";
   mainMenu.style.display = "none";
-  charMenu.style.display = "none";
   document.body.classList.remove("enemy-turn");
   isPlayerTurn = true;
   lightningBtn.style.display = "none";
@@ -258,6 +297,7 @@ function startTurn() {
   document.body.classList.remove("enemy-turn");
   board.style.pointerEvents = "auto";
   lightningBtn.style.display = mana >= 20 ? "inline-block" : "none";
+
   let time = 20;
   timerBar.style.width = "100%";
   clearInterval(turnTimer);
@@ -266,10 +306,14 @@ function startTurn() {
     timerBar.style.width = (time * 5) + "%";
     if (time <= 0) {
       clearInterval(turnTimer);
-      board.style.pointerEvents = "none";
-      resolveCascade();
+      endTurn();
     }
   }, 1000);
+}
+
+function endTurn() {
+  board.style.pointerEvents = "none";
+  resolveCascade();
 }
 
 function resolveCascade() {
@@ -280,12 +324,14 @@ function resolveCascade() {
     isPlayerTurn ? setTimeout(monsterTurn, 800) : setTimeout(startTurn, 800);
     return;
   }
+
   matches.forEach(g => {
     const color = getColor(grid[g[0]]);
     comboAccumulator[color] = (comboAccumulator[color] || 0) + g.length;
     comboAccumulator.count += 1;
     g.forEach(i => grid[i].classList.add("highlight"));
   });
+
   setTimeout(() => {
     matches.flat().forEach(i => {
       grid[i].classList.remove("highlight");
@@ -306,6 +352,7 @@ function applyEffects() {
   let def = blue >= 5 ? 10 : blue >= 3 ? 5 : 0;
   let critChance = orange + attributes.luck;
   let manaGain = purple >= 5 ? 20 : purple >= 3 ? 10 : 0;
+
   if (isPlayerTurn) {
     mana += manaGain;
     if (mana > 100) mana = 100;
@@ -313,12 +360,14 @@ function applyEffects() {
     enemyMana += manaGain;
     if (enemyMana > 100) enemyMana = 100;
   }
+
   let isCrit = Math.random() * 100 < critChance;
   dmg += Math.floor(dmg * (attributes.str || 0) / 100);
   let totalDmg = dmg + (isCrit ? dmg : 0);
   if (isPlayerTurn && lightningUsed) {
     totalDmg += 50 + Math.floor(50 * (attributes.int || 0) / 100);
   }
+
   if (isPlayerTurn) {
     let half = Math.floor(totalDmg / 2);
     if (enemyShield >= half) {
@@ -330,8 +379,9 @@ function applyEffects() {
       enemyHp -= (totalDmg - half + rem);
     }
     shield += def;
+    if (shield > 100 + (attributes.vit * 5)) shield = 100 + (attributes.vit * 5);
     hp += heal;
-    if (hp > 200) hp = 200;
+    if (hp > 200 + (attributes.vit * 10)) hp = 200 + (attributes.vit * 10);
     if (heal > 0) float("+" + heal, hpEl, "#00ff00");
     if (def > 0) float("+" + def, shieldEl, "#3399ff");
     battleLog.innerHTML = `<span style="color:#66ff66">Комбо ×${count}, Урон: ${dmg}${isCrit ? ' (КРИТ!)' : ''}${lightningUsed ? ', +Молния' : ''}</span>`;
@@ -347,15 +397,15 @@ function applyEffects() {
     }
     enemyShield += def;
     enemyHp += heal;
-    if (enemyHp > 100) enemyHp = 100;
+    if (enemyHp > 100 + Math.floor(xp/10)) enemyHp = 100 + Math.floor(xp/10);
     if (enemyShield > 100) enemyShield = 100;
     if (heal > 0) float("+" + heal, enemyHpEl, "#00ff00");
     if (def > 0) float("+" + def, enemyShieldEl, "#3399ff");
     battleLog.innerHTML = `<span style="color:#ff4444">Комбо ×${count}, Урон: ${dmg}${isCrit ? ' (КРИТ!)' : ''}</span>`;
   }
+
   updateStats();
   lightningBtn.style.display = "none";
-  checkEnd();
 }
 
 function useLightning() {
@@ -364,6 +414,7 @@ function useLightning() {
     mana -= 20;
     updateStats();
     lightningBtn.style.display = "none";
+    float("Молния!", lightningBtn, "#ffff00");
   }
 }
 
@@ -387,14 +438,15 @@ function checkEnd() {
   }
   if (enemyHp <= 0) {
     endMessage.textContent = "Победа!";
-    endScreen.style.display = "flex";
-    let earnedXp = mana;
+    let earnedXp = mana + 20;
     xp += earnedXp;
     mana = 0;
     while (xp >= 100) {
       xp -= 100;
       skillPoints += 1;
     }
+    updateCharacterUI();
+    endScreen.style.display = "flex";
     return true;
   }
   return false;
@@ -438,4 +490,91 @@ function checkMatches() {
   for (let c = 0; c < 6; c++) {
     for (let r = 0; r < 4; r++) {
       let i = index(r, c);
-      let a = grid[i], b = grid[i + 6], c_ = grid[i + 12
+      let a = grid[i], b = grid[i + 6], c_ = grid[i + 12];
+      if (getColor(a) === getColor(b) && getColor(b) === getColor(c_))
+        matches.push([i, i + 6, i + 12]);
+    }
+  }
+  return matches;
+}
+
+function monsterTurn() {
+  isPlayerTurn = false;
+  document.body.classList.add("enemy-turn");
+  lightningBtn.style.display = "none";
+  
+  setTimeout(() => {
+    let moved = false;
+    const attempts = [];
+    
+    // Создаем список всех возможных перестановок
+    for (let i = 0; i < 36; i++) {
+      for (let j = i + 1; j < 36; j++) {
+        attempts.push([i, j]);
+      }
+    }
+    
+    // Перемешиваем попытки
+    attempts.sort(() => Math.random() - 0.5);
+    
+    // Пробуем найти подходящий ход
+    for (let [i, j] of attempts) {
+      [grid[i].className, grid[j].className] = [grid[j].className, grid[i].className];
+      if (checkMatches().length > 0) {
+        moved = true;
+        setTimeout(() => resolveCascade(), 300);
+        break;
+      } else {
+        [grid[j].className, grid[i].className] = [grid[i].className, grid[j].className];
+      }
+    }
+    
+    if (!moved) {
+      setTimeout(startTurn, 1000);
+    }
+  }, 800 + Math.random() * 1000);
+}
+
+// Улучшенная логика перетаскивания
+let startX, startY;
+
+board.addEventListener("touchstart", e => {
+  if (!isPlayerTurn) return;
+  const t = e.touches[0];
+  startX = t.clientX;
+  startY = t.clientY;
+  const el = document.elementFromPoint(t.clientX, t.clientY);
+  if (el && el.classList.contains("cell")) dragging = el;
+});
+
+board.addEventListener("touchmove", e => {
+  if (!dragging || !isPlayerTurn) return;
+  e.preventDefault();
+  const t = e.touches[0];
+  const dx = t.clientX - startX;
+  const dy = t.clientY - startY;
+  
+  // Определяем направление свайпа
+  if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+    const el = document.elementFromPoint(t.clientX, t.clientY);
+    if (el && el.classList.contains("cell") && el !== dragging) {
+      [dragging.className, el.className] = [el.className, dragging.className];
+      dragging = el;
+      startX = t.clientX;
+      startY = t.clientY;
+    }
+  }
+});
+
+board.addEventListener("touchend", () => {
+  if (!isPlayerTurn) return;
+  dragging = null;
+  clearInterval(turnTimer);
+  endTurn();
+});
+
+// Инициализация игры
+nicknameInput.value = playerName;
+</script>
+</body>
+</html>
