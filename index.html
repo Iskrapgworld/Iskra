@@ -153,6 +153,7 @@
     <button id="menuBtn">В меню</button>
   </div>
   <script>
+window.onload = function() {
 const board = document.getElementById("board");
 const hpEl = document.getElementById("hp");
 const shieldEl = document.getElementById("shield");
@@ -413,4 +414,12 @@ function applyEffects() {
   def = Math.floor(def * comboBonus);
   manaGain = Math.floor(manaGain * comboBonus);
 
-  let critChance =
+  let critChance = orange + (attributes.luck || 0);
+  const isCrit = Math.random() * 100 < critChance;
+  if (isCrit) dmg *= 2;
+  dmg += Math.floor(dmg * (attributes.str || 0) / 100);
+  if (isPlayerTurn && lightningUsed) dmg += 50 + Math.floor(50 * (attributes.int || 0) / 100);
+
+  if (isPlayerTurn) {
+    let half = Math.floor(dmg / 2);
+    if (enemyShield >= half) {
