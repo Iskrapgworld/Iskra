@@ -1,22 +1,24 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ИСКРА: Битва v1.4</title>
+  <title>ИСКРА: Битва v2.0</title>
   <style>
     body {
       margin: 0;
       background-color: #111;
       color: #fff;
-      font-family: sans-serif;
+      font-family: 'Arial', sans-serif;
       text-align: center;
       touch-action: manipulation;
+      user-select: none;
     }
     h1 {
       color: #ffa500;
       margin: 10px 0;
       font-size: 1.5rem;
+      text-shadow: 0 0 5px #ff6600;
     }
     #topBar {
       display: flex;
@@ -24,6 +26,9 @@
       align-items: center;
       padding: 5px 10px;
       font-size: 14px;
+      background: rgba(0,0,0,0.7);
+      border-radius: 10px;
+      margin: 0 10px;
     }
     #timerBarContainer {
       flex-grow: 1;
@@ -32,6 +37,7 @@
       background: #444;
       border-radius: 5px;
       overflow: hidden;
+      box-shadow: 0 0 5px #000;
     }
     #timerBar {
       height: 100%;
@@ -42,38 +48,68 @@
     }
     #battleLog {
       margin: 5px;
-      padding: 4px;
+      padding: 8px;
       font-size: 14px;
-      min-height: 30px;
+      min-height: 40px;
+      background: rgba(0,0,0,0.5);
+      border-radius: 5px;
+      border: 1px solid #333;
     }
     #board {
       display: grid;
       grid-template-columns: repeat(6, 1fr);
       gap: 4px;
       width: 360px;
-      max-width: 100%;
-      margin: 30px auto 10px auto;
+      max-width: 95vw;
+      margin: 15px auto;
       transition: opacity 0.3s ease;
       will-change: transform;
     }
     .cell {
       width: 58px;
       height: 58px;
+      max-width: 14vw;
+      max-height: 14vw;
       border-radius: 50%;
       transition: transform 0.3s ease, opacity 1s ease;
       will-change: transform, opacity;
-      user-select: none;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+      position: relative;
+      overflow: hidden;
     }
-    .red    { background: radial-gradient(circle, #ff4d4d, #990000); }
-    .green  { background: radial-gradient(circle, #66ff66, #006600); }
-    .blue   { background: radial-gradient(circle, #66ccff, #003366); }
-    .purple { background: radial-gradient(circle, #dca0ff, #440066); }
-    .orange { background: radial-gradient(circle, #cc9955, #cc6600); }
-    .highlight { box-shadow: 0 0 10px 4px #ffffff88; }
-    .fade { opacity: 0; }
+    .cell::before {
+      content: '';
+      position: absolute;
+      top: -10px; left: -10px;
+      right: -10px; bottom: -10px;
+      background: radial-gradient(circle at center, rgba(255,255,255,0.8) 0%, transparent 70%);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .cell.highlight::before {
+      opacity: 0.4;
+    }
+    .red    { background: radial-gradient(circle at 30% 30%, #ff4d4d, #990000); }
+    .green  { background: radial-gradient(circle at 30% 30%, #66ff66, #006600); }
+    .blue   { background: radial-gradient(circle at 30% 30%, #66ccff, #003366); }
+    .purple { background: radial-gradient(circle at 30% 30%, #dca0ff, #440066); }
+    .orange { background: radial-gradient(circle at 30% 30%, #ffcc66, #cc6600); }
+    .highlight { 
+      box-shadow: 0 0 15px 5px rgba(255,255,255,0.7);
+      transform: scale(1.05);
+      z-index: 10;
+    }
+    .fade { 
+      opacity: 0;
+      transform: scale(0.5);
+    }
     .enemy-turn #board {
       pointer-events: none;
-      opacity: 0.2;
+      opacity: 0.3;
+    }
+    .enemy-turn #battleLog {
+      background: rgba(80,0,0,0.5);
+      border-color: #500;
     }
     #overlay, #endScreen, #mainMenu, #characterMenu {
       position: fixed;
@@ -84,497 +120,541 @@
       justify-content: center;
       align-items: center;
       flex-direction: column;
-      z-index: 999;
+      z-index: 1000;
+      padding: 20px;
+      box-sizing: border-box;
     }
     #mainMenu, #characterMenu {
       display: none;
     }
     .floatText {
       position: absolute;
-      font-size: 14px;
+      font-size: 16px;
       font-weight: bold;
       pointer-events: none;
       animation: floatUp 1s ease forwards;
       z-index: 1000;
+      text-shadow: 0 0 3px #000;
     }
     @keyframes floatUp {
-      from { opacity: 1; transform: translateY(0); }
-      to   { opacity: 0; transform: translateY(-30px); }
+      0% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-40px); }
     }
     #overlay input {
-      padding: 10px;
+      padding: 12px;
       font-size: 16px;
       border-radius: 5px;
       border: none;
-      margin-top: 10px;
+      margin: 10px 0;
       width: 80%;
       max-width: 300px;
+      text-align: center;
     }
     button {
-      padding: 10px 20px;
-      margin-top: 10px;
+      padding: 12px 24px;
+      margin: 8px;
       font-size: 16px;
       border: none;
       border-radius: 10px;
-      background: #6622cc;
+      background: linear-gradient(to bottom, #6622cc, #441188);
       color: white;
       cursor: pointer;
+      min-width: 200px;
+      box-shadow: 0 3px 5px rgba(0,0,0,0.3);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    button:active {
+      transform: translateY(2px);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
     }
     #lightningButton {
       margin: 10px auto;
       display: none;
-      background: #ffcc00;
+      background: linear-gradient(to bottom, #ffcc00, #ff9900);
       color: #000;
       font-weight: bold;
+      box-shadow: 0 0 15px rgba(255,204,0,0.5);
     }
     .skill-btn {
       margin-left: 10px;
-      padding: 5px 10px;
+      padding: 5px 12px;
       font-size: 14px;
+      min-width: auto;
+    }
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 80%;
+      max-width: 300px;
+      margin: 5px 0;
+    }
+    .progress-bar {
+      height: 5px;
+      background: #333;
+      border-radius: 3px;
+      margin-top: 3px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(to right, #33ff33, #ffff00);
+      width: 0%;
+      transition: width 0.5s;
+    }
+    .xp-bar {
+      background: linear-gradient(to right, #9933ff, #6600cc);
+    }
+    .tooltip {
+      position: relative;
+      display: inline-block;
+      cursor: help;
+    }
+    .tooltip .tooltiptext {
+      visibility: hidden;
+      width: 200px;
+      background-color: #333;
+      color: #fff;
+      text-align: center;
+      border-radius: 6px;
+      padding: 5px;
+      position: absolute;
+      z-index: 1;
+      bottom: 125%;
+      left: 50%;
+      transform: translateX(-50%);
+      opacity: 0;
+      transition: opacity 0.3s;
+      font-size: 12px;
+    }
+    .tooltip:hover .tooltiptext {
+      visibility: visible;
+      opacity: 1;
+    }
+    .crit-indicator {
+      color: #ffcc00;
+      font-weight: bold;
+      display: none;
+    }
+    .active {
+      display: inline;
     }
   </style>
 </head>
 <body>
-  <h1>🔥 ИСКРА: Битва v1.4 🔥</h1>
+  <h1>🔥 ИСКРА: Битва v2.0 🔥</h1>
   <div id="topBar">
-    <div>Вы:<br>❤️ <span id="hp">200</span> <span id="healText"></span><br>🛡 <span id="shield">100</span> <span id="defText"></span><br>🔮 <span id="mana">0</span></div>
-    <div id="timerBarContainer"><div id="timerBar"></div></div>
-    <div>Монстр:<br>💀 <span id="enemyHp">100</span> <span id="enemyHealText"></span><br>🛡 <span id="enemyShield">100</span> <span id="enemyDefText"></span><br>🔮 <span id="enemyMana">0</span></div>
+    <div>
+      <div>Вы: <span id="playerName">Игрок</span></div>
+      <div>❤️ <span id="hp">200</span>/<span id="maxHp">200</span></div>
+      <div>🛡 <span id="shield">100</span></div>
+      <div>🔮 <span id="mana">0</span>/100</div>
+    </div>
+    <div id="timerBarContainer">
+      <div id="timerBar"></div>
+    </div>
+    <div>
+      <div>Монстр</div>
+      <div>💀 <span id="enemyHp">100</span>/<span id="enemyMaxHp">100</span></div>
+      <div>🛡 <span id="enemyShield">100</span></div>
+      <div>🔮 <span id="enemyMana">0</span>/100</div>
+    </div>
   </div>
-  <div id="battleLog">Комбо появится здесь...</div>
+  <div class="progress-bar">
+    <div class="progress-fill xp-bar" id="xpBar"></div>
+  </div>
+  <div id="battleLog">Соберите 3+ одинаковых кристалла в ряд!</div>
   <div id="board"></div>
   <button id="lightningButton" onclick="useLightning()">⚡ Молния (20 маны)</button>
   <div id="overlay">
     <h2>Введите имя:</h2>
-    <input id="nickname" placeholder="Имя игрока">
+    <input id="nickname" placeholder="Имя игрока" maxlength="12">
     <button onclick="showMainMenu()">Далее</button>
   </div>
   <div id="mainMenu">
     <h2>Меню</h2>
     <button onclick="startGame()">В бой!</button>
     <button onclick="showCharacterMenu()">Параметры персонажа</button>
+    <button onclick="showTutorial()">Обучение</button>
   </div>
   <div id="characterMenu">
     <h2>Параметры персонажа</h2>
-    <div>Опыт: <span id="xp">0</span> | Очки навыков: <span id="skillPoints">0</span></div>
-    <div>Сила: <span id="str">1</span> <button class="skill-btn" onclick="upgrade('str')">+</button></div>
-    <div>Ловкость: <span id="agi">1</span> <button class="skill-btn" onclick="upgrade('agi')">+</button></div>
-    <div>Интеллект: <span id="int">1</span> <button class="skill-btn" onclick="upgrade('int')">+</button></div>
-    <div>Живучесть: <span id="vit">1</span> <button class="skill-btn" onclick="upgrade('vit')">+</button></div>
-    <div>Удача: <span id="luck">1</span> <button class="skill-btn" onclick="upgrade('luck')">+</button></div>
+    <div>Опыт: <span id="xp">0</span>/100 | Очки навыков: <span id="skillPoints">0</span></div>
+    <div class="stat-row">
+      <span class="tooltip">Сила (урон)<span class="tooltiptext">Увеличивает урон от атаки на 1% за уровень</span></span>
+      <span><span id="str">1</span> <button class="skill-btn" onclick="upgrade('str')">+</button></span>
+    </div>
+    <div class="stat-row">
+      <span class="tooltip">Ловкость (щит)<span class="tooltiptext">Увеличивает защиту на 1% за уровень</span></span>
+      <span><span id="agi">1</span> <button class="skill-btn" onclick="upgrade('agi')">+</button></span>
+    </div>
+    <div class="stat-row">
+      <span class="tooltip">Интеллект (мана)<span class="tooltiptext">Увеличивает урон молнии на 1% за уровень</span></span>
+      <span><span id="int">1</span> <button class="skill-btn" onclick="upgrade('int')">+</button></span>
+    </div>
+    <div class="stat-row">
+      <span class="tooltip">Живучесть (HP)<span class="tooltiptext">Увеличивает максимальное здоровье на 5% за уровень</span></span>
+      <span><span id="vit">1</span> <button class="skill-btn" onclick="upgrade('vit')">+</button></span>
+    </div>
+    <div class="stat-row">
+      <span class="tooltip">Удача (крит)<span class="tooltiptext">Увеличивает шанс критического удара на 1% за уровень</span></span>
+      <span><span id="luck">1</span> <button class="skill-btn" onclick="upgrade('luck')">+</button></span>
+    </div>
     <button onclick="backToMenu()">Назад</button>
   </div>
   <div id="endScreen" style="display:none;">
     <h2 id="endMessage">Победа!</h2>
+    <div id="rewardText"></div>
     <button onclick="showMainMenu()">В меню</button>
   </div>
+  <div id="tutorial" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:1000; color:white; padding:20px; box-sizing:border-box; overflow-y:auto;">
+    <h2>Обучение</h2>
+    <div style="text-align:left; max-width:500px; margin:0 auto;">
+      <p><b>Цель игры:</b> победить монстра, собирая комбинации кристаллов.</p>
+      <p><b>Правила:</b></p>
+      <ul>
+        <li>Перемещайте кристаллы, чтобы собрать 3+ одинаковых в ряд (по горизонтали или вертикали)</li>
+        <li>Каждый тип кристалла дает разные эффекты:
+          <ul>
+            <li><span style="color:#ff4d4d">Красный</span> - атака</li>
+            <li><span style="color:#66ff66">Зеленый</span> - лечение</li>
+            <li><span style="color:#66ccff">Синий</span> - щит</li>
+            <li><span style="color:#dca0ff">Фиолетовый</span> - мана</li>
+            <li><span style="color:#ffcc66">Оранжевый</span> - шанс крита</li>
+          </ul>
+        </li>
+        <li>На ход дается 20 секунд</li>
+        <li>После вашего хода ходит монстр</li>
+        <li>При накоплении 20+ маны можно использовать Молнию (50 урона)</li>
+      </ul>
+      <p><b>Бонусы:</b></p>
+      <ul>
+        <li>Каждое дополнительное комбо дает +5% к эффектам</li>
+        <li>Крит (удвоенный урон) рассчитывается один раз за ход</li>
+        <li>После победы получаете опыт, который можно потратить на улучшение характеристик</li>
+      </ul>
+    </div>
+    <button onclick="hideTutorial()" style="margin-top:20px;">Понятно</button>
+  </div>
   <script>
-const board = document.getElementById("board");
-const hpEl = document.getElementById("hp");
-const shieldEl = document.getElementById("shield");
-const enemyHpEl = document.getElementById("enemyHp");
-const enemyShieldEl = document.getElementById("enemyShield");
-const timerBar = document.getElementById("timerBar");
-const overlay = document.getElementById("overlay");
-const endScreen = document.getElementById("endScreen");
-const endMessage = document.getElementById("endMessage");
-const battleLog = document.getElementById("battleLog");
-const manaEl = document.getElementById("mana");
-const enemyManaEl = document.getElementById("enemyMana");
-const lightningBtn = document.getElementById("lightningButton");
-const nicknameInput = document.getElementById("nickname");
-
-const mainMenu = document.getElementById("mainMenu");
-const charMenu = document.getElementById("characterMenu");
-const xpEl = document.getElementById("xp");
-const skillPointsEl = document.getElementById("skillPoints");
-const attrEls = {
-  str: document.getElementById("str"),
-  agi: document.getElementById("agi"),
-  int: document.getElementById("int"),
-  vit: document.getElementById("vit"),
-  luck: document.getElementById("luck")
+// Конфигурация игры
+const config = {
+  colors: ['red', 'green', 'blue', 'purple', 'orange'],
+  baseHp: 200,
+  baseShield: 100,
+  baseMana: 0,
+  enemyBaseHp: 100,
+  turnTime: 20,
+  comboBonus: 0.05,
+  xpPerMana: 1,
+  xpToLevel: 100
 };
 
-let attributes = { str: 1, agi: 1, int: 1, vit: 1, luck: 1 };
-let xp = 0, skillPoints = 0;
-
-let mana = 0, enemyMana = 0;
-let lightningUsed = false;
-let grid = [], dragging = null;
-let isPlayerTurn = true;
-let hp = 200, shield = 100, enemyHp = 100, enemyShield = 100;
-let playerName = "Игрок", turnTimer;
-let comboAccumulator = {};
-
-const colors = ['red', 'green', 'blue', 'purple', 'orange'];
-
-function showMainMenu() {
-  playerName = nicknameInput.value.trim() || "Игрок";
-  overlay.style.display = "none";
-  mainMenu.style.display = "flex";
-  endScreen.style.display = "none";
-  updateCharacterUI();
-}
-
-function showCharacterMenu() {
-  mainMenu.style.display = "none";
-  charMenu.style.display = "flex";
-  updateCharacterUI();
-}
-
-function backToMenu() {
-  charMenu.style.display = "none";
-  mainMenu.style.display = "flex";
-}
-
-function updateCharacterUI() {
-  xpEl.textContent = xp;
-  skillPointsEl.textContent = skillPoints;
-  for (let key in attributes) {
-    attrEls[key].textContent = attributes[key];
+// Элементы интерфейса
+const elements = {
+  board: document.getElementById("board"),
+  hpEl: document.getElementById("hp"),
+  maxHpEl: document.getElementById("maxHp"),
+  shieldEl: document.getElementById("shield"),
+  manaEl: document.getElementById("mana"),
+  enemyHpEl: document.getElementById("enemyHp"),
+  enemyMaxHpEl: document.getElementById("enemyMaxHp"),
+  enemyShieldEl: document.getElementById("enemyShield"),
+  enemyManaEl: document.getElementById("enemyMana"),
+  timerBar: document.getElementById("timerBar"),
+  overlay: document.getElementById("overlay"),
+  endScreen: document.getElementById("endScreen"),
+  endMessage: document.getElementById("endMessage"),
+  rewardText: document.getElementById("rewardText"),
+  battleLog: document.getElementById("battleLog"),
+  lightningBtn: document.getElementById("lightningButton"),
+  playerNameEl: document.getElementById("playerName"),
+  nicknameInput: document.getElementById("nickname"),
+  xpBar: document.getElementById("xpBar"),
+  mainMenu: document.getElementById("mainMenu"),
+  charMenu: document.getElementById("characterMenu"),
+  xpEl: document.getElementById("xp"),
+  skillPointsEl: document.getElementById("skillPoints"),
+  attrEls: {
+    str: document.getElementById("str"),
+    agi: document.getElementById("agi"),
+    int: document.getElementById("int"),
+    vit: document.getElementById("vit"),
+    luck: document.getElementById("luck")
   }
+};
+
+// Состояние игры
+const state = {
+  grid: [],
+  dragging: null,
+  isPlayerTurn: true,
+  turnTimer: null,
+  comboAccumulator: {},
+  totalCombos: 0,
+  critChance: 0,
+  attributes: { str: 1, agi: 1, int: 1, vit: 1, luck: 1 },
+  xp: 0,
+  skillPoints: 0,
+  playerStats: {
+    hp: 0,
+    maxHp: 0,
+    shield: 0,
+    mana: 0
+  },
+  enemyStats: {
+    hp: 0,
+    maxHp: 0,
+    shield: 0,
+    mana: 0
+  },
+  lightningUsed: false,
+  playerName: "Игрок",
+  startX: 0,
+  startY: 0
+};
+
+// Инициализация игры
+function initGame() {
+  state.playerName = state.playerName;
+  elements.playerNameEl.textContent = state.playerName;
+  updateCharacterUI();
 }
 
+// Показать главное меню
+function showMainMenu() {
+  state.playerName = elements.nicknameInput.value.trim() || "Игрок";
+  elements.overlay.style.display = "none";
+  elements.mainMenu.style.display = "flex";
+  elements.endScreen.style.display = "none";
+  updateCharacterUI();
+}
+
+// Показать меню персонажа
+function showCharacterMenu() {
+  elements.mainMenu.style.display = "none";
+  elements.charMenu.style.display = "flex";
+}
+
+// Вернуться в меню
+function backToMenu() {
+  elements.charMenu.style.display = "none";
+  elements.mainMenu.style.display = "flex";
+}
+
+// Показать обучение
+function showTutorial() {
+  document.getElementById("tutorial").style.display = "flex";
+}
+
+// Скрыть обучение
+function hideTutorial() {
+  document.getElementById("tutorial").style.display = "none";
+}
+
+// Обновить UI характеристик
+function updateCharacterUI() {
+  elements.xpEl.textContent = state.xp;
+  elements.skillPointsEl.textContent = state.skillPoints;
+  for (let key in state.attributes) {
+    elements.attrEls[key].textContent = state.attributes[key];
+  }
+  elements.xpBar.style.width = `${(state.xp / config.xpToLevel) * 100}%`;
+}
+
+// Улучшить характеристику
 function upgrade(attr) {
-  if (skillPoints > 0 && attributes[attr] < 10) {
-    attributes[attr]++;
-    skillPoints--;
+  if (state.skillPoints > 0 && state.attributes[attr] < 10) {
+    state.attributes[attr]++;
+    state.skillPoints--;
     updateCharacterUI();
   }
 }
 
+// Начать игру
 function startGame() {
-  hp = 200 + (attributes.vit * 10); 
-  shield = 100; 
-  mana = 0;
-  enemyHp = 100 + Math.floor(xp/10); 
-  enemyShield = 100; 
-  enemyMana = 0;
-  lightningUsed = false;
+  // Рассчитываем характеристики игрока
+  const vitBonus = Math.floor(config.baseHp * 0.05 * state.attributes.vit);
+  state.playerStats = {
+    hp: config.baseHp + vitBonus,
+    maxHp: config.baseHp + vitBonus,
+    shield: config.baseShield,
+    mana: config.baseMana
+  };
+
+  // Рассчитываем характеристики врага (сложность растет с опытом)
+  const enemyHpBonus = Math.floor(state.xp / 10);
+  state.enemyStats = {
+    hp: config.enemyBaseHp + enemyHpBonus,
+    maxHp: config.enemyBaseHp + enemyHpBonus,
+    shield: config.baseShield,
+    mana: config.baseMana
+  };
+
+  state.lightningUsed = false;
   updateStats();
   createGrid();
-  endScreen.style.display = "none";
-  mainMenu.style.display = "none";
+  elements.endScreen.style.display = "none";
+  elements.mainMenu.style.display = "none";
   document.body.classList.remove("enemy-turn");
-  isPlayerTurn = true;
-  lightningBtn.style.display = "none";
+  state.isPlayerTurn = true;
+  elements.lightningBtn.style.display = "none";
   startTurn();
 }
 
+// Обновить статистику
 function updateStats() {
-  hpEl.textContent = hp;
-  shieldEl.textContent = shield;
-  manaEl.textContent = mana;
-  enemyHpEl.textContent = enemyHp;
-  enemyShieldEl.textContent = enemyShield;
-  enemyManaEl.textContent = enemyMana;
+  elements.hpEl.textContent = state.playerStats.hp;
+  elements.maxHpEl.textContent = state.playerStats.maxHp;
+  elements.shieldEl.textContent = state.playerStats.shield;
+  elements.manaEl.textContent = state.playerStats.mana;
+  elements.enemyHpEl.textContent = state.enemyStats.hp;
+  elements.enemyMaxHpEl.textContent = state.enemyStats.maxHp;
+  elements.enemyShieldEl.textContent = state.enemyStats.shield;
+  elements.enemyManaEl.textContent = state.enemyStats.mana;
 }
 
+// Создать игровое поле
 function createGrid() {
-  board.innerHTML = "";
-  grid = [];
+  elements.board.innerHTML = "";
+  state.grid = [];
   for (let i = 0; i < 36; i++) {
     const cell = document.createElement("div");
-    cell.className = "cell " + colors[Math.floor(Math.random() * colors.length)];
-    board.appendChild(cell);
-    grid.push(cell);
+    const color = config.colors[Math.floor(Math.random() * config.colors.length)];
+    cell.className = `cell ${color}`;
+    elements.board.appendChild(cell);
+    state.grid.push(cell);
   }
 }
 
+// Получить индекс по строке и столбцу
 function index(r, c) {
   return r * 6 + c;
 }
 
+// Получить цвет элемента
 function getColor(el) {
-  return colors.find(c => el.classList.contains(c));
+  return config.colors.find(c => el.classList.contains(c));
 }
 
+// Начать ход
 function startTurn() {
-  isPlayerTurn = true;
-  lightningUsed = false;
-  comboAccumulator = { red: 0, green: 0, blue: 0, orange: 0, purple: 0, count: 0 };
+  state.isPlayerTurn = true;
+  state.lightningUsed = false;
+  state.comboAccumulator = { red: 0, green: 0, blue: 0, orange: 0, purple: 0 };
+  state.totalCombos = 0;
+  state.critChance = 0;
   document.body.classList.remove("enemy-turn");
-  board.style.pointerEvents = "auto";
-  lightningBtn.style.display = mana >= 20 ? "inline-block" : "none";
+  elements.board.style.pointerEvents = "auto";
+  elements.lightningBtn.style.display = state.playerStats.mana >= 20 ? "inline-block" : "none";
 
-  let time = 20;
-  timerBar.style.width = "100%";
-  clearInterval(turnTimer);
-  turnTimer = setInterval(() => {
+  let time = config.turnTime;
+  elements.timerBar.style.width = "100%";
+  clearInterval(state.turnTimer);
+  state.turnTimer = setInterval(() => {
     time--;
-    timerBar.style.width = (time * 5) + "%";
+    elements.timerBar.style.width = `${(time / config.turnTime) * 100}%`;
     if (time <= 0) {
-      clearInterval(turnTimer);
+      clearInterval(state.turnTimer);
       endTurn();
     }
   }, 1000);
 }
 
+// Завершить ход
 function endTurn() {
-  board.style.pointerEvents = "none";
+  elements.board.style.pointerEvents = "none";
   resolveCascade();
 }
 
+// Обработать каскады
 function resolveCascade() {
   const matches = checkMatches();
   if (matches.length === 0) {
     applyEffects();
     if (checkEnd()) return;
-    isPlayerTurn ? setTimeout(monsterTurn, 800) : setTimeout(startTurn, 800);
+    state.isPlayerTurn ? setTimeout(monsterTurn, 1000) : setTimeout(startTurn, 1000);
     return;
   }
 
-  matches.forEach(g => {
-    const color = getColor(grid[g[0]]);
-    comboAccumulator[color] = (comboAccumulator[color] || 0) + g.length;
-    comboAccumulator.count += 1;
-    g.forEach(i => grid[i].classList.add("highlight"));
+  // Увеличиваем счетчики комбо
+  matches.forEach(group => {
+    const color = getColor(state.grid[group[0]]);
+    state.comboAccumulator[color] = (state.comboAccumulator[color] || 0) + group.length;
+    state.totalCombos++;
+    
+    // Добавляем шанс крита для оранжевых
+    if (color === 'orange') {
+      state.critChance += group.length >= 5 ? 2 : 1;
+    }
+    
+    // Подсвечиваем комбо
+    group.forEach(i => state.grid[i].classList.add("highlight"));
   });
 
+  // Анимация исчезновения и падения
   setTimeout(() => {
     matches.flat().forEach(i => {
-      grid[i].classList.remove("highlight");
-      grid[i].classList.add("fade");
+      state.grid[i].classList.remove("highlight");
+      state.grid[i].classList.add("fade");
     });
+    
     setTimeout(() => {
-      matches.flat().forEach(i => grid[i].className = "cell");
+      matches.flat().forEach(i => state.grid[i].className = "cell");
       dropDown();
       setTimeout(resolveCascade, 600);
     }, 600);
   }, 1000);
 }
 
+// Применить эффекты
 function applyEffects() {
-  const { red, green, blue, orange, purple, count } = comboAccumulator;
+  const { red, green, blue, orange, purple } = state.comboAccumulator;
+  
+  // Базовые значения эффектов
   let dmg = red >= 5 ? 20 : red >= 3 ? 10 : 0;
   let heal = green >= 5 ? 10 : green >= 3 ? 5 : 0;
   let def = blue >= 5 ? 10 : blue >= 3 ? 5 : 0;
-  let critChance = orange + attributes.luck;
   let manaGain = purple >= 5 ? 20 : purple >= 3 ? 10 : 0;
-
-  if (isPlayerTurn) {
-    mana += manaGain;
-    if (mana > 100) mana = 100;
-  } else {
-    enemyMana += manaGain;
-    if (enemyMana > 100) enemyMana = 100;
-  }
-
-  let isCrit = Math.random() * 100 < critChance;
-  dmg += Math.floor(dmg * (attributes.str || 0) / 100);
-  let totalDmg = dmg + (isCrit ? dmg : 0);
-  if (isPlayerTurn && lightningUsed) {
-    totalDmg += 50 + Math.floor(50 * (attributes.int || 0) / 100);
-  }
-
-  if (isPlayerTurn) {
-    let half = Math.floor(totalDmg / 2);
-    if (enemyShield >= half) {
-      enemyShield -= half;
-      enemyHp -= (totalDmg - half);
-    } else {
-      let rem = half - enemyShield;
-      enemyShield = 0;
-      enemyHp -= (totalDmg - half + rem);
-    }
-    shield += def;
-    if (shield > 100 + (attributes.vit * 5)) shield = 100 + (attributes.vit * 5);
-    hp += heal;
-    if (hp > 200 + (attributes.vit * 10)) hp = 200 + (attributes.vit * 10);
-    if (heal > 0) float("+" + heal, hpEl, "#00ff00");
-    if (def > 0) float("+" + def, shieldEl, "#3399ff");
-    battleLog.innerHTML = `<span style="color:#66ff66">Комбо ×${count}, Урон: ${dmg}${isCrit ? ' (КРИТ!)' : ''}${lightningUsed ? ', +Молния' : ''}</span>`;
-  } else {
-    let half = Math.floor(totalDmg / 2);
-    if (shield >= half) {
-      shield -= half;
-      hp -= (totalDmg - half);
-    } else {
-      let rem = half - shield;
-      shield = 0;
-      hp -= (totalDmg - half + rem);
-    }
-    enemyShield += def;
-    enemyHp += heal;
-    if (enemyHp > 100 + Math.floor(xp/10)) enemyHp = 100 + Math.floor(xp/10);
-    if (enemyShield > 100) enemyShield = 100;
-    if (heal > 0) float("+" + heal, enemyHpEl, "#00ff00");
-    if (def > 0) float("+" + def, enemyShieldEl, "#3399ff");
-    battleLog.innerHTML = `<span style="color:#ff4444">Комбо ×${count}, Урон: ${dmg}${isCrit ? ' (КРИТ!)' : ''}</span>`;
-  }
-
-  updateStats();
-  lightningBtn.style.display = "none";
-}
-
-function useLightning() {
-  if (mana >= 20 && isPlayerTurn && !lightningUsed) {
-    lightningUsed = true;
-    mana -= 20;
-    updateStats();
-    lightningBtn.style.display = "none";
-    float("Молния!", lightningBtn, "#ffff00");
-  }
-}
-
-function float(text, target, color) {
-  const box = document.createElement("div");
-  box.className = "floatText";
-  box.textContent = text;
-  box.style.color = color;
-  const rect = target.getBoundingClientRect();
-  box.style.left = (rect.left + rect.width / 2) + "px";
-  box.style.top = (rect.top - 10) + "px";
-  document.body.appendChild(box);
-  setTimeout(() => box.remove(), 1500);
-}
-
-function checkEnd() {
-  if (hp <= 0) {
-    endMessage.textContent = "Поражение...";
-    endScreen.style.display = "flex";
-    return true;
-  }
-  if (enemyHp <= 0) {
-    endMessage.textContent = "Победа!";
-    let earnedXp = mana + 20;
-    xp += earnedXp;
-    mana = 0;
-    while (xp >= 100) {
-      xp -= 100;
-      skillPoints += 1;
-    }
-    updateCharacterUI();
-    endScreen.style.display = "flex";
-    return true;
-  }
-  return false;
-}
-
-function dropDown() {
-  for (let c = 0; c < 6; c++) {
-    for (let r = 5; r > 0; r--) {
-      let i = index(r, c);
-      if (!getColor(grid[i])) {
-        for (let k = r - 1; k >= 0; k--) {
-          let up = index(k, c);
-          if (getColor(grid[up])) {
-            grid[i].className = grid[up].className;
-            grid[up].className = "cell";
-            break;
-          }
-        }
-      }
-    }
-    for (let r = 0; r < 6; r++) {
-      let i = index(r, c);
-      if (!getColor(grid[i])) {
-        const cls = colors[Math.floor(Math.random() * colors.length)];
-        grid[i].className = "cell " + cls;
-      }
-    }
-  }
-}
-
-function checkMatches() {
-  const matches = [];
-  for (let r = 0; r < 6; r++) {
-    for (let c = 0; c < 4; c++) {
-      let i = index(r, c);
-      let a = grid[i], b = grid[i + 1], c_ = grid[i + 2];
-      if (getColor(a) === getColor(b) && getColor(b) === getColor(c_))
-        matches.push([i, i + 1, i + 2]);
-    }
-  }
-  for (let c = 0; c < 6; c++) {
-    for (let r = 0; r < 4; r++) {
-      let i = index(r, c);
-      let a = grid[i], b = grid[i + 6], c_ = grid[i + 12];
-      if (getColor(a) === getColor(b) && getColor(b) === getColor(c_))
-        matches.push([i, i + 6, i + 12]);
-    }
-  }
-  return matches;
-}
-
-function monsterTurn() {
-  isPlayerTurn = false;
-  document.body.classList.add("enemy-turn");
-  lightningBtn.style.display = "none";
   
-  setTimeout(() => {
-    let moved = false;
-    const attempts = [];
-    
-    // Создаем список всех возможных перестановок
-    for (let i = 0; i < 36; i++) {
-      for (let j = i + 1; j < 36; j++) {
-        attempts.push([i, j]);
-      }
-    }
-    
-    // Перемешиваем попытки
-    attempts.sort(() => Math.random() - 0.5);
-    
-    // Пробуем найти подходящий ход
-    for (let [i, j] of attempts) {
-      [grid[i].className, grid[j].className] = [grid[j].className, grid[i].className];
-      if (checkMatches().length > 0) {
-        moved = true;
-        setTimeout(() => resolveCascade(), 300);
-        break;
-      } else {
-        [grid[j].className, grid[i].className] = [grid[i].className, grid[j].className];
-      }
-    }
-    
-    if (!moved) {
-      setTimeout(startTurn, 1000);
-    }
-  }, 800 + Math.random() * 1000);
-}
-
-// Улучшенная логика перетаскивания
-let startX, startY;
-
-board.addEventListener("touchstart", e => {
-  if (!isPlayerTurn) return;
-  const t = e.touches[0];
-  startX = t.clientX;
-  startY = t.clientY;
-  const el = document.elementFromPoint(t.clientX, t.clientY);
-  if (el && el.classList.contains("cell")) dragging = el;
-});
-
-board.addEventListener("touchmove", e => {
-  if (!dragging || !isPlayerTurn) return;
-  e.preventDefault();
-  const t = e.touches[0];
-  const dx = t.clientX - startX;
-  const dy = t.clientY - startY;
+  // Бонус за дополнительные комбо (5% за каждое сверх первой)
+  const comboBonus = 1 + (Math.max(0, state.totalCombos - 1) * config.comboBonus;
   
-  // Определяем направление свайпа
-  if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
-    const el = document.elementFromPoint(t.clientX, t.clientY);
-    if (el && el.classList.contains("cell") && el !== dragging) {
-      [dragging.className, el.className] = [el.className, dragging.className];
-      dragging = el;
-      startX = t.clientX;
-      startY = t.clientY;
-    }
+  // Учитываем характеристики
+  dmg = Math.floor(dmg * comboBonus * (1 + state.attributes.str / 100));
+  heal = Math.floor(heal * comboBonus);
+  def = Math.floor(def * comboBonus * (1 + state.attributes.agi / 100));
+  manaGain = Math.floor(manaGain * comboBonus);
+  
+  // Добавляем шанс крита из удачи
+  state.critChance += state.attributes.luck;
+  
+  // Проверяем крит (один раз за ход)
+  const isCrit = Math.random() * 100 < state.critChance;
+  if (isCrit) dmg *= 2;
+  
+  // Урон от молнии
+  let lightningDmg = 0;
+  if (state.isPlayerTurn && state.lightningUsed) {
+    lightningDmg = 50 + Math.floor(50 * state.attributes.int / 100);
   }
-});
-
-board.addEventListener("touchend", () => {
-  if (!isPlayerTurn) return;
-  dragging = null;
-  clearInterval(turnTimer);
-  endTurn();
-});
-
-// Инициализация игры
-nicknameInput.value = playerName;
-</script>
-</body>
-</html>
+  
+  // Применяем эффекты
+  if (state.isPlayerTurn) {
+    // Урон игрока
+    applyDamage(dmg + lightningDmg, isCrit);
+    
+    // Лечение и защита игрока
+    state.playerStats.shield += def;
+    if (state.playerStats.shield > config.baseShield * (1 + state.attributes.agi / 20)) {
+      state.playerStats.shield = config.baseShield * (1 + state.attributes.agi / 20);
+    }
+    
+    state.playerStats.hp += heal;
+    if (state.playerStats.hp > state.playerStats.maxHp) {
+      state.playerStats.hp = state.playerStats.maxHp;
+    }
+    
+    // Мана игрока
+    state.playerStats.mana += manaGain;
+    if (
