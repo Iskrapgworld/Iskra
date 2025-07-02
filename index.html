@@ -313,6 +313,70 @@ function resolveCascade() {
     }, 600);
   }, 1000);
 }
+
+function applyEffects() {
+  const { red, green, blue, orange, purple, count } = comboAccumulator;
+  let dmg = red >= 5 ? 20 : red >= 3 ? 10 : 0;
+  let heal = green >= 5 ? 10 : green >= 3 ? 5 : 0;
+  let def = blue >= 5 ? 10 : blue >= 3 ? 5 : 0;
+  let critChance = orange + attributes.luck;
+  let manaGain = purple >= 5 ? 20 : purple >= 3 ? 10 : 0;
+
+  if (isPlayerTurn) {
+    mana += manaGain;
+    if (mana > 100) mana = 100;
+  } else {
+    enemyMana += manaGain;
+    if (enemyMana > 100) enemyMana = 100;
+  }
+
+  let isCrit = Math.random() * 100 < critChance;
+  dmg += Math.floor(dmg * (attributes.str || 0) / 100);
+  let totalDmg = dmg + (isCrit ? dmg : 0);
+  if (isPlayerTurn && lightningUsed) {
+    totalDmg += 50 + Math.floor(50 * (attributes.int || 0) / 100);
+  }
+
+  if (isPlayerTurn) {
+    let half = Math.floor(totalDmg / 2);
+    if (enemyShield >= half) {
+      enemyShield -= half;
+      enemyHp -= (totalDmg - half);
+    } else {
+      let rem = half - enemyShield;
+      enemyShield = 0;
+      enemyHp -= (totalDmg - half + rem);
+    }
+    shield += def;
+    hp += heal;
+    if (hp > 200) hp = 200;
+    if (heal > 0) float("+" + heal, hpEl, "#00ff00");
+    if (def > 0) float("+" + def, shieldEl, "#3399ff");
+    battleLog.innerHTML = `<span style="color:#66ff66">Комбо ×${count}, Урон: ${dmg}${isCrit ? ' (КРИТ!)' : ''}${lightningUsed ? ', +Молния' : ''}</span>`;
+  } else {
+    let half = Math.floor(totalDmg / 2);
+    if (shield >= half) {
+      shield -= half;
+      hp -= (totalDmg - half);
+    } else {
+      let rem = half - shield;
+      shield = 0;
+      hp -= (totalDmg - half + rem);
+    }
+    enemyShield += def;
+    enemyHp += heal;
+    if (enemyHp > 100) enemyHp = 100;
+    if (enemyShield > 100) enemyShield = 100;
+    if (heal > 0) float("+" + heal, enemyHpEl, "#00ff00");
+    if (def > 0) float("+" + def, enemyShieldEl, "#3399ff");
+    battleLog.innerHTML = `<span style="color:#ff4444">Комбо ×${count}, Урон: ${dmg}${isCrit ? ' (КРИТ!)' : ''}</span>`;
+  }
+
+  updateStats();
+  lightningBtn.style.display = "none";
+  checkEnd();
+}
+
 function useLightning() {
   if (mana >= 20 && isPlayerTurn && !lightningUsed) {
     lightningUsed = true;
@@ -445,4 +509,4 @@ board.addEventListener("touchend", () => {
 });
 </script>
 </body>
-  </html>
+</html>
