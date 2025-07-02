@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>ИСКРА: Битва v1.4</title>
+  <title>🔥 ИСКРА: Битва TG-мини 🔥</title>
   <style>
     body {
       margin: 0;
@@ -117,19 +117,19 @@
   </style>
 </head>
 <body>
-  <h1>🔥 ИСКРА: Битва v1.4 🔥</h1>
+  <h1>🔥 ИСКРА: Битва TG-мини 🔥</h1>
   <div id="topBar">
-    <div>Вы:<br>❤️ <span id="hp">500</span> <span id="healText"></span><br>🛡 <span id="shield">100</span> <span id="defText"></span><br>🔮 <span id="mana">0</span></div>
+    <div>Вы:<br>❤️ <span id="hp">500</span><br>🛡 <span id="shield">100</span><br>🔮 <span id="mana">0</span></div>
     <div id="timerBarContainer"><div id="timerBar"></div></div>
-    <div>Монстр:<br>💀 <span id="enemyHp">100</span> <span id="enemyHealText"></span><br>🛡 <span id="enemyShield">100</span> <span id="enemyDefText"></span><br>🔮 <span id="enemyMana">0</span></div>
+    <div>Монстр:<br>💀 <span id="enemyHp">100</span><br>🛡 <span id="enemyShield">100</span><br>🔮 <span id="enemyMana">0</span></div>
   </div>
   <div id="battleLog">Комбо появится здесь...</div>
   <div id="board"></div>
-  <button id="lightningButton" onclick="useLightning()">⚡ Молния (20 маны)</button>
+  <button id="lightningButton">⚡ Молния (20 маны)</button>
   <div id="overlay">
     <h2>Введите имя:</h2>
     <input id="nickname" placeholder="Имя игрока">
-    <button onclick="showMainMenu()">Далее</button>
+    <button id="continueButton">Далее</button>
   </div>
   <div id="mainMenu">
     <h2>Меню</h2>
@@ -164,11 +164,12 @@ const battleLog = document.getElementById("battleLog");
 const manaEl = document.getElementById("mana");
 const enemyManaEl = document.getElementById("enemyMana");
 const lightningBtn = document.getElementById("lightningButton");
-
 const mainMenu = document.getElementById("mainMenu");
 const charMenu = document.getElementById("characterMenu");
 const xpEl = document.getElementById("xp");
 const skillPointsEl = document.getElementById("skillPoints");
+const nicknameInput = document.getElementById("nickname");
+const continueBtn = document.getElementById("continueButton");
 const attrEls = {
   str: document.getElementById("str"),
   agi: document.getElementById("agi"),
@@ -179,40 +180,44 @@ const attrEls = {
 
 let attributes = { str: 1, agi: 1, int: 1, vit: 1, luck: 1 };
 let xp = 0, skillPoints = 0;
+let playerName = "Игрок";
 
 let mana = 0, enemyMana = 0;
 let lightningUsed = false;
 let grid = [], dragging = null;
 let isPlayerTurn = true;
 let hp = 500, shield = 100, enemyHp = 100, enemyShield = 100;
-let playerName = "Игрок", turnTimer;
-let comboAccumulator = {};
+let turnTimer, comboAccumulator = {};
 
 const colors = ['red', 'green', 'blue', 'purple', 'orange'];
+
+// Исправленный обработчик кнопки "Далее" через addEventListener
+continueBtn.addEventListener("click", () => {
+  playerName = nicknameInput.value.trim() || "Игрок";
+  overlay.style.display = "none";
+  mainMenu.style.display = "flex";
+  endScreen.style.display = "none";
+});
 
 function showMainMenu() {
   overlay.style.display = "none";
   mainMenu.style.display = "flex";
-  endScreen.style.display = "none"; // <== ВАЖНО: скрыть экран победы!
+  endScreen.style.display = "none";
 }
-
 function showCharacterMenu() {
   mainMenu.style.display = "none";
   charMenu.style.display = "flex";
   updateCharacterUI();
 }
-
 function backToMenu() {
   charMenu.style.display = "none";
   mainMenu.style.display = "flex";
 }
-
 function updateCharacterUI() {
   xpEl.textContent = xp;
   skillPointsEl.textContent = skillPoints;
   for (let key in attributes) attrEls[key].textContent = attributes[key];
 }
-
 function upgrade(attr) {
   if (skillPoints > 0) {
     attributes[attr]++;
@@ -220,7 +225,6 @@ function upgrade(attr) {
     updateCharacterUI();
   }
 }
-
 function startGame() {
   hp = 500; shield = 100; mana = 0;
   enemyHp = 100; enemyShield = 100; enemyMana = 0;
@@ -234,7 +238,6 @@ function startGame() {
   lightningBtn.style.display = "none";
   startTurn();
 }
-
 function updateStats() {
   hpEl.textContent = hp;
   shieldEl.textContent = shield;
@@ -243,7 +246,6 @@ function updateStats() {
   enemyShieldEl.textContent = enemyShield;
   enemyManaEl.textContent = enemyMana;
 }
-
 function createGrid() {
   board.innerHTML = "";
   grid = [];
@@ -254,15 +256,12 @@ function createGrid() {
     grid.push(cell);
   }
 }
-
 function index(r, c) {
   return r * 6 + c;
 }
-
 function getColor(el) {
   return colors.find(c => el.classList.contains(c));
 }
-
 function startTurn() {
   isPlayerTurn = true;
   lightningUsed = false;
@@ -270,7 +269,6 @@ function startTurn() {
   document.body.classList.remove("enemy-turn");
   board.style.pointerEvents = "auto";
   lightningBtn.style.display = mana >= 20 ? "inline-block" : "none";
-
   let time = 20;
   timerBar.style.width = "100%";
   clearInterval(turnTimer);
@@ -284,7 +282,6 @@ function startTurn() {
     }
   }, 1000);
 }
-
 function resolveCascade() {
   const matches = checkMatches();
   if (matches.length === 0) {
@@ -293,14 +290,12 @@ function resolveCascade() {
     isPlayerTurn ? setTimeout(monsterTurn, 800) : setTimeout(startTurn, 800);
     return;
   }
-
   matches.forEach(g => {
     const color = getColor(grid[g[0]]);
     comboAccumulator[color] = (comboAccumulator[color] || 0) + g.length;
     comboAccumulator.count += 1;
     g.forEach(i => grid[i].classList.add("highlight"));
   });
-
   setTimeout(() => {
     matches.flat().forEach(i => {
       grid[i].classList.remove("highlight");
@@ -313,7 +308,6 @@ function resolveCascade() {
     }, 600);
   }, 1000);
 }
-
 function applyEffects() {
   const { red, green, blue, orange, purple, count } = comboAccumulator;
   let dmg = red >= 5 ? 20 : red >= 3 ? 10 : 0;
@@ -376,16 +370,14 @@ function applyEffects() {
   lightningBtn.style.display = "none";
   checkEnd();
 }
-
-function useLightning() {
+lightningBtn.addEventListener("click", function() {
   if (mana >= 20 && isPlayerTurn && !lightningUsed) {
     lightningUsed = true;
     mana -= 20;
     updateStats();
     lightningBtn.style.display = "none";
   }
-}
-
+});
 function float(text, target, color) {
   const box = document.createElement("div");
   box.className = "floatText";
@@ -397,7 +389,6 @@ function float(text, target, color) {
   document.body.appendChild(box);
   setTimeout(() => box.remove(), 1500);
 }
-
 function checkEnd() {
   if (hp <= 0) {
     endMessage.textContent = "Поражение...";
@@ -418,7 +409,6 @@ function checkEnd() {
   }
   return false;
 }
-
 function dropDown() {
   for (let c = 0; c < 6; c++) {
     for (let r = 5; r > 0; r--) {
@@ -443,12 +433,6 @@ function dropDown() {
     }
   }
 }
-
 function checkMatches() {
   const matches = [];
-  for (let r = 0; r < 6; r++) {
-    for (let c = 0; c < 4; c++) {
-      let i = index(r, c);
-      let a = grid[i], b = grid[i + 1], c_ = grid[i + 2];
-      if (getColor(a) === getColor(b) && getColor(b) === getColor(c_))
-        matches
+  for (let r = 0; r <
