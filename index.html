@@ -11,10 +11,7 @@
       font-family: sans-serif;
       text-align: center;
     }
-    h1 {
-      color: #ffa500;
-      margin: 10px 0;
-    }
+    h1 { color: #ffa500; margin: 10px 0; }
     #topBar {
       display: flex;
       justify-content: space-between;
@@ -67,19 +64,45 @@
       pointer-events: none;
       opacity: 0.2;
     }
-    #overlay, #endScreen, #mainMenu, #characterMenu {
-      position: absolute; /* Исправлено! */
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.9);
+    .nicknameForm {
+      background: #1a1122;
+      padding: 40px 16px 24px 16px;
+      border-radius: 20px;
+      box-shadow: 0 0 16px #000a;
+      max-width: 340px;
+      margin: 40px auto 0 auto;
       display: flex;
-      justify-content: center;
-      align-items: center;
       flex-direction: column;
-      z-index: 2; /* Исправлено! */
+      align-items: center;
+    }
+    .nicknameForm input {
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: none;
+      margin: 10px 0;
+      width: 200px;
+      text-align: center;
+    }
+    .nicknameForm button {
+      background: #7b2ff2;
+      color: #fff;
+      font-weight: bold;
+      padding: 10px 26px;
+      border: none;
+      border-radius: 10px;
+      font-size: 18px;
+      cursor: pointer;
     }
     #mainMenu, #characterMenu {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.92);
       display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 3;
     }
     .floatText {
       position: absolute;
@@ -91,20 +114,6 @@
     @keyframes floatUp {
       from { opacity: 1; transform: translateY(0); }
       to   { opacity: 0; transform: translateY(-30px); }
-    }
-    #overlay input {
-      padding: 10px;
-      font-size: 16px;
-      border-radius: 5px;
-      border: none;
-      margin-top: 10px;
-    }
-    #overlay button {
-      z-index: 10;
-      position: relative;
-      background: #7b2ff2;
-      color: #fff;
-      font-weight: bold;
     }
     button {
       padding: 10px 20px;
@@ -123,10 +132,27 @@
       color: #000;
       font-weight: bold;
     }
+    #endScreen {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.92);
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 4;
+    }
   </style>
 </head>
 <body>
   <h1>🔥 ИСКРА: Битва TG-мини 🔥</h1>
+
+  <div id="nicknameBlock" class="nicknameForm">
+    <h2>Введите имя:</h2>
+    <input id="nickname" placeholder="Имя игрока" maxlength="16" autocomplete="off">
+    <button onclick="showMainMenu()">Далее</button>
+  </div>
+
   <div id="topBar">
     <div>Вы:<br>❤️ <span id="hp">200</span><br>🛡 <span id="shield">100</span><br>🔮 <span id="mana">0</span></div>
     <div id="timerBarContainer"><div id="timerBar"></div></div>
@@ -135,11 +161,7 @@
   <div id="battleLog">Комбо появится здесь...</div>
   <div id="board"></div>
   <button id="lightningButton" onclick="useLightning()">⚡ Молния (20 маны)</button>
-  <div id="overlay">
-    <h2>Введите имя:</h2>
-    <input id="nickname" placeholder="Имя игрока" maxlength="16">
-    <button onclick="showMainMenu()">Далее</button>
-  </div>
+
   <div id="mainMenu">
     <h2>Меню</h2>
     <button onclick="startGame()">В бой!</button>
@@ -155,11 +177,12 @@
     <div>Удача: <span id="luck">1</span> <button onclick="upgrade('luck')">+</button></div>
     <button onclick="backToMenu()">Назад</button>
   </div>
-  <div id="endScreen" style="display:none;">
+  <div id="endScreen">
     <h2 id="endMessage">Победа!</h2>
     <button onclick="showMainMenu()">В меню</button>
   </div>
   <script>
+// === Все переменные ===
 const board = document.getElementById("board");
 const hpEl = document.getElementById("hp");
 const shieldEl = document.getElementById("shield");
@@ -168,7 +191,6 @@ const enemyShieldEl = document.getElementById("enemyShield");
 const manaEl = document.getElementById("mana");
 const enemyManaEl = document.getElementById("enemyMana");
 const timerBar = document.getElementById("timerBar");
-const overlay = document.getElementById("overlay");
 const endScreen = document.getElementById("endScreen");
 const endMessage = document.getElementById("endMessage");
 const battleLog = document.getElementById("battleLog");
@@ -185,6 +207,7 @@ const attrEls = {
   luck: document.getElementById("luck")
 };
 const nicknameInput = document.getElementById("nickname");
+const nicknameBlock = document.getElementById("nicknameBlock");
 
 let attributes = { str: 1, agi: 1, int: 1, vit: 1, luck: 1 };
 let xp = 0, skillPoints = 0;
@@ -197,10 +220,10 @@ let playerName = "Игрок", turnTimer;
 let comboAccumulator = {};
 const colors = ['red', 'green', 'blue', 'purple', 'orange'];
 
-/* === МЕНЮ И НАВИГАЦИЯ === */
+// === Меню и навигация ===
 function showMainMenu() {
   playerName = nicknameInput.value.trim() || "Игрок";
-  overlay.style.display = "none";
+  nicknameBlock.style.display = "none";
   mainMenu.style.display = "flex";
   endScreen.style.display = "none";
 }
@@ -226,7 +249,7 @@ function upgrade(attr) {
   }
 }
 
-/* === ГЛАВНЫЙ СТАРТ === */
+// === Главный старт ===
 function startGame() {
   hp = 200 + (attributes.vit-1)*10;
   shield = 100;
@@ -254,7 +277,7 @@ function updateStats() {
   enemyManaEl.textContent = enemyMana;
 }
 
-/* === СОЗДАНИЕ ПОЛЯ (без стартовых комбо) === */
+// === Создание поля (без стартовых комбо) ===
 function createGrid() {
   let tries = 0;
   do {
@@ -271,7 +294,7 @@ function createGrid() {
   } while (findMatches().length > 0);
 }
 
-/* === DRAG'n'SWAP только по соседству === */
+// === Drag'n'Swap только по соседству ===
 board.addEventListener("touchstart", function(e) {
   const t = e.touches[0];
   const el = document.elementFromPoint(t.clientX, t.clientY);
@@ -306,7 +329,7 @@ function isAdjacent(i, j) {
   return (Math.abs(r1 - r2) + Math.abs(c1 - c2)) === 1;
 }
 
-/* === ГЛАВНЫЙ ЦИКЛ === */
+// === Главный цикл ===
 function startTurn() {
   isPlayerTurn = true;
   lightningUsed = false;
@@ -328,7 +351,7 @@ function startTurn() {
   }, 1000);
 }
 
-/* === ПОИСК КОМБО 3+ === */
+// === Поиск комбо 3+ ===
 function findMatches() {
   let found = [];
   // Горизонт
@@ -362,7 +385,7 @@ function findMatches() {
   return found;
 }
 
-/* === КАСКАД === */
+// === Каскад ===
 function resolveCascade() {
   const matches = findMatches();
   if (matches.length === 0) {
@@ -388,7 +411,7 @@ function resolveCascade() {
   }, 1000);
 }
 
-/* === ЭФФЕКТЫ и КОМБО === */
+// === Эффекты и комбо ===
 function applyEffects() {
   const red = comboAccumulator.red, green = comboAccumulator.green, blue = comboAccumulator.blue,
         purple = comboAccumulator.purple, orange = comboAccumulator.orange, count = comboAccumulator.count;
@@ -406,19 +429,3 @@ function applyEffects() {
   let critChance = orange + (attributes.luck || 0);
   const isCrit = Math.random() * 100 < critChance;
   if (isCrit) dmg *= 2;
-  dmg += Math.floor(dmg * (attributes.str || 0) / 100);
-  if (isPlayerTurn && lightningUsed) dmg += 50 + Math.floor(50 * (attributes.int || 0) / 100);
-
-  if (isPlayerTurn) {
-    let half = Math.floor(dmg / 2);
-    if (enemyShield >= half) {
-      enemyShield -= half;
-      enemyHp -= (dmg - half);
-    } else {
-      let rem = half - enemyShield;
-      enemyShield = 0;
-      enemyHp -= (dmg - half + rem);
-    }
-    shield += def;
-    hp += heal;
-    if (hp > 200) hp
