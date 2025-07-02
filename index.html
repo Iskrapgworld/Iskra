@@ -5,6 +5,7 @@
   <title>🔥 ИСКРА: Битва TG-мини 🔥</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <style>
+    /* ... стили (оставь свои, рабочие) ... */
     body { margin: 0; background: #111; color: #fff; font-family: sans-serif; text-align: center; }
     h1 { color: #ffa500; margin: 18px 0 8px 0; font-size: 2.1em; letter-spacing: 2px;}
     #topBar { display: flex; justify-content: space-between; align-items: flex-end; padding: 10px 18px 0 18px; font-size: 15px; }
@@ -106,32 +107,28 @@
     <button class="overlay-btn" onclick="showMainMenu()">В меню</button>
   </div>
 <script>
-  // ======= Меню и логика переходов ======
-  const overlay = document.getElementById("overlay");
-  const mainMenu = document.getElementById("mainMenu");
-  const charMenu = document.getElementById("characterMenu");
-  const endScreen = document.getElementById("endScreen");
-  document.getElementById("goNext").addEventListener("click", () => {
-    overlay.style.display = "none";
-    mainMenu.style.display = "flex";
+  // Меню и логика переходов с addEventListener!
+  document.getElementById("goNext").addEventListener("click", function() {
+    document.getElementById("overlay").style.display = "none";
+    document.getElementById("mainMenu").style.display = "flex";
   });
-  document.getElementById("toBattle").addEventListener("click", () => {
-    mainMenu.style.display = "none";
+  document.getElementById("toBattle").addEventListener("click", function() {
+    document.getElementById("mainMenu").style.display = "none";
     startGame();
   });
-  document.getElementById("toChar").addEventListener("click", () => {
-    mainMenu.style.display = "none";
-    charMenu.style.display = "flex";
+  document.getElementById("toChar").addEventListener("click", function() {
+    document.getElementById("mainMenu").style.display = "none";
+    document.getElementById("characterMenu").style.display = "flex";
     updateCharacterUI();
   });
   function showMainMenu() {
-    mainMenu.style.display = "flex";
-    charMenu.style.display = "none";
-    endScreen.style.display = "none";
+    document.getElementById("mainMenu").style.display = "flex";
+    document.getElementById("characterMenu").style.display = "none";
+    document.getElementById("endScreen").style.display = "none";
   }
   function backToMenu() {
-    charMenu.style.display = "none";
-    mainMenu.style.display = "flex";
+    document.getElementById("characterMenu").style.display = "none";
+    document.getElementById("mainMenu").style.display = "flex";
   }
   // Прокачка
   let attributes = { str: 1, agi: 1, int: 1, vit: 1, luck: 1 };
@@ -157,120 +154,8 @@
       updateCharacterUI();
     }
   }
-  // ======= БОЕВАЯ ЛОГИКА =======
-  const hpEl = document.getElementById("hpVal");
-  const shieldEl = document.getElementById("shieldVal");
-  const manaEl = document.getElementById("manaVal");
-  const enemyHpEl = document.getElementById("enemyHpVal");
-  const enemyShieldEl = document.getElementById("enemyShieldVal");
-  const enemyManaEl = document.getElementById("enemyManaVal");
-  const hpBar = document.getElementById("hpBar");
-  const shieldBar = document.getElementById("shieldBar");
-  const manaBar = document.getElementById("manaBar");
-  const enemyHpBar = document.getElementById("enemyHpBar");
-  const enemyShieldBar = document.getElementById("enemyShieldBar");
-  const enemyManaBar = document.getElementById("enemyManaBar");
-  const board = document.getElementById("board");
-  const battleLog = document.getElementById("battleLog");
-  const timerBar = document.getElementById("timerBar");
-  const lightningBtn = document.getElementById("lightningButton");
-  const endMessage = document.getElementById("endMessage");
-  // Начальные параметры
-  let hp = 200, shield = 100, mana = 0;
-  let enemyHp = 100, enemyShield = 100, enemyMana = 0;
-  let grid = [], dragging = null, isPlayerTurn = true, turnTimer;
-  let comboAccumulator = [], bonusPercent = 0;
-  let lightningUsed = false;
-  const colors = ['red', 'green', 'blue', 'purple', 'orange'];
-  // Обновление статов
-  function updateStats() {
-    hpEl.textContent = hp;
-    shieldEl.textContent = shield;
-    manaEl.textContent = mana;
-    enemyHpEl.textContent = enemyHp;
-    enemyShieldEl.textContent = enemyShield;
-    enemyManaEl.textContent = enemyMana;
-    hpBar.style.width = (hp/200*100)+"%";
-    shieldBar.style.width = (shield/100*100)+"%";
-    manaBar.style.width = (mana/100*100)+"%";
-    enemyHpBar.style.width = (enemyHp/100*100)+"%";
-    enemyShieldBar.style.width = (enemyShield/100*100)+"%";
-    enemyManaBar.style.width = (enemyMana/100*100)+"%";
-  }
-  // Начало боя
-  function startGame() {
-    hp = 200; shield = 100; mana = 0;
-    enemyHp = 100; enemyShield = 100; enemyMana = 0;
-    lightningUsed = false;
-    updateStats();
-    createGrid();
-    endScreen.style.display = "none";
-    document.body.classList.remove("enemy-turn");
-    isPlayerTurn = true;
-    lightningBtn.style.display = "none";
-    startTurn();
-  }
-  // Создание поля 6x6 без стартовых комбо
-  function createGrid() {
-    board.innerHTML = "";
-    grid = [];
-    do {
-      board.innerHTML = "";
-      grid = [];
-      for (let i = 0; i < 36; i++) {
-        const cell = document.createElement("div");
-        cell.className = "cell " + colors[Math.floor(Math.random() * colors.length)];
-        board.appendChild(cell);
-        grid.push(cell);
-      }
-    } while (checkMatches().length > 0);
-  }
-  function index(r, c) { return r * 6 + c; }
-  function getColor(el) { return colors.find(c => el.classList.contains(c)); }
-  // ==== ХОД ИГРОКА ====
-  function startTurn() {
-    isPlayerTurn = true; lightningUsed = false;
-    comboAccumulator = [];
-    document.body.classList.remove("enemy-turn");
-    board.style.pointerEvents = "auto";
-    lightningBtn.style.display = mana >= 20 ? "inline-block" : "none";
-    let time = 20;
-    timerBar.style.width = "100%";
-    clearInterval(turnTimer);
-    turnTimer = setInterval(() => {
-      time--;
-      timerBar.style.width = (time * 5) + "%";
-      if (time <= 0) {
-        clearInterval(turnTimer);
-        board.style.pointerEvents = "none";
-        resolveCascade();
-      }
-    }, 1000);
-  }
-  // ==== СЛОВЛИВАЕМ ВСЕ КОМБО (КАСКАДЫ) ====
-  function resolveCascade(bonusFromCascade=0, wasMove=false) {
-    let matches = checkMatches();
-    if (!wasMove && matches.length===0) return; // ничего не делаем
-    if (matches.length === 0) {
-      // Считаем эффекты (все накопленные за все комбо)
-      let summary = {red:0,green:0,blue:0,orange:0,purple:0,count:0, chain:0};
-      for (let arr of comboAccumulator) {
-        for (let k in summary) if (arr[k]) summary[k] += arr[k];
-        summary.count += arr.count||0;
-        summary.chain++;
-      }
-      // Суммируем бонус за все цепи (по 5% за каждую доп.комбу)
-      let comboBonus = Math.max(0, summary.chain-1)*0.05;
-      let dmg = summary.red >= 5 ? 20 : summary.red >= 3 ? 10 : 0;
-      dmg += Math.round(dmg * comboBonus);
-      let heal = summary.green >= 5 ? 10 : summary.green >= 3 ? 5 : 0;
-      heal += Math.round(heal * comboBonus);
-      let def = summary.blue >= 5 ? 10 : summary.blue >= 3 ? 5 : 0;
-      def += Math.round(def * comboBonus);
-      let manaGain = summary.purple >= 5 ? 20 : summary.purple >= 3 ? 10 : 0;
-      manaGain += Math.round(manaGain * comboBonus);
-      if (isPlayerTurn) {
-        mana += manaGain;
-        if (mana > 100) mana = 100;
-      } else {
-        enemyMana +=
+  // ======= БОЕВАЯ ЛОГИКА (оставь как у тебя, если рабочая) =======
+  // --- вставь остальную боевку и функции здесь ---
+</script>
+</body>
+</html>
