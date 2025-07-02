@@ -398,3 +398,125 @@
           if (!getColor(grid[i])) {
             for (let k=r-1;k>=0;k--) {
               let up=index(k,c);
+if (getColor(grid[up])) {
+                grid[i].className = grid[up].className;
+                grid[up].className = "cell";
+                break;
+              }
+            }
+          }
+        }
+        for (let r = 0; r < 6; r++) {
+          let i = index(r, c);
+          if (!getColor(grid[i])) {
+            const cls = colors[Math.floor(Math.random() * colors.length)];
+            grid[i].className = "cell " + cls;
+          }
+        }
+      }
+    }
+
+    function checkMatches() {
+      const matches = [];
+      // горизонталь
+      for (let r = 0; r < 6; r++) {
+        for (let c = 0; c < 4; c++) {
+          let i = index(r, c);
+          let a = grid[i], b = grid[i + 1], c_ = grid[i + 2];
+          if (getColor(a) && getColor(a) === getColor(b) && getColor(b) === getColor(c_))
+            matches.push([i, i + 1, i + 2]);
+        }
+      }
+      // вертикаль
+      for (let c = 0; c < 6; c++) {
+        for (let r = 0; r < 4; r++) {
+          let i = index(r, c);
+          let a = grid[i], b = grid[i + 6], c_ = grid[i + 12];
+          if (getColor(a) && getColor(a) === getColor(b) && getColor(b) === getColor(c_))
+            matches.push([i, i + 6, i + 12]);
+        }
+      }
+      return matches;
+    }
+
+    function monsterTurn() {
+      isPlayerTurn = false;
+      document.body.classList.add("enemy-turn");
+      lightningBtn.style.display = "none";
+      setTimeout(() => {
+        let moved = false;
+        for (let i = 0; i < 36 && !moved; i++) {
+          for (let j = i + 1; j < 36 && !moved; j++) {
+            [grid[i].className, grid[j].className] = [grid[j].className, grid[i].className];
+            if (checkMatches().length > 0) {
+              moved = true;
+              setTimeout(() => resolveCascade(), 300);
+            } else {
+              [grid[j].className, grid[i].className] = [grid[i].className, grid[j].className];
+            }
+          }
+        }
+        if (!moved) setTimeout(startTurn, 900);
+      }, 600 + Math.random() * 700);
+    }
+
+    // Drag logic (тач и мышка)
+    let dragStart = null, dragIdx = null;
+    board.addEventListener("touchstart", e => {
+      const t = e.touches[0];
+      const el = document.elementFromPoint(t.clientX, t.clientY);
+      if (el && el.classList.contains("cell")) {
+        dragging = el;
+        dragIdx = Array.from(board.children).indexOf(el);
+      }
+    });
+    board.addEventListener("touchmove", e => {
+      if (!dragging) return;
+      const t = e.touches[0];
+      const el = document.elementFromPoint(t.clientX, t.clientY);
+      if (el && el.classList.contains("cell") && el !== dragging) {
+        [dragging.className, el.className] = [el.className, dragging.className];
+        dragging = el;
+      }
+    });
+    board.addEventListener("touchend", () => {
+      dragging = null;
+      board.style.pointerEvents = "none";
+      resolveCascade();
+    });
+
+    // Мышь
+    board.addEventListener("mousedown", e => {
+      if (e.target.classList.contains("cell")) {
+        dragStart = e.target;
+      }
+    });
+    board.addEventListener("mousemove", e => {
+      if (dragStart) {
+        let el = document.elementFromPoint(e.clientX, e.clientY);
+        if (el && el.classList.contains("cell") && el !== dragStart) {
+          [dragStart.className, el.className] = [el.className, dragStart.className];
+          dragStart = el;
+        }
+      }
+    });
+    board.addEventListener("mouseup", () => {
+      if (dragStart) {
+        dragStart = null;
+        board.style.pointerEvents = "none";
+        resolveCascade();
+      }
+    });
+
+    // Кнопка молнии
+    lightningBtn.onclick = function() {
+      if (mana >= 20 && isPlayerTurn && !lightningUsed) {
+        lightningUsed = true;
+        mana -= 20;
+        updateStats();
+        lightningBtn.style.display = "none";
+      }
+    };
+  </script>
+</body>
+</html>
