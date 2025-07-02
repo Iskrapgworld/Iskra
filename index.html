@@ -13,70 +13,28 @@
     }
     h1 {
       color: #ffa500;
-      margin: 30px 0 10px 0;
+      margin: 16px 0 8px 0;
+      font-size: 2.2em;
+      letter-spacing: 1px;
     }
-    #loginOverlay {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100vw; height: 100vh;
-      background: rgba(0,0,0,0.95);
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      z-index: 999;
-    }
-    .loginBox {
-      background: #211430;
-      border-radius: 24px;
-      box-shadow: 0 0 32px #000c;
-      padding: 32px 16px 24px 16px;
-      min-width: 320px;
-      margin: 12px;
-    }
-    .loginBox h2 { margin-bottom: 20px; }
-    .loginInput {
-      margin: 12px 0;
-      font-size: 18px;
-      padding: 10px 12px;
-      border-radius: 8px;
-      border: none;
-      width: 85%;
-    }
-    .loginBtn {
-      background: #882cff;
-      color: #fff;
-      border: none;
-      border-radius: 12px;
-      font-size: 20px;
-      padding: 10px 30px;
-      margin-top: 20px;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    .loginBtn:hover { background: #a760ff; }
-    #loginError {
-      color: #ff4444;
-      margin-top: 10px;
-      font-size: 16px;
-      min-height: 22px;
-    }
-    /* Пример оформления боевого интерфейса */
-    #gamePanel { display: none; }
     #topBar {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 5px 10px;
-      font-size: 14px;
+      width: 97vw;
+      margin: 0 auto 6px auto;
+      font-size: 17px;
+      max-width: 440px;
     }
     #timerBarContainer {
       flex-grow: 1;
-      height: 10px;
+      height: 12px;
       margin: 0 10px;
       background: #444;
       border-radius: 5px;
       overflow: hidden;
+      position: relative;
+      top: 4px;
     }
     #timerBar {
       height: 100%;
@@ -85,64 +43,335 @@
       transition: width 1s linear;
     }
     #battleLog {
-      margin: 5px;
-      padding: 4px;
-      font-size: 14px;
-      min-height: 30px;
+      margin: 4px 0 8px 0;
+      padding: 6px 0;
+      font-size: 18px;
+      min-height: 26px;
+      font-weight: 500;
     }
+    #board {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 3.7px;
+      width: 352px;
+      margin: 0 auto;
+      transition: opacity 0.3s ease;
+    }
+    .cell {
+      width: 53px;
+      height: 53px;
+      border-radius: 16px;
+      transition: transform 0.3s, opacity 1s;
+      box-shadow: 0 1px 2px #0008;
+    }
+    .red    { background: radial-gradient(circle at 65% 30%, #ff4d4d, #990000 85%); }
+    .green  { background: radial-gradient(circle at 30% 60%, #80ff8b, #146611 90%); }
+    .blue   { background: radial-gradient(circle at 30% 40%, #75cfff, #1b2166 85%); }
+    .purple { background: radial-gradient(circle at 50% 50%, #d9a6ff, #440066 90%); }
+    .orange { background: radial-gradient(circle at 60% 30%, #ffd599, #cc6600 85%); }
+    .highlight { box-shadow: 0 0 20px 7px #fff8, 0 2px 6px #000b; }
+    .fade { opacity: 0; }
+    .enemy-turn #board { pointer-events: none; opacity: 0.26; }
+    .floatText {
+      position: absolute;
+      font-size: 15px;
+      font-weight: bold;
+      pointer-events: none;
+      animation: floatUp 1.2s ease forwards;
+      z-index: 1999;
+    }
+    @keyframes floatUp {
+      from { opacity: 1; transform: translateY(0);}
+      to   { opacity: 0; transform: translateY(-32px);}
+    }
+    #endScreen {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.96);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      z-index: 5000;
+    }
+    #endScreen h2 { color: #ffa500; font-size: 2em; margin-bottom: 20px;}
+    #endScreen button {
+      padding: 12px 32px;
+      font-size: 1.2em;
+      border: none;
+      border-radius: 12px;
+      background: #6622cc;
+      color: #fff;
+      font-weight: bold;
+      margin-top: 12px;
+    }
+    #lightningButton {
+      margin: 9px auto 0 auto;
+      display: none;
+      background: #ffcc00;
+      color: #000;
+      font-size: 17px;
+      font-weight: bold;
+      border-radius: 11px;
+      border: none;
+      padding: 8px 32px;
+    }
+    #playerStats, #enemyStats {
+      text-align: left;
+      min-width: 100px;
+      font-size: 16px;
+    }
+    .bar {
+      height: 13px;
+      border-radius: 8px;
+      background: #292929;
+      margin: 2px 0 7px 0;
+      overflow: hidden;
+      position: relative;
+    }
+    .bar-inner {
+      height: 100%;
+      transition: width 0.5s;
+      border-radius: 8px;
+    }
+    .hp { background: linear-gradient(90deg,#30d84b,#faff00); }
+    .shield { background: linear-gradient(90deg,#8ec6f9,#24618a); }
+    .mana { background: linear-gradient(90deg,#af7eff,#43007e); }
   </style>
 </head>
 <body>
   <h1>🔥 ИСКРА: Битва TG-мини 🔥</h1>
-  <!-- Логин -->
-  <div id="loginOverlay">
-    <form class="loginBox" id="loginForm" autocomplete="off">
-      <h2>Вход в игру</h2>
-      <input class="loginInput" id="nickname" type="text" placeholder="Ник" autocomplete="username" required><br>
-      <input class="loginInput" id="password" type="password" placeholder="Пароль" autocomplete="current-password" required><br>
-      <button class="loginBtn" type="submit">Войти</button>
-      <div id="loginError"></div>
-    </form>
-  </div>
-  <!-- Пример боевого интерфейса (появится после входа) -->
-  <div id="gamePanel">
-    <div id="topBar">
-      <div>Вы:<br>❤️ <span id="hp">200</span></div>
-      <div id="timerBarContainer"><div id="timerBar"></div></div>
-      <div>Монстр:<br>💀 <span id="enemyHp">100</span></div>
+  <div id="topBar">
+    <div id="playerStats">Вы:<br>
+      ❤️ <span id="hp">200</span>
+      <div class="bar"><div id="hpBar" class="bar-inner hp" style="width:100%"></div></div>
+      🛡 <span id="shield">100</span>
+      <div class="bar"><div id="shieldBar" class="bar-inner shield" style="width:100%"></div></div>
+      🔮 <span id="mana">0</span>
+      <div class="bar"><div id="manaBar" class="bar-inner mana" style="width:0%"></div></div>
     </div>
-    <div id="battleLog">Комбо появится здесь...</div>
-    <!-- ... и т.д. ... -->
+    <div id="timerBarContainer"><div id="timerBar"></div></div>
+    <div id="enemyStats">Монстр:<br>
+      💀 <span id="enemyHp">100</span>
+      <div class="bar"><div id="enemyHpBar" class="bar-inner hp" style="width:100%"></div></div>
+      🛡 <span id="enemyShield">100</span>
+      <div class="bar"><div id="enemyShieldBar" class="bar-inner shield" style="width:100%"></div></div>
+      🔮 <span id="enemyMana">0</span>
+      <div class="bar"><div id="enemyManaBar" class="bar-inner mana" style="width:0%"></div></div>
+    </div>
+  </div>
+  <div id="battleLog">Комбо появится здесь…</div>
+  <div id="board"></div>
+  <button id="lightningButton" onclick="useLightning()">⚡ Молния (20 маны)</button>
+  <div id="endScreen">
+    <h2 id="endMessage"></h2>
+    <button onclick="location.reload()">Сыграть ещё</button>
   </div>
   <script>
-    // Проверка localStorage для автологина (чисто для удобства теста)
-    if (localStorage.getItem("iskraNick") && localStorage.getItem("iskraPass")) {
-      document.getElementById("loginOverlay").style.display = "none";
-      document.getElementById("gamePanel").style.display = "block";
-      // Можно дополнить вставкой ника на экран
+const board = document.getElementById("board");
+const hpEl = document.getElementById("hp"), shieldEl = document.getElementById("shield"), manaEl = document.getElementById("mana");
+const enemyHpEl = document.getElementById("enemyHp"), enemyShieldEl = document.getElementById("enemyShield"), enemyManaEl = document.getElementById("enemyMana");
+const hpBar = document.getElementById("hpBar"), shieldBar = document.getElementById("shieldBar"), manaBar = document.getElementById("manaBar");
+const enemyHpBar = document.getElementById("enemyHpBar"), enemyShieldBar = document.getElementById("enemyShieldBar"), enemyManaBar = document.getElementById("enemyManaBar");
+const battleLog = document.getElementById("battleLog");
+const lightningBtn = document.getElementById("lightningButton");
+const endScreen = document.getElementById("endScreen"), endMessage = document.getElementById("endMessage");
+const timerBar = document.getElementById("timerBar");
+let grid = [], dragging = null, turnTimer;
+let hp = 200, shield = 100, mana = 0;
+let enemyHp = 100, enemyShield = 100, enemyMana = 0;
+let isPlayerTurn = true, comboAccumulator = {}, lightningUsed = false;
+const colors = ['red','green','blue','purple','orange'];
+function updateStats(){
+  hpEl.textContent=hp; shieldEl.textContent=shield; manaEl.textContent=mana;
+  enemyHpEl.textContent=enemyHp; enemyShieldEl.textContent=enemyShield; enemyManaEl.textContent=enemyMana;
+  hpBar.style.width=Math.max(0,(hp/200*100))+'%';
+  shieldBar.style.width=Math.max(0,(shield/100*100))+'%';
+  manaBar.style.width=Math.max(0,(mana/100*100))+'%';
+  enemyHpBar.style.width=Math.max(0,(enemyHp/100*100))+'%';
+  enemyShieldBar.style.width=Math.max(0,(enemyShield/100*100))+'%';
+  enemyManaBar.style.width=Math.max(0,(enemyMana/100*100))+'%';
+}
+function createGrid(){
+  board.innerHTML=''; grid=[];
+  for(let i=0;i<36;i++){
+    let cell=document.createElement("div");
+    cell.className="cell "+colors[Math.floor(Math.random()*colors.length)];
+    board.appendChild(cell); grid.push(cell);
+  }
+}
+function index(r,c){return r*6+c;}
+function getColor(el){return colors.find(c=>el.classList.contains(c));}
+function startTurn(){
+  isPlayerTurn=true; lightningUsed=false;
+  comboAccumulator={red:0,green:0,blue:0,orange:0,purple:0,count:0};
+  document.body.classList.remove("enemy-turn");
+  board.style.pointerEvents="auto";
+  lightningBtn.style.display=mana>=20?"inline-block":"none";
+  let time=20; timerBar.style.width="100%";
+  clearInterval(turnTimer);
+  turnTimer=setInterval(()=>{
+    time--; timerBar.style.width=(time*5)+"%";
+    if(time<=0){
+      clearInterval(turnTimer);
+      board.style.pointerEvents="none";
+      resolveCascade();
     }
-
-    document.getElementById("loginForm").addEventListener("submit", function(e) {
-      e.preventDefault();
-      let nick = document.getElementById("nickname").value.trim();
-      let pass = document.getElementById("password").value;
-      let errorBox = document.getElementById("loginError");
-      if (nick.length < 2) {
-        errorBox.textContent = "Введите ник (2+ символа)";
-        return;
-      }
-      if (pass.length < 3) {
-        errorBox.textContent = "Пароль слишком короткий";
-        return;
-      }
-      // Сохраняем "аккаунт" в localStorage
-      localStorage.setItem("iskraNick", nick);
-      localStorage.setItem("iskraPass", pass);
-      // Показываем игру, скрываем логин
-      document.getElementById("loginOverlay").style.display = "none";
-      document.getElementById("gamePanel").style.display = "block";
-      // Можно тут подгрузить данные пользователя, если есть
+  },1000);
+}
+function resolveCascade(){
+  const matches=checkMatches();
+  if(matches.length===0){
+    applyEffects();
+    if(checkEnd())return;
+    isPlayerTurn?setTimeout(monsterTurn,600):setTimeout(startTurn,600);
+    return;
+  }
+  matches.forEach(g=>{
+    const color=getColor(grid[g[0]]);
+    comboAccumulator[color]=(comboAccumulator[color]||0)+g.length;
+    comboAccumulator.count+=1;
+    g.forEach(i=>grid[i].classList.add("highlight"));
+  });
+  setTimeout(()=>{
+    matches.flat().forEach(i=>{
+      grid[i].classList.remove("highlight");
+      grid[i].classList.add("fade");
     });
-  </script>
-</body>
-</html>
+    setTimeout(()=>{
+      matches.flat().forEach(i=>grid[i].className="cell");
+      dropDown();
+      setTimeout(resolveCascade,600);
+    },800);
+  },1200);
+}
+function applyEffects(){
+  const {red,green,blue,orange,purple,count}=comboAccumulator;
+  let dmg = red>=5?20:red>=3?10:0;
+  let heal = green>=5?10:green>=3?5:0;
+  let def  = blue>=5?10:blue>=3?5:0;
+  let manaGain=purple>=5?20:purple>=3?10:0;
+  let critChance = orange*3;
+  let isCrit = Math.random()*100<critChance;
+  if(isPlayerTurn){ mana+=manaGain; if(mana>100)mana=100; }
+  else { enemyMana+=manaGain; if(enemyMana>100)enemyMana=100;}
+  let totalDmg=dmg+(isCrit?dmg:0)+(isPlayerTurn&&lightningUsed?50:0);
+  if(isPlayerTurn){
+    let half=Math.floor(totalDmg/2);
+    if(enemyShield>=half){ enemyShield-=half; enemyHp-=(totalDmg-half);}
+    else { let rem=half-enemyShield; enemyShield=0; enemyHp-=(totalDmg-half+rem);}
+    shield+=def; hp+=heal;
+    if(hp>200)hp=200; if(shield>100)shield=100;
+    if(heal>0)float("+"+heal,hpEl,"#00ff00");
+    if(def>0)float("+"+def,shieldEl,"#3399ff");
+    let logTxt = `Комбо ×${count}, Урон: ${dmg}${isCrit?' (КРИТ!)':''}${lightningUsed?', +Молния':''}`;
+    battleLog.innerHTML=`<span style="color:#66ff66">${logTxt}</span>`;
+  } else {
+    let half=Math.floor(totalDmg/2);
+    if(shield>=half){ shield-=half; hp-=(totalDmg-half);}
+    else { let rem=half-shield; shield=0; hp-=(totalDmg-half+rem);}
+    enemyShield+=def; enemyHp+=heal;
+    if(enemyHp>100)enemyHp=100; if(enemyShield>100)enemyShield=100;
+    if(heal>0)float("+"+heal,enemyHpEl,"#00ff00");
+    if(def>0)float("+"+def,enemyShieldEl,"#3399ff");
+    let logTxt = `Комбо ×${count}, Урон: ${dmg}${isCrit?' (КРИТ!)':''}`;
+    battleLog.innerHTML=`<span style="color:#ff4444">${logTxt}</span>`;
+  }
+  updateStats(); lightningBtn.style.display="none"; checkEnd();
+}
+function useLightning(){
+  if(mana>=20&&isPlayerTurn&&!lightningUsed){
+    lightningUsed=true; mana-=20; updateStats(); lightningBtn.style.display="none";
+  }
+}
+function float(text,target,color){
+  const box=document.createElement("div");
+  box.className="floatText"; box.textContent=text; box.style.color=color;
+  const rect=target.getBoundingClientRect();
+  box.style.left=(rect.left+rect.width/2)+"px"; box.style.top=(rect.top-10)+"px";
+  document.body.appendChild(box); setTimeout(()=>box.remove(),1300);
+}
+function checkEnd(){
+  if(hp<=0){
+    endMessage.textContent="Поражение..."; endScreen.style.display="flex";
+    return true;
+  }
+  if(enemyHp<=0){
+    endMessage.textContent="Победа!"; endScreen.style.display="flex";
+    return true;
+  }
+  return false;
+}
+function dropDown(){
+  for(let c=0;c<6;c++){
+    for(let r=5;r>0;r--){
+      let i=index(r,c);
+      if(!getColor(grid[i])){
+        for(let k=r-1;k>=0;k--){
+          let up=index(k,c);
+          if(getColor(grid[up])){
+            grid[i].className=grid[up].className;
+            grid[up].className="cell";
+            break;
+          }
+        }
+      }
+    }
+    for(let r=0;r<6;r++){
+      let i=index(r,c);
+      if(!getColor(grid[i])){
+        const cls=colors[Math.floor(Math.random()*colors.length)];
+        grid[i].className="cell "+cls;
+      }
+    }
+  }
+}
+function checkMatches(){
+  const matches=[];
+  for(let r=0;r<6;r++){
+    for(let c=0;c<4;c++){
+      let i=index(r,c);
+      let a=grid[i],b=grid[i+1],c_=grid[i+2];
+      if(getColor(a)===getColor(b)&&getColor(b)===getColor(c_))
+        matches.push([i,i+1,i+2]);
+    }
+  }
+  for(let c=0;c<6;c++){
+    for(let r=0;r<4;r++){
+      let i=index(r,c);
+      let a=grid[i],b=grid[i+6],c_=grid[i+12];
+      if(getColor(a)===getColor(b)&&getColor(b)===getColor(c_))
+        matches.push([i,i+6,i+12]);
+    }
+  }
+  return matches;
+}
+function monsterTurn(){
+  isPlayerTurn=false;
+  document.body.classList.add("enemy-turn");
+  lightningBtn.style.display="none";
+  setTimeout(()=>{
+    let moved=false;
+    for(let i=0;i<36&&!moved;i++){
+      for(let j=i+1;j<36&&!moved;j++){
+        [grid[i].className,grid[j].className]=[grid[j].className,grid[i].className];
+        if(checkMatches().length>0){
+          moved=true; setTimeout(()=>resolveCascade(),260);
+        } else {
+          [grid[j].className,grid[i].className]=[grid[i].className,grid[j].className];
+        }
+      }
+    }
+    if(!moved)setTimeout(startTurn,800);
+  },500+Math.random()*800);
+}
+board.addEventListener("touchstart",e=>{
+  const t=e.touches[0],el=document.elementFromPoint(t.clientX,t.clientY);
+  if(el&&el.classList.contains("cell"))dragging=el;
+});
+board.addEventListener("touchmove",e=>{
+  if(!dragging)return;
+  const t=e.touches[0],el=document.elementFromPoint(t.clientX,t.clientY);
+  if(el&&el.classList.contains("cell")&&el!==dragging){
+    [dragging.className,el.className]=
