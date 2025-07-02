@@ -3,446 +3,166 @@
 <head>
   <meta charset="UTF-8" />
   <title>🔥 ИСКРА: Битва TG-мини 🔥</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
-    body {
-      margin: 0;
-      background-color: #111;
-      color: #fff;
-      font-family: 'Segoe UI', sans-serif;
-      text-align: center;
-      min-height: 100vh;
-    }
-    h1 {
-      color: #ffa500;
-      margin: 16px 0 6px 0;
-      font-size: 2.1em;
-      letter-spacing: 2px;
-    }
-    #loginBox {
-      background: #23123a;
-      border-radius: 28px;
-      padding: 38px 22px 22px 22px;
-      box-shadow: 0 0 40px #000a;
-      min-width: 290px;
-      margin-top: 48px;
-      color: #fff;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      font-size: 1.2em;
-    }
-    #loginBox label {
-      font-size: 1.25em;
-      margin-bottom: 7px;
-      font-weight: bold;
-    }
-    #loginBox input {
-      padding: 12px;
-      font-size: 1.1em;
-      border-radius: 9px;
-      border: none;
-      margin-bottom: 14px;
-      width: 210px;
-      background: #faf9fc;
-      color: #222;
-      outline: none;
-      text-align: center;
-    }
-    #loginBox button {
-      background: #822be0;
-      color: #fff;
-      font-size: 1.17em;
-      padding: 10px 35px;
-      border: none;
-      border-radius: 13px;
-      font-weight: bold;
-      margin-top: 12px;
-      transition: 0.2s;
-    }
-    #loginBox button:active {
-      background: #a069e6;
-    }
-    #gameArea {
-      display: none;
-      width: 100%;
-    }
-    #topBar {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-      padding: 0 8px;
-      margin: 0 0 3px 0;
-      font-size: 15px;
-    }
-    .panel {
-      text-align: left;
-      min-width: 100px;
-    }
-    .enemyPanel {
-      text-align: right;
-    }
-    .barLbl { font-size: 18px; }
-    .barIcon { font-size: 1.24em; vertical-align: middle; }
-    .barWrap {
-      width: 94%;
-      background: #222;
-      border-radius: 10px;
-      margin: 3px 0 7px 0;
-      height: 16px;
-      box-shadow: 0 1px 4px #000c inset;
-      overflow: hidden;
-      position: relative;
-    }
-    .bar {
-      height: 100%;
-      border-radius: 10px;
-      transition: width 0.5s cubic-bezier(.47,1.64,.41,.8);
-    }
-    .hpBar    { background: linear-gradient(90deg, #33ff33 50%, #ffff00); }
-    .shieldBar{ background: linear-gradient(90deg, #3fd2fa 60%, #accbfa); }
-    .manaBar  { background: linear-gradient(90deg, #b383ff 50%, #fef5f5 90%);}
-    #battleLog {
-      font-size: 1.3em;
-      margin: 15px 0 7px 0;
-      min-height: 30px;
-    }
-    #board {
-      display: grid;
-      grid-template-columns: repeat(6, 44px);
-      gap: 5px;
-      width: 274px;
-      margin: 19px auto 10px auto;
-      transition: opacity 0.3s;
-      user-select: none;
-      touch-action: none;
-    }
-    .cell {
-      width: 44px; height: 44px;
-      border-radius: 9px;
-      box-shadow: 0 1px 7px #222a;
-      background: #222;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 2.0em;
-      cursor: grab;
-      transition: transform 0.23s, box-shadow 0.5s, opacity 0.7s;
-    }
-    .red    { background: linear-gradient(145deg,#ff4d4d 60%,#990000 100%); color:#fff; }
-    .green  { background: linear-gradient(145deg,#86ff86 70%,#006600 100%); color:#fff; }
-    .blue   { background: linear-gradient(145deg,#aee2ff 80%,#1469ad 100%); color:#fff; }
-    .purple { background: linear-gradient(145deg,#dca0ff 60%,#440066 100%); color:#fff; }
-    .orange { background: linear-gradient(145deg,#ffcb76 80%,#cc6600 100%); color:#fff; }
-    .highlight { box-shadow: 0 0 18px 5px #fff7, 0 2px 9px #fffa; }
-    .fade { opacity: 0; }
-    .enemy-turn #board { opacity: 0.27; pointer-events: none;}
-    #lightningButton {
-      margin: 6px auto 0 auto;
-      display: none;
-      background: #ffd700;
-      color: #222;
-      font-size: 1.12em;
-      font-weight: bold;
-      border: none;
-      border-radius: 10px;
-      padding: 10px 32px;
-      transition: 0.2s;
-    }
-    #lightningButton:active { background: #ffe36d; }
-    .floatText {
-      position: absolute;
-      font-size: 15px;
-      font-weight: bold;
-      pointer-events: none;
-      animation: floatUp 1.15s ease forwards;
-      left: 50%; top: 38%;
-      z-index: 22;
-    }
-    @keyframes floatUp {
-      from { opacity: 1; transform: translateY(0); }
-      to   { opacity: 0; transform: translateY(-32px); }
-    }
+    body { margin: 0; background: #111; color: #fff; font-family: sans-serif; text-align: center;}
+    h1 { color: #ffa500; margin: 20px 0 12px 0;}
+    #topBar { display: flex; justify-content: space-between; align-items: flex-end; padding: 0 10px; font-size: 18px;}
+    #bars {display: flex; flex-direction: column; align-items: flex-start;}
+    #barsR {display: flex; flex-direction: column; align-items: flex-end;}
+    .bar {height: 16px; border-radius: 8px; margin-bottom: 6px; width: 170px;}
+    .hp-bar {background: linear-gradient(90deg, #46e255 70%, #ffe928);}
+    .shield-bar {background: linear-gradient(90deg, #62cfff 60%, #2f6bd2);}
+    .mana-bar {background: linear-gradient(90deg, #ae8cff, #3c2456);}
+    #board {display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; width: 336px; margin: 30px auto 10px auto;}
+    .cell { width: 50px; height: 50px; border-radius: 12px; background: #222; font-size: 22px; box-shadow: 0 2px 8px #0004; transition: opacity .5s;}
+    .red { background: linear-gradient(135deg, #ff5959 70%, #ca2828 100%);}
+    .green { background: linear-gradient(135deg, #7dff93 70%, #19c644 100%);}
+    .blue { background: linear-gradient(135deg, #8fd8ff 60%, #215fd8 100%);}
+    .purple { background: linear-gradient(135deg, #cdaaff 70%, #574694 100%);}
+    .orange { background: linear-gradient(135deg, #ffe290 60%, #c88910 100%);}
+    .highlight {box-shadow: 0 0 20px 7px #fff7;}
+    .fade {opacity: 0;}
+    .enemy-turn #board {pointer-events: none; opacity: 0.3;}
+    #battleLog {margin: 12px auto; padding: 7px; font-size: 20px; min-height: 36px;}
+    #overlay, #endScreen {position: fixed;top: 0;left: 0;width: 100vw;height: 100vh;background: rgba(12,0,18,0.93);display: flex;flex-direction: column;align-items: center;justify-content: center;z-index: 5;}
+    #overlay input {padding: 10px;font-size: 18px;border-radius: 7px;border: none;margin-bottom: 16px;width: 250px;}
+    #overlay button, #endScreen button {padding: 12px 35px; font-size: 20px; border-radius: 13px; border: none; background: #9c4fff; color: #fff; margin-top: 10px;}
+    #endScreen {display:none;}
   </style>
 </head>
 <body>
   <h1>🔥 ИСКРА: Битва TG-мини 🔥</h1>
-  <div id="loginBox">
-    <label for="nickname">Введите ник:</label>
-    <input id="nickname" maxlength="18" autocomplete="username">
-    <label for="password">Пароль:</label>
-    <input id="password" type="password" maxlength="18" autocomplete="current-password">
+  <div id="topBar">
+    <div id="bars">
+      <div style="margin-bottom:3px;">Вы:</div>
+      <div>❤️ <span id="hp">200</span></div>
+      <div class="bar hp-bar" id="hpBar"></div>
+      <div>🛡 <span id="shield">100</span></div>
+      <div class="bar shield-bar" id="shieldBar"></div>
+      <div>🔮 <span id="mana">0</span></div>
+      <div class="bar mana-bar" id="manaBar"></div>
+    </div>
+    <div id="barsR">
+      <div style="margin-bottom:3px;">Монстр:</div>
+      <div>💀 <span id="enemyHp">100</span></div>
+      <div class="bar hp-bar" id="enemyHpBar"></div>
+      <div>🛡 <span id="enemyShield">100</span></div>
+      <div class="bar shield-bar" id="enemyShieldBar"></div>
+      <div>🔮 <span id="enemyMana">0</span></div>
+      <div class="bar mana-bar" id="enemyManaBar"></div>
+    </div>
+  </div>
+  <div id="battleLog">Комбо появится здесь…</div>
+  <div id="board"></div>
+  <div id="overlay">
+    <h2 style="color:#fff;margin-bottom:10px;">Вход в игру</h2>
+    <input id="nickname" placeholder="Логин">
+    <input id="password" type="password" placeholder="Пароль">
     <button id="loginBtn">Войти</button>
   </div>
-  <div id="gameArea">
-    <div id="topBar">
-      <div class="panel">
-        <span class="barLbl">Вы:</span><br>
-        <span class="barIcon">❤️</span> <span id="hp">200</span>
-        <div class="barWrap"><div id="hpBar" class="bar hpBar"></div></div>
-        <span class="barIcon">🛡</span> <span id="shield">100</span>
-        <div class="barWrap"><div id="shieldBar" class="bar shieldBar"></div></div>
-        <span class="barIcon">🔮</span> <span id="mana">0</span>
-        <div class="barWrap"><div id="manaBar" class="bar manaBar"></div></div>
-      </div>
-      <div style="width:10px"></div>
-      <div class="panel enemyPanel">
-        <span class="barLbl">Монстр:</span><br>
-        <span class="barIcon">💀</span> <span id="enemyHp">100</span>
-        <div class="barWrap"><div id="enemyHpBar" class="bar hpBar"></div></div>
-        <span class="barIcon">🛡</span> <span id="enemyShield">100</span>
-        <div class="barWrap"><div id="enemyShieldBar" class="bar shieldBar"></div></div>
-        <span class="barIcon">🔮</span> <span id="enemyMana">0</span>
-        <div class="barWrap"><div id="enemyManaBar" class="bar manaBar"></div></div>
-      </div>
-    </div>
-    <div id="battleLog">Комбо появится здесь…</div>
-    <div id="board"></div>
-    <button id="lightningButton">⚡ Молния (20 маны)</button>
+  <div id="endScreen">
+    <h2 id="endMessage" style="font-size:2em;color:#57ff64;margin-bottom:16px;">Победа!</h2>
+    <button id="backToMenuBtn">В меню</button>
   </div>
   <script>
-    // --- ЛОГИН / СКРЫТИЕ / ВЫЗОВ ИГРЫ ---
-    document.getElementById('loginBtn').onclick = function() {
-      const nick = document.getElementById('nickname').value.trim();
-      const pass = document.getElementById('password').value.trim();
-      if (nick && pass) {
-        document.getElementById('loginBox').style.display = "none";
-        document.getElementById('gameArea').style.display = "block";
-        startGame(); // <--- тут!
-      } else {
-        alert('Введите ник и пароль!');
-      }
-    };
+    // === Начальные параметры ===
+    let hp = 200, shield = 100, mana = 0;
+    let enemyHp = 100, enemyShield = 100, enemyMana = 0;
 
-    // --- ИГРОВАЯ ЛОГИКА ---
-    const board = document.getElementById("board");
+    // --- UI элементы
     const hpEl = document.getElementById("hp");
     const shieldEl = document.getElementById("shield");
     const manaEl = document.getElementById("mana");
-    const hpBar = document.getElementById("hpBar");
-    const shieldBar = document.getElementById("shieldBar");
-    const manaBar = document.getElementById("manaBar");
     const enemyHpEl = document.getElementById("enemyHp");
     const enemyShieldEl = document.getElementById("enemyShield");
     const enemyManaEl = document.getElementById("enemyMana");
+    const hpBar = document.getElementById("hpBar");
+    const shieldBar = document.getElementById("shieldBar");
+    const manaBar = document.getElementById("manaBar");
     const enemyHpBar = document.getElementById("enemyHpBar");
     const enemyShieldBar = document.getElementById("enemyShieldBar");
     const enemyManaBar = document.getElementById("enemyManaBar");
+    const board = document.getElementById("board");
     const battleLog = document.getElementById("battleLog");
-    const lightningBtn = document.getElementById("lightningButton");
+    const overlay = document.getElementById("overlay");
+    const endScreen = document.getElementById("endScreen");
+    const endMessage = document.getElementById("endMessage");
+    const backToMenuBtn = document.getElementById("backToMenuBtn");
 
-    let hp = 200, shield = 100, mana = 0;
-    let enemyHp = 100, enemyShield = 100, enemyMana = 0;
-    let isPlayerTurn = true, lightningUsed = false;
-    let grid = [], dragging = null, comboAccumulator = {};
-    const colors = ['red', 'green', 'blue', 'purple', 'orange'];
+    // --- Цвета
+    const colors = ['red','green','blue','purple','orange'];
 
+    // --- Глобальное состояние
+    let grid = [];
+    let isPlayerTurn = true;
+    let turnTimer, dragging = null, lightningUsed = false;
+    let playerName = "";
+
+    // === Вход
+    document.getElementById('loginBtn').addEventListener('click', enterGame);
+
+    function enterGame() {
+      playerName = document.getElementById('nickname').value || 'Игрок';
+      overlay.style.display = "none";
+      startGame();
+    }
+
+    // === Старт боя
     function startGame() {
+      // Параметры
       hp = 200; shield = 100; mana = 0;
       enemyHp = 100; enemyShield = 100; enemyMana = 0;
-      lightningUsed = false;
       isPlayerTurn = true;
+      lightningUsed = false;
       updateStats();
-      createGrid();
+      createGridNoCombos();
+      endScreen.style.display = "none";
       document.body.classList.remove("enemy-turn");
-      lightningBtn.style.display = "none";
       startTurn();
     }
 
+    // === Интерфейс
     function updateStats() {
-      hpEl.textContent = hp;
-      shieldEl.textContent = shield;
-      manaEl.textContent = mana;
-      enemyHpEl.textContent = enemyHp;
-      enemyShieldEl.textContent = enemyShield;
-      enemyManaEl.textContent = enemyMana;
-      hpBar.style.width = (hp/200*100)+"%";
-      shieldBar.style.width = (shield/100*100)+"%";
-      manaBar.style.width = (mana/100*100)+"%";
-      enemyHpBar.style.width = (enemyHp/100*100)+"%";
-      enemyShieldBar.style.width = (enemyShield/100*100)+"%";
-      enemyManaBar.style.width = (enemyMana/100*100)+"%";
+      hpEl.textContent = hp; shieldEl.textContent = shield; manaEl.textContent = mana;
+      enemyHpEl.textContent = enemyHp; enemyShieldEl.textContent = enemyShield; enemyManaEl.textContent = enemyMana;
+      hpBar.style.width = (hp/200*170) + "px";
+      shieldBar.style.width = (shield/100*170) + "px";
+      manaBar.style.width = (mana/100*170) + "px";
+      enemyHpBar.style.width = (enemyHp/100*170) + "px";
+      enemyShieldBar.style.width = (enemyShield/100*170) + "px";
+      enemyManaBar.style.width = (enemyMana/100*170) + "px";
     }
 
-    function createGrid() {
+    // === Поле БЕЗ стартовых комбо ===
+    function createGridNoCombos() {
       do {
         board.innerHTML = "";
         grid = [];
         for (let i = 0; i < 36; i++) {
           const cell = document.createElement("div");
-          cell.className = "cell " + colors[Math.floor(Math.random()*colors.length)];
+          cell.className = "cell " + colors[Math.floor(Math.random() * colors.length)];
           board.appendChild(cell);
           grid.push(cell);
         }
-      } while (checkMatches().length > 0);
+      } while(checkMatches().length > 0);
     }
 
-    function index(r, c) { return r*6+c; }
-    function getColor(el) { return colors.find(c=>el.classList.contains(c)); }
-
+    // === Логика боя ===
     function startTurn() {
       isPlayerTurn = true;
       lightningUsed = false;
-      comboAccumulator = { red:0, green:0, blue:0, orange:0, purple:0, count:0 };
       document.body.classList.remove("enemy-turn");
       board.style.pointerEvents = "auto";
-      lightningBtn.style.display = mana>=20?"inline-block":"none";
-    }
-
-    function resolveCascade() {
-      const matches = checkMatches();
-      if (matches.length === 0) {
-        applyEffects();
-        if (checkEnd()) return;
-        isPlayerTurn ? setTimeout(monsterTurn,700) : setTimeout(startTurn,700);
-        return;
-      }
-      matches.forEach(g=>{
-        const color = getColor(grid[g[0]]);
-        comboAccumulator[color]=(comboAccumulator[color]||0)+g.length;
-        comboAccumulator.count+=1;
-        g.forEach(i=>grid[i].classList.add("highlight"));
-      });
-      setTimeout(()=>{
-        matches.flat().forEach(i=>{
-          grid[i].classList.remove("highlight");
-          grid[i].classList.add("fade");
-        });
-        setTimeout(()=>{
-          matches.flat().forEach(i=>grid[i].className="cell");
-          dropDown();
-          setTimeout(resolveCascade,550);
-        },600);
-      },1100);
-    }
-
-    function applyEffects() {
-      const {red,green,blue,orange,purple,count}=comboAccumulator;
-      let dmg = red>=5?20:red>=3?10:0;
-      let heal = green>=5?10:green>=3?5:0;
-      let def = blue>=5?10:blue>=3?5:0;
-      let manaGain = purple>=5?20:purple>=3?10:0;
-      let critChance = orange;
-      let isCrit = Math.random()*100 < critChance;
-      let totalDmg = dmg+(isCrit?dmg:0)+(isPlayerTurn&&lightningUsed?50:0);
-
-      if (isPlayerTurn) {
-        mana+=manaGain;
-        if (mana>100) mana=100;
-        let half = Math.floor(totalDmg/2);
-        if (enemyShield>=half) {
-          enemyShield-=half;
-          enemyHp-=(totalDmg-half);
-        } else {
-          let rem=half-enemyShield; enemyShield=0;
-          enemyHp-=(totalDmg-half+rem);
-        }
-        shield+=def;
-        hp+=heal; if (hp>200) hp=200;
-        showFloat(heal,'#00ff00',hpEl);
-        showFloat(def,'#44cfff',shieldEl);
-        battleLog.innerHTML = `<span style="color:#66ff66">Комбо ×${count}, Урон: ${dmg}${isCrit?' (КРИТ!)':''}${lightningUsed?', +Молния':''}</span>`;
-      } else {
-        enemyMana+=manaGain;
-        if (enemyMana>100) enemyMana=100;
-        let half = Math.floor(totalDmg/2);
-        if (shield>=half) {
-          shield-=half;
-          hp-=(totalDmg-half);
-        } else {
-          let rem=half-shield; shield=0;
-          hp-=(totalDmg-half+rem);
-        }
-        enemyShield+=def;
-        enemyHp+=heal; if (enemyHp>100) enemyHp=100;
-        showFloat(heal,'#00ff00',enemyHpEl);
-        showFloat(def,'#44cfff',enemyShieldEl);
-        battleLog.innerHTML = `<span style="color:#ff4444">Комбо ×${count}, Урон: ${dmg}${isCrit?' (КРИТ!)':''}</span>`;
-      }
-      updateStats();
-      lightningBtn.style.display = "none";
-      checkEnd();
-    }
-
-    function showFloat(val, color, target) {
-      if (!val) return;
-      const box = document.createElement("div");
-      box.className = "floatText";
-      box.textContent = (val>0?'+':'')+val;
-      box.style.color = color;
-      const rect = target.getBoundingClientRect();
-      box.style.left = (rect.left+rect.width/2)+'px';
-      box.style.top = (rect.top-8)+'px';
-      document.body.appendChild(box);
-      setTimeout(()=>box.remove(),1150);
-    }
-
-    function checkEnd() {
-      if (hp<=0) {
-        battleLog.innerHTML = '<span style="color:#f55;font-weight:bold">Поражение…</span>';
+      turnTimer = setTimeout(() => {
         board.style.pointerEvents = "none";
-        setTimeout(startGame, 2400);
-        return true;
-      }
-      if (enemyHp<=0) {
-        battleLog.innerHTML = '<span style="color:#7fff63;font-weight:bold">Победа!</span>';
-        board.style.pointerEvents = "none";
-        setTimeout(startGame, 2400);
-        return true;
-      }
-      return false;
+        resolveCascade();
+      }, 20000); // 20 сек
     }
 
-    function dropDown() {
-      for (let c = 0; c < 6; c++) {
-        for (let r = 5; r > 0; r--) {
-          let i = index(r,c);
-          if (!getColor(grid[i])) {
-            for (let k=r-1;k>=0;k--) {
-              let up=index(k,c);
-if (getColor(grid[up])) {
-                grid[i].className = grid[up].className;
-                grid[up].className = "cell";
-                break;
-              }
-            }
-          }
-        }
-        for (let r = 0; r < 6; r++) {
-          let i = index(r, c);
-          if (!getColor(grid[i])) {
-            const cls = colors[Math.floor(Math.random() * colors.length)];
-            grid[i].className = "cell " + cls;
-          }
-        }
-      }
-    }
-
-    function checkMatches() {
-      const matches = [];
-      // горизонталь
-      for (let r = 0; r < 6; r++) {
-        for (let c = 0; c < 4; c++) {
-          let i = index(r, c);
-          let a = grid[i], b = grid[i + 1], c_ = grid[i + 2];
-          if (getColor(a) && getColor(a) === getColor(b) && getColor(b) === getColor(c_))
-            matches.push([i, i + 1, i + 2]);
-        }
-      }
-      // вертикаль
-      for (let c = 0; c < 6; c++) {
-        for (let r = 0; r < 4; r++) {
-          let i = index(r, c);
-          let a = grid[i], b = grid[i + 6], c_ = grid[i + 12];
-          if (getColor(a) && getColor(a) === getColor(b) && getColor(b) === getColor(c_))
-            matches.push([i, i + 6, i + 12]);
-        }
-      }
-      return matches;
-    }
-
+    // --- Логика монстра ---
     function monsterTurn() {
       isPlayerTurn = false;
       document.body.classList.add("enemy-turn");
-      lightningBtn.style.display = "none";
       setTimeout(() => {
         let moved = false;
         for (let i = 0; i < 36 && !moved; i++) {
@@ -450,73 +170,168 @@ if (getColor(grid[up])) {
             [grid[i].className, grid[j].className] = [grid[j].className, grid[i].className];
             if (checkMatches().length > 0) {
               moved = true;
-              setTimeout(() => resolveCascade(), 300);
+              setTimeout(() => resolveCascade(), 400);
             } else {
               [grid[j].className, grid[i].className] = [grid[i].className, grid[j].className];
             }
           }
         }
         if (!moved) setTimeout(startTurn, 900);
-      }, 600 + Math.random() * 700);
+      }, 700 + Math.random()*600);
     }
 
-    // Drag logic (тач и мышка)
-    let dragStart = null, dragIdx = null;
-    board.addEventListener("touchstart", e => {
-      const t = e.touches[0];
-      const el = document.elementFromPoint(t.clientX, t.clientY);
-      if (el && el.classList.contains("cell")) {
-        dragging = el;
-        dragIdx = Array.from(board.children).indexOf(el);
+    // === Основная КАСКАДНАЯ логика ===
+    function resolveCascade() {
+      let allCombos = [];
+      let comboStats = {red:0,green:0,blue:0,purple:0,orange:0, count:0};
+      function gatherCombos() {
+        let matches = checkMatches();
+        if (matches.length === 0) return;
+        comboStats.count += matches.length;
+        matches.forEach(g=>{
+          const color = getColor(grid[g[0]]);
+          comboStats[color] += g.length;
+          g.forEach(i=>grid[i].classList.add('highlight'));
+        });
+        setTimeout(()=>{
+          matches.flat().forEach(i=>{
+            grid[i].classList.remove("highlight");
+            grid[i].classList.add("fade");
+          });
+          setTimeout(()=>{
+            matches.flat().forEach(i=>grid[i].className = "cell");
+            dropDown();
+            setTimeout(gatherCombos, 450);
+          }, 500);
+        }, 1200);
       }
-    });
-    board.addEventListener("touchmove", e => {
-      if (!dragging) return;
-      const t = e.touches[0];
-      const el = document.elementFromPoint(t.clientX, t.clientY);
-      if (el && el.classList.contains("cell") && el !== dragging) {
-        [dragging.className, el.className] = [el.className, dragging.className];
-        dragging = el;
-      }
-    });
-    board.addEventListener("touchend", () => {
-      dragging = null;
-      board.style.pointerEvents = "none";
-      resolveCascade();
-    });
+      gatherCombos();
+      setTimeout(()=>applyEffects(comboStats), 2600); // после каскада
+    }
 
-    // Мышь
-    board.addEventListener("mousedown", e => {
-      if (e.target.classList.contains("cell")) {
-        dragStart = e.target;
+    // === Расчёт урона и эффектов по ВСЕМ комбо ===
+    function applyEffects(cs) {
+      // cs — comboStats с накопленными всеми цветами и кол-вом комбо
+      let dmg = 0, heal = 0, def = 0, manaGain = 0;
+      if (cs.red>=5) dmg+=20; else if(cs.red>=3) dmg+=10;
+      if (cs.green>=5) heal+=10; else if(cs.green>=3) heal+=5;
+      if (cs.blue>=5) def+=10; else if(cs.blue>=3) def+=5;
+      if (cs.purple>=5) manaGain+=20; else if(cs.purple>=3) manaGain+=10;
+      if (isPlayerTurn) {
+        mana += manaGain; if(mana>100)mana=100;
+        let realDmg = dmg;
+        // делим урон между щитом и хп
+        let half = Math.floor(realDmg/2);
+        if(enemyShield>=half){enemyShield-=half;enemyHp-=(realDmg-half);}
+        else{let rem=half-enemyShield;enemyShield=0;enemyHp-=(realDmg-half+rem);}
+        shield+=def; if(shield>100)shield=100;
+        hp+=heal; if(hp>200)hp=200;
+        if(enemyHp<0)enemyHp=0;
+        battleLog.innerHTML = cs.count
+          ? `<span style="color:#66ff66;">Комбо ×${cs.count}, Урон: ${dmg}, Лечение: ${heal}, Щит: ${def}, Мана: ${manaGain}</span>`
+          : "<span style='color:#fff;'>Нет комбо!</span>";
+      } else {
+        enemyMana += manaGain; if(enemyMana>100)enemyMana=100;
+        let realDmg = dmg;
+        let half = Math.floor(realDmg/2);
+        if(shield>=half){shield-=half;hp-=(realDmg-half);}
+        else{let rem=half-shield;shield=0;hp-=(realDmg-half+rem);}
+        enemyShield+=def; if(enemyShield>100)enemyShield=100;
+        enemyHp+=heal; if(enemyHp>100)enemyHp=100;
+        if(hp<0)hp=0;
+        battleLog.innerHTML = cs.count
+          ? `<span style="color:#ff3333;">Комбо ×${cs.count}, Урон: ${dmg}, Лечение: ${heal}, Щит: ${def}, Мана: ${manaGain}</span>`
+          : "<span style='color:#fff;'>Нет комбо!</span>";
       }
-    });
-    board.addEventListener("mousemove", e => {
-      if (dragStart) {
-        let el = document.elementFromPoint(e.clientX, e.clientY);
-        if (el && el.classList.contains("cell") && el !== dragStart) {
-          [dragStart.className, el.className] = [el.className, dragStart.className];
-          dragStart = el;
+      updateStats();
+      checkEnd();
+      if (hp<=0||enemyHp<=0) return;
+      isPlayerTurn ? setTimeout(monsterTurn, 800) : setTimeout(startTurn, 900);
+    }
+
+    // === Победа/Поражение ===
+    function checkEnd() {
+      if(hp<=0){
+        endMessage.textContent = "Поражение!";
+        endScreen.style.display="flex";
+        return true;
+      }
+      if(enemyHp<=0){
+        endMessage.textContent = "Победа!";
+        endScreen.style.display="flex";
+        return true;
+      }
+      return false;
+    }
+
+    // === Движение и сбор ===
+    function dropDown() {
+      for (let c=0;c<6;c++){
+        for(let r=5;r>0;r--){
+          let i=r*6+c;
+          if(!getColor(grid[i])){
+            for(let k=r-1;k>=0;k--){
+              let up=k*6+c;
+              if(getColor(grid[up])){
+                grid[i].className = grid[up].className;
+                grid[up].className="cell";
+                break;
+              }
+            }
+          }
+        }
+        for(let r=0;r<6;r++){
+          let i=r*6+c;
+          if(!getColor(grid[i])){
+            const cls = colors[Math.floor(Math.random()*colors.length)];
+            grid[i].className = "cell "+cls;
+          }
         }
       }
-    });
-    board.addEventListener("mouseup", () => {
-      if (dragStart) {
-        dragStart = null;
-        board.style.pointerEvents = "none";
-        resolveCascade();
+    }
+    function checkMatches() {
+      const matches=[];
+      for(let r=0;r<6;r++){
+        for(let c=0;c<4;c++){
+          let i=r*6+c;
+          let a=grid[i],b=grid[i+1],c_=grid[i+2];
+          if(getColor(a)&&getColor(a)===getColor(b)&&getColor(b)===getColor(c_))
+            matches.push([i,i+1,i+2]);
+        }
       }
+      for(let c=0;c<6;c++){
+        for(let r=0;r<4;r++){
+          let i=r*6+c;
+          let a=grid[i],b=grid[i+6],c_=grid[i+12];
+          if(getColor(a)&&getColor(a)===getColor(b)&&getColor(b)===getColor(c_))
+            matches.push([i,i+6,i+12]);
+        }
+      }
+      return matches;
+    }
+    function getColor(el) {return colors.find(c=>el.classList.contains(c));}
+
+    // === Перетаскивание на мобилках ===
+    board.addEventListener("touchstart", e=>{
+      const t=e.touches[0],el=document.elementFromPoint(t.clientX,t.clientY);
+      if(el&&el.classList.contains("cell")) dragging=el;
+    });
+    board.addEventListener("touchmove", e=>{
+      if(!dragging)return;
+      const t=e.touches[0],el=document.elementFromPoint(t.clientX,t.clientY);
+      if(el&&el.classList.contains("cell")&&el!==dragging){
+        [dragging.className,el.className]=[el.className,dragging.className];
+        dragging=el;
+      }
+    });
+    board.addEventListener("touchend", ()=>{
+      dragging=null; clearTimeout(turnTimer); board.style.pointerEvents="none"; resolveCascade();
     });
 
-    // Кнопка молнии
-    lightningBtn.onclick = function() {
-      if (mana >= 20 && isPlayerTurn && !lightningUsed) {
-        lightningUsed = true;
-        mana -= 20;
-        updateStats();
-        lightningBtn.style.display = "none";
-      }
-    };
+    // === Кнопка "В меню" ===
+    backToMenuBtn.onclick = function() {
+      endScreen.style.display = "none";
+      overlay.style.display = "flex";
+    }
   </script>
-</body>
-</html>
+</body
