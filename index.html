@@ -5,65 +5,23 @@
   <title>ИСКРА: Битва TG-мини</title>
   <style>
     body {
+      margin: 0;
       background: #111;
       color: #fff;
       font-family: sans-serif;
-      margin: 0;
       text-align: center;
     }
-    h1 { color: #ffa500; margin: 16px 0 8px 0; }
-    .nicknameForm {
-      background: #231135;
-      margin: 32px auto 0 auto;
-      padding: 32px 16px 24px 16px;
-      border-radius: 28px;
-      max-width: 360px;
-      box-shadow: 0 0 32px #000a;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    .nicknameForm input {
-      padding: 12px;
-      font-size: 18px;
-      border-radius: 7px;
-      border: none;
-      margin: 18px 0 18px 0;
-      width: 230px;
-      text-align: center;
-      background: #fff;
-      color: #111;
-    }
-    .nicknameForm button {
-      background: #7b2ff2;
-      color: #fff;
-      font-weight: bold;
-      padding: 13px 40px;
-      border: none;
-      border-radius: 11px;
-      font-size: 20px;
-      cursor: pointer;
-    }
-    #mainMenu, #characterMenu, #endScreen {
-      display: none;
-      position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.94);
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      z-index: 10;
-    }
+    h1 { color: #ffa500; margin: 12px 0 6px 0; }
     #topBar {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 7px 12px;
+      padding: 5px 10px;
       font-size: 15px;
     }
     #timerBarContainer {
       flex-grow: 1;
-      height: 12px;
+      height: 10px;
       margin: 0 10px;
       background: #444;
       border-radius: 5px;
@@ -93,43 +51,78 @@
       width: 58px;
       height: 58px;
       border-radius: 50%;
-      transition: transform 0.3s ease, opacity 1s ease;
+      transition: transform 0.3s, opacity 1s;
     }
     .red    { background: radial-gradient(circle, #ff4d4d, #990000); }
     .green  { background: radial-gradient(circle, #66ff66, #006600); }
     .blue   { background: radial-gradient(circle, #66ccff, #003366); }
     .purple { background: radial-gradient(circle, #dca0ff, #440066); }
     .orange { background: radial-gradient(circle, #cc9955, #cc6600); }
-    .highlight { box-shadow: 0 0 10px 4px #ffffff88; }
+    .highlight { box-shadow: 0 0 10px 4px #fff9; }
     .fade { opacity: 0.18; }
     .enemy-turn #board { pointer-events: none; opacity: 0.2; }
-    button, .nicknameForm button {
+    #overlay, #endScreen, #mainMenu, #characterMenu {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.92);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      z-index: 99;
+    }
+    #mainMenu, #characterMenu { display: none; }
+    .floatText {
+      position: absolute;
+      font-size: 15px;
+      font-weight: bold;
+      pointer-events: none;
+      animation: floatUp 1s ease forwards;
+      z-index: 9999;
+    }
+    @keyframes floatUp {
+      from { opacity: 1; transform: translateY(0); }
+      to   { opacity: 0; transform: translateY(-30px); }
+    }
+    #overlay input {
+      padding: 10px;
+      font-size: 18px;
+      border-radius: 6px;
+      border: none;
+      margin-top: 14px;
+      width: 200px;
+      text-align: center;
+    }
+    button {
+      padding: 12px 28px;
       margin-top: 10px;
       font-size: 17px;
       border: none;
-      border-radius: 10px;
+      border-radius: 11px;
       background: #6622cc;
       color: white;
+      font-weight: bold;
       cursor: pointer;
     }
     #lightningButton {
-      margin: 12px auto;
+      margin: 10px auto;
       display: none;
       background: #ffcc00;
       color: #000;
       font-weight: bold;
     }
+    #endScreen { display: none; }
   </style>
 </head>
 <body>
   <h1>🔥 ИСКРА: Битва TG-мини 🔥</h1>
-  <div id="nicknameBlock" class="nicknameForm">
+  <div id="overlay">
     <h2 style="margin-bottom:0;">Введите имя:</h2>
     <input id="nickname" placeholder="Имя игрока" maxlength="16" autocomplete="off">
-    <button id="nextBtn">Далее</button>
+    <button onclick="showMainMenu()">Далее</button>
   </div>
-
-  <div id="topBar" style="margin-top:16px;">
+  <div id="topBar">
     <div>Вы:<br>❤️ <span id="hp">200</span><br>🛡 <span id="shield">100</span><br>🔮 <span id="mana">0</span></div>
     <div id="timerBarContainer"><div id="timerBar"></div></div>
     <div>Монстр:<br>💀 <span id="enemyHp">100</span><br>🛡 <span id="enemyShield">100</span><br>🔮 <span id="enemyMana">0</span></div>
@@ -137,7 +130,6 @@
   <div id="battleLog">Комбо появится здесь...</div>
   <div id="board"></div>
   <button id="lightningButton" onclick="useLightning()">⚡ Молния (20 маны)</button>
-
   <div id="mainMenu">
     <h2>Меню</h2>
     <button onclick="startGame()">В бой!</button>
@@ -158,7 +150,7 @@
     <button onclick="showMainMenu()">В меню</button>
   </div>
   <script>
-// ---- Все переменные (как раньше, без изменений)
+// --- Переменные и состояние
 const board = document.getElementById("board");
 const hpEl = document.getElementById("hp");
 const shieldEl = document.getElementById("shield");
@@ -167,6 +159,7 @@ const enemyShieldEl = document.getElementById("enemyShield");
 const manaEl = document.getElementById("mana");
 const enemyManaEl = document.getElementById("enemyMana");
 const timerBar = document.getElementById("timerBar");
+const overlay = document.getElementById("overlay");
 const endScreen = document.getElementById("endScreen");
 const endMessage = document.getElementById("endMessage");
 const battleLog = document.getElementById("battleLog");
@@ -183,8 +176,6 @@ const attrEls = {
   luck: document.getElementById("luck")
 };
 const nicknameInput = document.getElementById("nickname");
-const nicknameBlock = document.getElementById("nicknameBlock");
-const nextBtn = document.getElementById("nextBtn");
 
 let attributes = { str: 1, agi: 1, int: 1, vit: 1, luck: 1 };
 let xp = 0, skillPoints = 0;
@@ -197,18 +188,238 @@ let playerName = "Игрок", turnTimer;
 let comboAccumulator = {};
 const colors = ['red', 'green', 'blue', 'purple', 'orange'];
 
-// --- Главное: теперь кнопка Далее работает даже в Telegram!
-nextBtn.addEventListener('click', function() {
+// --- Главное меню и параметры
+function showMainMenu() {
   playerName = nicknameInput.value.trim() || "Игрок";
-  nicknameBlock.style.display = "none";
+  overlay.style.display = "none";
   mainMenu.style.display = "flex";
   endScreen.style.display = "none";
+}
+function showCharacterMenu() {
+  mainMenu.style.display = "none";
+  charMenu.style.display = "flex";
+  updateCharacterUI();
+}
+function backToMenu() {
+  charMenu.style.display = "none";
+  mainMenu.style.display = "flex";
+}
+function updateCharacterUI() {
+  xpEl.textContent = xp;
+  skillPointsEl.textContent = skillPoints;
+  for (let key in attributes) attrEls[key].textContent = attributes[key];
+}
+function upgrade(attr) {
+  if (skillPoints > 0) {
+    attributes[attr]++;
+    skillPoints--;
+    updateCharacterUI();
+  }
+}
+
+// --- Новый бой
+function startGame() {
+  hp = 200 + (attributes.vit-1)*10;
+  shield = 100;
+  mana = 0;
+  enemyHp = 100;
+  enemyShield = 100;
+  enemyMana = 0;
+  lightningUsed = false;
+  updateStats();
+  createGrid();
+  endScreen.style.display = "none";
+  mainMenu.style.display = "none";
+  document.body.classList.remove("enemy-turn");
+  isPlayerTurn = true;
+  lightningBtn.style.display = "none";
+  battleLog.innerHTML = "";
+  startTurn();
+}
+function updateStats() {
+  hpEl.textContent = hp;
+  shieldEl.textContent = shield;
+  manaEl.textContent = mana;
+  enemyHpEl.textContent = enemyHp;
+  enemyShieldEl.textContent = enemyShield;
+  enemyManaEl.textContent = enemyMana;
+}
+
+// --- Создание поля (БЕЗ стартовых комбо)
+function createGrid() {
+  let tries = 0;
+  do {
+    board.innerHTML = "";
+    grid = [];
+    for (let i = 0; i < 36; i++) {
+      const cell = document.createElement("div");
+      cell.className = "cell " + colors[Math.floor(Math.random() * colors.length)];
+      board.appendChild(cell);
+      grid.push(cell);
+    }
+    tries++;
+    if (tries > 50) break;
+  } while (findMatches().length > 0);
+}
+
+// --- Drag'n'Swap только по соседству
+board.addEventListener("touchstart", function(e) {
+  const t = e.touches[0];
+  const el = document.elementFromPoint(t.clientX, t.clientY);
+  if (el && el.classList.contains("cell")) {
+    dragging = el;
+    dragIdx = Array.from(board.children).indexOf(el);
+  }
 });
+board.addEventListener("touchmove", function(e) {
+  if (!dragging) return;
+  const t = e.touches[0];
+  const el = document.elementFromPoint(t.clientX, t.clientY);
+  if (el && el.classList.contains("cell") && el !== dragging) {
+    const idx2 = Array.from(board.children).indexOf(el);
+    if (isAdjacent(dragIdx, idx2)) {
+      [dragging.className, el.className] = [el.className, dragging.className];
+      dragging = el;
+      dragIdx = idx2;
+    }
+  }
+});
+board.addEventListener("touchend", function() {
+  dragging = null;
+  dragIdx = null;
+  clearInterval(turnTimer);
+  board.style.pointerEvents = "none";
+  resolveCascade();
+});
+function isAdjacent(i, j) {
+  const r1 = Math.floor(i / 6), c1 = i % 6;
+  const r2 = Math.floor(j / 6), c2 = j % 6;
+  return (Math.abs(r1 - r2) + Math.abs(c1 - c2)) === 1;
+}
 
-// Остальной JS-код боевой системы — такой же как и был у тебя (см. выше, чтобы не засорять чат)
-// ...
-// Сюда подставь твой последний рабочий код боя, createGrid, findMatches, drag&drop, startTurn и т.д.
+// --- Ход игрока/монстра, таймер, молния
+function startTurn() {
+  isPlayerTurn = true;
+  lightningUsed = false;
+  comboAccumulator = { red: 0, green: 0, blue: 0, purple: 0, orange: 0, count: 0 };
+  document.body.classList.remove("enemy-turn");
+  board.style.pointerEvents = "auto";
+  lightningBtn.style.display = mana >= 20 ? "inline-block" : "none";
+  let time = 20;
+  timerBar.style.width = "100%";
+  clearInterval(turnTimer);
+  turnTimer = setInterval(function() {
+    time--;
+    timerBar.style.width = (time * 5) + "%";
+    if (time <= 0) {
+      clearInterval(turnTimer);
+      board.style.pointerEvents = "none";
+      resolveCascade();
+    }
+  }, 1000);
+}
+function useLightning() {
+  if (mana >= 20 && isPlayerTurn && !lightningUsed) {
+    lightningUsed = true;
+    mana -= 20;
+    updateStats();
+    lightningBtn.style.display = "none";
+  }
+}
 
-</script>
-</body>
-</html>
+// --- Поиск комбо 3+
+function findMatches() {
+  let found = [];
+  // Горизонталь
+  for (let r = 0; r < 6; r++) {
+    let seq = [r * 6];
+    for (let c = 1; c < 6; c++) {
+      let i = r * 6 + c;
+      if (getColor(grid[i]) === getColor(grid[i - 1]) && getColor(grid[i])) {
+        seq.push(i);
+      } else {
+        if (seq.length >= 3) found.push(seq.slice());
+        seq = [i];
+      }
+    }
+    if (seq.length >= 3) found.push(seq.slice());
+  }
+  // Вертикаль
+  for (let c = 0; c < 6; c++) {
+    let seq = [c];
+    for (let r = 1; r < 6; r++) {
+      let i = r * 6 + c;
+      if (getColor(grid[i]) === getColor(grid[i - 6]) && getColor(grid[i])) {
+        seq.push(i);
+      } else {
+        if (seq.length >= 3) found.push(seq.slice());
+        seq = [i];
+      }
+    }
+    if (seq.length >= 3) found.push(seq.slice());
+  }
+  return found;
+}
+
+// --- Каскад
+function resolveCascade() {
+  const matches = findMatches();
+  if (matches.length === 0) {
+    applyEffects();
+    if (checkEnd()) return;
+    if (isPlayerTurn) setTimeout(monsterTurn, 800);
+    else setTimeout(startTurn, 800);
+    return;
+  }
+  matches.forEach(function(group) {
+    const color = getColor(grid[group[0]]);
+    comboAccumulator[color] = (comboAccumulator[color] || 0) + group.length;
+    comboAccumulator.count++;
+    group.forEach(function(i) { grid[i].classList.add("highlight"); });
+  });
+  setTimeout(function() {
+    matches.flat().forEach(function(i) { grid[i].classList.remove("highlight"); grid[i].classList.add("fade"); });
+    setTimeout(function() {
+      matches.flat().forEach(function(i) { grid[i].className = "cell"; });
+      dropDown();
+      setTimeout(resolveCascade, 600);
+    }, 1000);
+  }, 1000);
+}
+
+// --- Счёт урона и бонусы PG 1.5.4
+function applyEffects() {
+  const { red, green, blue, purple, orange, count } = comboAccumulator;
+  if (!count) return;
+  let dmg = red >= 5 ? 20 : red >= 3 ? 10 : 0;
+  let heal = green >= 5 ? 10 : green >= 3 ? 5 : 0;
+  let def = blue >= 5 ? 10 : blue >= 3 ? 5 : 0;
+  let manaGain = purple >= 5 ? 20 : purple >= 3 ? 10 : 0;
+  // Каскадный бонус +5% за каждое комбо сверх первого
+  const comboBonus = 1 + (count - 1) * 0.05;
+  dmg = Math.floor(dmg * comboBonus);
+  heal = Math.floor(heal * comboBonus);
+  def = Math.floor(def * comboBonus);
+  manaGain = Math.floor(manaGain * comboBonus);
+
+  let critChance = orange + (attributes.luck || 0);
+  const isCrit = Math.random() * 100 < critChance;
+  if (isCrit) dmg *= 2;
+  dmg += Math.floor(dmg * (attributes.str || 0) / 100);
+  if (isPlayerTurn && lightningUsed) dmg += 50 + Math.floor(50 * (attributes.int || 0) / 100);
+
+  if (isPlayerTurn) {
+    let half = Math.floor(dmg / 2);
+    if (enemyShield >= half) {
+      enemyShield -= half;
+      enemyHp -= (dmg - half);
+    } else {
+      let rem = half - enemyShield;
+      enemyShield = 0;
+      enemyHp -= (dmg - half + rem);
+    }
+    shield += def;
+    hp += heal;
+    if (hp > 200 + (attributes.vit-1)*10) hp = 200 + (attributes.vit-1)*10;
+    if (heal > 0) float("+" + heal, hpEl, "#00ff00");
+    if (def > 0) float("+" + def, shieldEl, "#
