@@ -89,15 +89,16 @@ let xp = 0, skillPoints = 0;
 
 let mana = 0, enemyMana = 0;
 let lightningUsed = false;
-let grid = [], dragging = null;
-let isPlayerTurn = true;
+let grid = [],
+    dragging = null;
+    let isPlayerTurn = true;
 let hp = 200, shield = 100, enemyHp = 100, enemyShield = 100;
 let playerName = "Игрок", turnTimer;
 let comboAccumulator = {};
 
 const colors = ['red', 'green', 'blue', 'purple', 'orange'];
 
-// Сразу показываем главное меню при загрузке!
+// Меню сразу при загрузке!
 window.onload = () => { 
   mainMenu.style.display = "flex";
   charMenu.style.display = "none";
@@ -335,5 +336,4 @@ function checkEnd() {
 function dropDown() {
   for (let c = 0; c < 6; c++) {
     for (let r = 5; r > 0; r--) {
-      let i = index(r, c);
-      if (!get
+      let i = index(r
