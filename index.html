@@ -1,274 +1,302 @@
 <!DOCTYPE html><html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>PG: Версия 1.4</title>
+  <meta charset="UTF-8" />
+  <title>ИСКРА: Битва v1.4</title>
   <style>
     body {
       margin: 0;
-      font-family: sans-serif;
       background-color: #111;
       color: #fff;
-    }
-    h1, h2 {
+      font-family: sans-serif;
       text-align: center;
+    }
+    h1 {
       color: #ffa500;
+      margin: 10px 0;
     }
-    .screen {
+    #topBar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 10px;
+      font-size: 14px;
+    }
+    #timerBarContainer {
+      flex-grow: 1;
+      height: 10px;
+      margin: 0 10px;
+      background: #444;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+    #timerBar {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, #33ff33, #ffff00);
+      transition: width 1s linear;
+    }
+    #battleLog {
+      margin: 5px;
+      padding: 4px;
+      font-size: 14px;
+      min-height: 30px;
+    }
+    #board {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 4px;
+      width: 360px;
+      margin: 30px auto 10px auto;
+      transition: opacity 0.3s ease;
+    }
+    .cell {
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      transition: transform 0.3s ease, opacity 1s ease;
+    }
+    .red    { background: radial-gradient(circle, #ff4d4d, #990000); }
+    .green  { background: radial-gradient(circle, #66ff66, #006600); }
+    .blue   { background: radial-gradient(circle, #66ccff, #003366); }
+    .purple { background: radial-gradient(circle, #dca0ff, #440066); }
+    .orange { background: radial-gradient(circle, #cc9955, #cc6600); }
+    .highlight { box-shadow: 0 0 10px 4px #ffffff88; }
+    .fade { opacity: 0; }
+    .enemy-turn #board {
+      pointer-events: none;
+      opacity: 0.2;
+    }
+    #overlay, #endScreen, #mainMenu, #paramScreen {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.85);
       display: none;
-      padding: 20px;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      z-index: 999;
     }
-    .active {
-      display: block;
+    .floatText {
+      position: absolute;
+      font-size: 14px;
+      font-weight: bold;
+      pointer-events: none;
+      animation: floatUp 3s ease forwards;
     }
-    #menu, #characterScreen {
-      text-align: center;
+    @keyframes floatUp {
+      from { opacity: 1; transform: translateY(0); }
+      to   { opacity: 0; transform: translateY(-30px); }
+    }
+    #overlay input {
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: none;
+      margin-top: 10px;
     }
     button {
       padding: 10px 20px;
-      margin: 10px;
+      margin-top: 10px;
       font-size: 16px;
       border: none;
       border-radius: 10px;
       background: #6622cc;
       color: white;
     }
-    .stats {
-      margin: 20px auto;
-      text-align: center;
-      max-width: 300px;
-    }
-    .stats div {
-      margin-bottom: 10px;
-      font-size: 18px;
+    #lightningButton {
+      margin: 10px auto;
+      display: none;
+      background: #ffcc00;
+      color: #000;
     }
   </style>
 </head>
 <body>
-  <div id="startScreen" class="screen active">
-    <h1>ИСКРА: Битва (v1.4)</h1>
+  <h1>🔥 ИСКРА: Битва v1.4 🔥</h1>
+  <div id="topBar">
+    <div>Вы:<br>❤️ <span id="hp">200</span> <span id="healText"></span><br>🛡 <span id="shield">100</span> <span id="defText"></span><br>🔮 <span id="mana">0</span></div>
+    <div id="timerBarContainer"><div id="timerBar"></div></div>
+    <div>Монстр:<br>💀 <span id="enemyHp">100</span> <span id="enemyHealText"></span><br>🛡 <span id="enemyShield">100</span> <span id="enemyDefText"></span><br>🔮 <span id="enemyMana">0</span></div>
+  </div>
+  <div id="battleLog">Комбо появится здесь...</div>
+  <div id="board"></div>
+  <button id="lightningButton" onclick="useLightning()">⚡ Молния (20 маны)</button>  <div id="overlay" style="display:flex">
     <h2>Введите имя:</h2>
     <input id="nickname" placeholder="Имя игрока">
-    <br><br>
-    <button onclick="enterMenu()">Продолжить</button>
-  </div>  <div id="menu" class="screen">
-    <h1>Меню</h1>
-    <button onclick="startBattle()">В Бой</button>
-    <button onclick="openCharacter()">Параметры персонажа</button>
-  </div>  <div id="characterScreen" class="screen">
-    <h1>Параметры персонажа</h1>
-    <div>Опыт (Искра): <span id="expAmount">0</span></div>
-    <div class="stats">
-      <div>Сила: <span id="str">1</span> <button onclick="upgradeStat('str')">+</button></div>
-      <div>Ловкость: <span id="agi">1</span> <button onclick="upgradeStat('agi')">+</button></div>
-      <div>Живучесть: <span id="vit">1</span> <button onclick="upgradeStat('vit')">+</button></div>
-      <div>Интеллект: <span id="int">1</span> <button onclick="upgradeStat('int')">+</button></div>
-      <div>Удача: <span id="luck">1</span> <button onclick="upgradeStat('luck')">+</button></div>
+    <button onclick="goToMainMenu()">Далее</button>
+  </div>  <div id="mainMenu">
+    <h2 id="welcome"></h2>
+    <button onclick="startGame()">В бой!</button>
+    <button onclick="openParams()">Параметры персонажа</button>
+  </div>  <div id="paramScreen">
+    <h2>Параметры персонажа</h2>
+    <div>Опыт: <span id="xp">0</span> | Доступно очков: <span id="points">0</span></div>
+    <div>
+      Сила: <span id="str">1</span> <button onclick="upgrade('str')">+</button><br>
+      Ловкость: <span id="agi">1</span> <button onclick="upgrade('agi')">+</button><br>
+      Живучесть: <span id="vit">1</span> <button onclick="upgrade('vit')">+</button><br>
+      Интеллект: <span id="int">1</span> <button onclick="upgrade('int')">+</button><br>
+      Удача: <span id="luck">1</span> <button onclick="upgrade('luck')">+</button>
     </div>
-    <button onclick="goBack()">Назад</button>
-  </div>  <div id="battleScreen" class="screen">
-    <!-- Здесь будет игровое поле и логика боя (подключу в JS части) -->
-  </div>  <script>
-    let playerName = "Игрок";
-    let experience = 0;
-    let stats = {
-      str: 1,
-      agi: 1,
-      vit: 1,
-      int: 1,
-      luck: 1
-    };
-    let unspentPoints = 0;
-
-    function enterMenu() {
-      const nameInput = document.getElementById("nickname");
-      playerName = nameInput.value || "Игрок";
-      switchScreen("menu");
-    }
-
-    function startBattle() {
-      switchScreen("battleScreen");
-      // Игровая логика боя будет здесь в JS-коде во второй части
-    }
-
-    function openCharacter() {
-      updateCharacterScreen();
-      switchScreen("characterScreen");
-    }
-
-    function goBack() {
-      switchScreen("menu");
-    }
-
-    function switchScreen(id) {
-      document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
-      document.getElementById(id).classList.add("active");
-    }
-
-    function updateCharacterScreen() {
-      document.getElementById("expAmount").textContent = experience;
-      for (let stat in stats) {
-        document.getElementById(stat).textContent = stats[stat];
-      }
-    }
-
-    function upgradeStat(stat) {
-      if (experience >= 100) {
-        stats[stat]++;
-        experience -= 100;
-        updateCharacterScreen();
-      }
-    }
-  </script></body>
+    <button onclick="backToMenu()">Назад</button>
+  </div>  <div id="endScreen" style="display:none">
+    <h2 id="endMessage">Победа!</h2>
+    <button onclick="backToMenu()">На главную</button>
+  </div><script>
+// Продолжение в следующей части — включая всю боевую логику, расчёт опыта и прокачку...
+</script></body>
 </html>
 <script>
-let stats = { strength: 1, agility: 1, vitality: 1, intellect: 1, luck: 1 };
+let hp = 200, shield = 100, mana = 0;
+let enemyHp = 100, enemyShield = 100, enemyMana = 0;
+let isPlayerTurn = true;
+let lightningUsed = false;
+let playerName = "";
 let experience = 0;
-
-function saveStats() {
-  localStorage.setItem("pg_stats", JSON.stringify(stats));
-  localStorage.setItem("pg_exp", experience);
-}
-
-function loadStats() {
-  const s = localStorage.getItem("pg_stats");
-  const e = localStorage.getItem("pg_exp");
-  if (s) stats = JSON.parse(s);
-  if (e) experience = parseInt(e);
-}
-
-function showMainMenu() {
-  document.getElementById("overlay").innerHTML = `
-    <h2>Добро пожаловать, ${playerName}</h2>
-    <button onclick="showBattle()">В бой</button>
-    <button onclick="showStats()">Параметры персонажа</button>
-  `;
-  document.getElementById("overlay").style.display = "flex";
-}
-
-function showStats() {
-  let available = Math.floor(experience / 100);
-  let html = `<h2>Параметры персонажа</h2>`;
-  html += `<div>Доступный опыт: ${experience}</div>`;
-  html += `<div>Доступно очков: ${available}</div>`;
-  for (let k in stats) {
-    html += `<div>${k.toUpperCase()}: ${stats[k]} <button onclick="upgrade('${k}')">+</button></div>`;
-  }
-  html += `<button onclick="showMainMenu()">Назад</button>`;
-  document.getElementById("overlay").innerHTML = html;
-}
-
-function upgrade(attr) {
-  if (experience >= 100) {
-    stats[attr]++;
-    experience -= 100;
-    saveStats();
-    showStats();
-  }
-}
+let levelThreshold = [100, 200, 400, 800, 1600];
+let skillPoints = 0;
+let stats = {
+  strength: 1,
+  agility: 1,
+  vitality: 1,
+  intellect: 1,
+  luck: 1,
+};
 
 function startGame() {
-  playerName = document.getElementById("nickname").value || "Игрок";
-  loadStats();
-  showMainMenu();
+  document.getElementById("startScreen").style.display = "none";
+  document.getElementById("menuScreen").style.display = "block";
 }
 
-function showBattle() {
-  document.getElementById("overlay").style.display = "none";
-  endScreen.style.display = "none";
-  document.body.classList.remove("enemy-turn");
+function openBattle() {
+  document.getElementById("menuScreen").style.display = "none";
+  document.getElementById("gameScreen").style.display = "block";
+  initBattle();
+}
+
+function openStats() {
+  document.getElementById("menuScreen").style.display = "none";
+  document.getElementById("statsScreen").style.display = "block";
+  updateStatsUI();
+}
+
+function backToMenu() {
+  document.getElementById("statsScreen").style.display = "none";
+  document.getElementById("gameScreen").style.display = "none";
+  document.getElementById("menuScreen").style.display = "block";
+}
+
+function updateStatsUI() {
+  document.getElementById("xpDisplay").innerText = experience;
+  document.getElementById("pointsDisplay").innerText = skillPoints;
+  document.getElementById("statStrength").innerText = stats.strength;
+  document.getElementById("statAgility").innerText = stats.agility;
+  document.getElementById("statVitality").innerText = stats.vitality;
+  document.getElementById("statIntellect").innerText = stats.intellect;
+  document.getElementById("statLuck").innerText = stats.luck;
+}
+
+function upgradeStat(stat) {
+  if (skillPoints > 0) {
+    stats[stat]++;
+    skillPoints--;
+    updateStatsUI();
+  }
+}
+
+function initBattle() {
+  hp = 200;
+  shield = 100;
+  mana = 0;
+  enemyHp = 100;
+  enemyShield = 100;
+  enemyMana = 0;
+  lightningUsed = false;
   isPlayerTurn = true;
-  lightningBtn.style.display = "none";
-  hp = 200; shield = 100; mana = 0;
-  enemyHp = 500; enemyShield = 300; enemyMana = 0;
-  updateStats();
-  createGrid();
+  updateHUD();
   startTurn();
 }
 
-function checkEnd() {
-  if (hp <= 0) {
-    endMessage.textContent = "Победа монстра!";
-    endScreen.style.display = "flex";
-    return true;
+function updateHUD() {
+  document.getElementById("hp").innerText = hp;
+  document.getElementById("shield").innerText = shield;
+  document.getElementById("mana").innerText = mana;
+  document.getElementById("enemyHp").innerText = enemyHp;
+  document.getElementById("enemyShield").innerText = enemyShield;
+  document.getElementById("enemyMana").innerText = enemyMana;
+  document.getElementById("lightningButton").style.display =
+    isPlayerTurn && mana >= 20 ? "inline-block" : "none";
+}
+
+function useLightning() {
+  if (isPlayerTurn && mana >= 20) {
+    lightningUsed = true;
+    mana -= 20;
+    updateHUD();
   }
+}
+
+function startTurn() {
+  isPlayerTurn = true;
+  lightningUsed = false;
+  updateHUD();
+  // Здесь вставляется логика игрового поля, сбора камней и применения урона
+}
+
+function endTurn() {
+  applyEffects();
+  updateHUD();
   if (enemyHp <= 0) {
-    endMessage.textContent = "Победа игрока!";
-    endScreen.style.display = "flex";
     experience += mana;
-    saveStats();
-    return true;
+    mana = 0;
+    while (experience >= levelThreshold[0]) {
+      experience -= levelThreshold.shift();
+      skillPoints += 5;
+    }
+    backToMenu();
+  } else {
+    isPlayerTurn = false;
+    enemyTurn();
   }
-  return false;
 }
 
 function applyEffects() {
-  const { red, green, blue, orange, purple, count } = comboAccumulator;
-  let dmg = red >= 5 ? 20 : red >= 3 ? 10 : 0;
-  let heal = green >= 5 ? 10 : green >= 3 ? 5 : 0;
-  let def = blue >= 5 ? 10 : blue >= 3 ? 5 : 0;
-  let critChance = orange + stats.luck;
-  let manaGain = purple >= 5 ? 20 : purple >= 3 ? 10 : 0;
-
-  dmg += Math.floor(dmg * stats.strength / 100);
-  def += Math.floor(def * stats.agility / 100);
-  heal += Math.floor(heal * stats.vitality / 100);
-
-  if (isPlayerTurn) {
-    mana += manaGain;
-    if (mana > 100) mana = 100;
+  let baseDamage = 10; // допустим, от красных камней
+  let damage = Math.floor(baseDamage * (1 + stats.strength / 100));
+  if (lightningUsed) damage += Math.floor(50 * (1 + stats.intellect / 100));
+  let shieldDamage = Math.floor(damage / 2);
+  let hpDamage = damage - shieldDamage;
+  if (enemyShield >= shieldDamage) {
+    enemyShield -= shieldDamage;
+    enemyHp -= hpDamage;
   } else {
-    enemyMana += manaGain;
-    if (enemyMana > 100) enemyMana = 100;
+    let left = shieldDamage - enemyShield;
+    enemyShield = 0;
+    enemyHp -= hpDamage + left;
   }
+}
 
-  let isCrit = Math.random() * 100 < critChance;
-  let totalDmg = dmg + (isCrit ? dmg : 0);
-  if (isPlayerTurn && lightningUsed) {
-    totalDmg += 50 + Math.floor(50 * stats.intellect / 100);
-  }
-
-  if (isPlayerTurn) {
-    let half = Math.floor(totalDmg / 2);
-    if (enemyShield >= half) {
-      enemyShield -= half;
-      enemyHp -= (totalDmg - half);
+function enemyTurn() {
+  setTimeout(() => {
+    let baseDamage = 10;
+    let shieldDamage = Math.floor(baseDamage / 2);
+    let hpDamage = baseDamage - shieldDamage;
+    if (shield >= shieldDamage) {
+      shield -= shieldDamage;
+      hp -= hpDamage;
     } else {
-      let rem = half - enemyShield;
-      enemyShield = 0;
-      enemyHp -= (totalDmg - half + rem);
-    }
-    shield += def;
-    hp += heal;
-    if (hp > 200) hp = 200;
-
-    if (heal > 0) float("+" + heal, hpEl, "#00ff00");
-    if (def > 0) float("+" + def, shieldEl, "#3399ff");
-
-    battleLog.innerHTML = `<span style="color:#66ff66">Комбо ×${count}, Урон: ${dmg}${isCrit ? ' (КРИТ!)' : ''}${lightningUsed ? ', +Молния' : ''}</span>`;
-
-  } else {
-    let half = Math.floor(totalDmg / 2);
-    if (shield >= half) {
-      shield -= half;
-      hp -= (totalDmg - half);
-    } else {
-      let rem = half - shield;
+      let left = shieldDamage - shield;
       shield = 0;
-      hp -= (totalDmg - half + rem);
+      hp -= hpDamage + left;
     }
-    enemyShield += def;
-    enemyHp += heal;
-    if (enemyHp > 500) enemyHp = 500;
-    if (enemyShield > 300) enemyShield = 300;
-
-    if (heal > 0) float("+" + heal, enemyHpEl, "#00ff00");
-    if (def > 0) float("+" + def, enemyShieldEl, "#3399ff");
-
-    battleLog.innerHTML = `<span style="color:#ff4444">Комбо ×${count}, Урон: ${dmg}${isCrit ? ' (КРИТ!)' : ''}</span>`;
-  }
-
-  updateStats();
-  lightningBtn.style.display = "none";
-  checkEnd();
+    if (hp <= 0) {
+      alert("Вы проиграли!");
+      backToMenu();
+    } else {
+      isPlayerTurn = true;
+      updateHUD();
+    }
+  }, 1000);
 }
 </script>
