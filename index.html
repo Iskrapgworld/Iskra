@@ -101,11 +101,7 @@
     <button onclick="showMainMenu()">В меню</button>
   </div>
   <script>
-    // Тут будет JS (вся логика) — он не помещается в это сообщение
-    // Скажи "дальше", и я продолжу именно отсюда — со всего блока <script>
-  </script>
-</body>
-</html>
+    // Переменные
 const board = document.getElementById("board");
 const hpEl = document.getElementById("hp");
 const shieldEl = document.getElementById("shield");
@@ -119,6 +115,7 @@ const battleLog = document.getElementById("battleLog");
 const manaEl = document.getElementById("mana");
 const enemyManaEl = document.getElementById("enemyMana");
 const lightningBtn = document.getElementById("lightningButton");
+
 const mainMenu = document.getElementById("mainMenu");
 const charMenu = document.getElementById("characterMenu");
 const xpEl = document.getElementById("xp");
@@ -140,6 +137,8 @@ let isPlayerTurn = true;
 let hp = 200, shield = 100, enemyHp = 100, enemyShield = 100;
 let playerName = "Игрок", turnTimer;
 let comboAccumulator = {};
+
+// Цвета
 const colors = ['red', 'green', 'blue', 'purple', 'orange'];
 
 function showMainMenu() {
@@ -147,20 +146,24 @@ function showMainMenu() {
   mainMenu.style.display = "flex";
   endScreen.style.display = "none";
 }
+
 function showCharacterMenu() {
   mainMenu.style.display = "none";
   charMenu.style.display = "flex";
   updateCharacterUI();
 }
+
 function backToMenu() {
   charMenu.style.display = "none";
   mainMenu.style.display = "flex";
 }
+
 function updateCharacterUI() {
   xpEl.textContent = xp;
   skillPointsEl.textContent = skillPoints;
   for (let key in attributes) attrEls[key].textContent = attributes[key];
 }
+
 function upgrade(attr) {
   if (skillPoints > 0) {
     attributes[attr]++;
@@ -168,6 +171,7 @@ function upgrade(attr) {
     updateCharacterUI();
   }
 }
+
 function startGame() {
   hp = 200; shield = 100; mana = 0;
   enemyHp = 100; enemyShield = 100; enemyMana = 0;
@@ -181,6 +185,7 @@ function startGame() {
   lightningBtn.style.display = "none";
   startTurn();
 }
+
 function updateStats() {
   hpEl.textContent = hp;
   shieldEl.textContent = shield;
@@ -189,6 +194,7 @@ function updateStats() {
   enemyShieldEl.textContent = enemyShield;
   enemyManaEl.textContent = enemyMana;
 }
+
 function createGrid() {
   board.innerHTML = "";
   grid = [];
@@ -199,8 +205,14 @@ function createGrid() {
     grid.push(cell);
   }
 }
-function index(r, c) { return r * 6 + c; }
-function getColor(el) { return colors.find(c => el.classList.contains(c)); }
+
+function index(r, c) {
+  return r * 6 + c;
+}
+
+function getColor(el) {
+  return colors.find(c => el.classList.contains(c));
+}
 
 function startTurn() {
   isPlayerTurn = true;
@@ -232,6 +244,7 @@ function resolveCascade() {
     isPlayerTurn ? setTimeout(monsterTurn, 800) : setTimeout(startTurn, 800);
     return;
   }
+
   matches.forEach(g => {
     const color = getColor(grid[g[0]]);
     comboAccumulator[color] = (comboAccumulator[color] || 0) + g.length;
@@ -251,13 +264,13 @@ function resolveCascade() {
     }, 600);
   }, 1000);
 }
-
-function applyEffects() {
+    function applyEffects() {
   const { red, green, blue, orange, purple, count } = comboAccumulator;
+
   let baseDmg = red >= 5 ? 20 : red >= 3 ? 10 : 0;
   let heal = green >= 5 ? 10 : green >= 3 ? 5 : 0;
   let def = blue >= 5 ? 10 : blue >= 3 ? 5 : 0;
-  let critChance = orange + attributes.luck;
+  let critChance = orange + (attributes.luck || 0);
   let manaGain = purple >= 5 ? 20 : purple >= 3 ? 10 : 0;
 
   if (isPlayerTurn) {
@@ -271,9 +284,9 @@ function applyEffects() {
   let isCrit = Math.random() * 100 < critChance;
   let totalDmg = baseDmg;
 
-  totalDmg += Math.floor(baseDmg * (count * 5) / 100); // Бонус за комбо
-  totalDmg += Math.floor(baseDmg * (attributes.str || 0) / 100); // Сила
-  if (isCrit) totalDmg += baseDmg;
+  totalDmg += Math.floor(baseDmg * (count * 5) / 100); // бонус от количества комбо
+  totalDmg += Math.floor(baseDmg * (attributes.str || 0) / 100); // сила
+  if (isCrit) totalDmg += baseDmg; // крит
   if (isPlayerTurn && lightningUsed) {
     let lightningDmg = 50 + Math.floor(50 * (attributes.int || 0) / 100);
     totalDmg += lightningDmg;
@@ -294,6 +307,7 @@ function applyEffects() {
     if (hp > 200) hp = 200;
     if (heal > 0) float("+" + heal, hpEl, "#00ff00");
     if (def > 0) float("+" + def, shieldEl, "#3399ff");
+
     battleLog.innerHTML = `<span style="color:#66ff66">Комбо ×${count}, Урон: ${totalDmg}${isCrit ? ' (КРИТ!)' : ''}${lightningUsed ? ', +Молния' : ''}</span>`;
   } else {
     let half = Math.floor(totalDmg / 2);
@@ -311,21 +325,13 @@ function applyEffects() {
     if (enemyShield > 100) enemyShield = 100;
     if (heal > 0) float("+" + heal, enemyHpEl, "#00ff00");
     if (def > 0) float("+" + def, enemyShieldEl, "#3399ff");
+
     battleLog.innerHTML = `<span style="color:#ff4444">Комбо ×${count}, Урон: ${totalDmg}${isCrit ? ' (КРИТ!)' : ''}</span>`;
   }
 
   updateStats();
   lightningBtn.style.display = "none";
   checkEnd();
-}
-
-function useLightning() {
-  if (mana >= 20 && isPlayerTurn && !lightningUsed) {
-    lightningUsed = true;
-    mana -= 20;
-    updateStats();
-    lightningBtn.style.display = "none";
-  }
 }
 
 function float(text, target, color) {
@@ -364,10 +370,10 @@ function checkEnd() {
 function dropDown() {
   for (let c = 0; c < 6; c++) {
     for (let r = 5; r > 0; r--) {
-      let i = index(r, c);
+      let i = r * 6 + c;
       if (!getColor(grid[i])) {
         for (let k = r - 1; k >= 0; k--) {
-          let up = index(k, c);
+          let up = k * 6 + c;
           if (getColor(grid[up])) {
             grid[i].className = grid[up].className;
             grid[up].className = "cell";
@@ -377,7 +383,7 @@ function dropDown() {
       }
     }
     for (let r = 0; r < 6; r++) {
-      let i = index(r, c);
+      let i = r * 6 + c;
       if (!getColor(grid[i])) {
         const cls = colors[Math.floor(Math.random() * colors.length)];
         grid[i].className = "cell " + cls;
@@ -390,7 +396,7 @@ function checkMatches() {
   const matches = [];
   for (let r = 0; r < 6; r++) {
     for (let c = 0; c < 4; c++) {
-      let i = index(r, c);
+      let i = r * 6 + c;
       let a = grid[i], b = grid[i + 1], c_ = grid[i + 2];
       if (getColor(a) === getColor(b) && getColor(b) === getColor(c_))
         matches.push([i, i + 1, i + 2]);
@@ -398,7 +404,7 @@ function checkMatches() {
   }
   for (let c = 0; c < 6; c++) {
     for (let r = 0; r < 4; r++) {
-      let i = index(r, c);
+      let i = r * 6 + c;
       let a = grid[i], b = grid[i + 6], c_ = grid[i + 12];
       if (getColor(a) === getColor(b) && getColor(b) === getColor(c_))
         matches.push([i, i + 6, i + 12]);
@@ -428,6 +434,7 @@ function monsterTurn() {
   }, 800 + Math.random() * 1000);
 }
 
+// Drag logic (для касаний)
 board.addEventListener("touchstart", e => {
   const t = e.touches[0];
   const el = document.elementFromPoint(t.clientX, t.clientY);
@@ -442,9 +449,6 @@ board.addEventListener("touchmove", e => {
     dragging = el;
   }
 });
-board.addEventListener("touchend", () => {
-  dragging = null;
-  clearInterval(turnTimer);
-  board.style.pointerEvents = "none";
-  resolveCascade();
-});
+</script>
+</body>
+</html>
