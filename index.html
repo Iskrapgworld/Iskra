@@ -374,4 +374,9 @@ board.addEventListener("touchmove",e=>{
   if(!dragging)return;
   const t=e.touches[0],el=document.elementFromPoint(t.clientX,t.clientY);
   if(el&&el.classList.contains("cell")&&el!==dragging){
-    [dragging.className,el.className]=
+    [dragging.className,el.className]=[el.className,dragging.className];
+    dragging=el;
+  }
+});
+board.addEventListener("touchend",()=>{
+  dragging=null;
