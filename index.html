@@ -26,7 +26,9 @@
     #battleLog {margin: 12px auto; padding: 7px; font-size: 20px; min-height: 36px;}
     #overlay, #endScreen {position: fixed;top: 0;left: 0;width: 100vw;height: 100vh;background: rgba(12,0,18,0.93);display: flex;flex-direction: column;align-items: center;justify-content: center;z-index: 5;}
     #overlay input {padding: 10px;font-size: 18px;border-radius: 7px;border: none;margin-bottom: 16px;width: 250px;}
-    #overlay button, #endScreen button {padding: 12px 35px; font-size: 20px; border-radius: 13px; border: none; background: #9c4fff; color: #fff; margin-top: 10px;}
+    #overlay button, #endScreen button, #lightningButton {padding: 12px 35px; font-size: 20px; border-radius: 13px; border: none; background: #9c4fff; color: #fff; margin-top: 10px;}
+    #lightningButton {background: #ffcc00; color: #2b202b; margin-bottom: 0;}
+    #lightningButton[disabled] {opacity: 0.5;}
     #endScreen {display:none;}
   </style>
 </head>
@@ -52,6 +54,7 @@
       <div class="bar mana-bar" id="enemyManaBar"></div>
     </div>
   </div>
+  <button id="lightningButton" style="display:none;margin:16px auto;">⚡ Молния (20 маны)</button>
   <div id="battleLog">Комбо появится здесь…</div>
   <div id="board"></div>
   <div id="overlay">
@@ -88,6 +91,7 @@
     const endScreen = document.getElementById("endScreen");
     const endMessage = document.getElementById("endMessage");
     const backToMenuBtn = document.getElementById("backToMenuBtn");
+    const lightningBtn = document.getElementById("lightningButton");
 
     // --- Цвета
     const colors = ['red','green','blue','purple','orange'];
@@ -100,6 +104,7 @@
 
     // === Вход
     document.getElementById('loginBtn').addEventListener('click', enterGame);
+    lightningBtn.onclick = useLightning;
 
     function enterGame() {
       playerName = document.getElementById('nickname').value || 'Игрок';
@@ -118,6 +123,7 @@
       createGridNoCombos();
       endScreen.style.display = "none";
       document.body.classList.remove("enemy-turn");
+      battleLog.innerHTML = "Комбо появится здесь…";
       startTurn();
     }
 
@@ -131,6 +137,8 @@
       enemyHpBar.style.width = (enemyHp/100*170) + "px";
       enemyShieldBar.style.width = (enemyShield/100*170) + "px";
       enemyManaBar.style.width = (enemyMana/100*170) + "px";
+      lightningBtn.style.display = (isPlayerTurn && mana>=20 && !lightningUsed) ? "block":"none";
+      lightningBtn.disabled = !(isPlayerTurn && mana>=20 && !lightningUsed);
     }
 
     // === Поле БЕЗ стартовых комбо ===
@@ -147,22 +155,24 @@
       } while(checkMatches().length > 0);
     }
 
-    // === Логика боя ===
+    // === БОЕВАЯ МЕХАНИКА С КАСКАДАМИ И БОНУСАМИ ===
     function startTurn() {
       isPlayerTurn = true;
       lightningUsed = false;
       document.body.classList.remove("enemy-turn");
       board.style.pointerEvents = "auto";
+      updateStats();
       turnTimer = setTimeout(() => {
         board.style.pointerEvents = "none";
         resolveCascade();
       }, 20000); // 20 сек
     }
 
-    // --- Логика монстра ---
     function monsterTurn() {
       isPlayerTurn = false;
       document.body.classList.add("enemy-turn");
+      lightningUsed = false;
+      lightningBtn.style.display = "none";
       setTimeout(() => {
         let moved = false;
         for (let i = 0; i < 36 && !moved; i++) {
@@ -180,17 +190,22 @@
       }, 700 + Math.random()*600);
     }
 
-    // === Основная КАСКАДНАЯ логика ===
+    // КАСКАД: собирает все комбо (основные + выпавшие) и суммирует эффекты
     function resolveCascade() {
-      let allCombos = [];
-      let comboStats = {red:0,green:0,blue:0,purple:0,orange:0, count:0};
-      function gatherCombos() {
+      let totalCombos = 0;
+      let red = 0, green = 0, blue = 0, purple = 0, orange = 0;
+      function processCascade(next) {
         let matches = checkMatches();
-        if (matches.length === 0) return;
-        comboStats.count += matches.length;
+        if (!matches.length) return next();
+        totalCombos += matches.length;
         matches.forEach(g=>{
-          const color = getColor(grid[g[0]]);
-          comboStats[color] += g.length;
+          let color = getColor(grid[g[0]]);
+          let count = g.length;
+          if (color==="red") red += count;
+          if (color==="green") green += count;
+          if (color==="blue") blue += count;
+          if (color==="purple") purple += count;
+          if (color==="orange") orange += count;
           g.forEach(i=>grid[i].classList.add('highlight'));
         });
         setTimeout(()=>{
@@ -201,25 +216,34 @@
           setTimeout(()=>{
             matches.flat().forEach(i=>grid[i].className = "cell");
             dropDown();
-            setTimeout(gatherCombos, 450);
-          }, 500);
-        }, 1200);
+            setTimeout(()=>processCascade(next), 350);
+          }, 600);
+        }, 1100);
       }
-      gatherCombos();
-      setTimeout(()=>applyEffects(comboStats), 2600); // после каскада
+      processCascade(()=>{
+        setTimeout(()=>applyEffects({red,green,blue,purple,orange,totalCombos}), 500);
+      });
     }
 
-    // === Расчёт урона и эффектов по ВСЕМ комбо ===
+    // Эффекты по всем комбо + бонус за кол-во комбо
     function applyEffects(cs) {
-      // cs — comboStats с накопленными всеми цветами и кол-вом комбо
+      let {red, green, blue, purple, orange, totalCombos} = cs;
+      // Основные эффекты (одноразово за всё каскадирование)
       let dmg = 0, heal = 0, def = 0, manaGain = 0;
-      if (cs.red>=5) dmg+=20; else if(cs.red>=3) dmg+=10;
-      if (cs.green>=5) heal+=10; else if(cs.green>=3) heal+=5;
-      if (cs.blue>=5) def+=10; else if(cs.blue>=3) def+=5;
-      if (cs.purple>=5) manaGain+=20; else if(cs.purple>=3) manaGain+=10;
+      // УРОН, ЛЕЧЕНИЕ и т.д. — по сумме кристаллов (с учетом 5+)
+      if (red>=5) dmg+=20; else if(red>=3) dmg+=10;
+      if (green>=5) heal+=10; else if(green>=3) heal+=5;
+      if (blue>=5) def+=10; else if(blue>=3) def+=5;
+      if (purple>=5) manaGain+=20; else if(purple>=3) manaGain+=10;
+      // БОНУС за КАЖДОЕ комбо: +5% урона за комбо (включая каскады)
+      let comboBonus = 1 + (totalCombos-1)*0.05; // 2 комбо = +5%, 3 = +10% и т.д.
+      if (totalCombos > 1) dmg = Math.round(dmg*comboBonus);
+
+      let logMsg = '';
       if (isPlayerTurn) {
         mana += manaGain; if(mana>100)mana=100;
         let realDmg = dmg;
+        if (lightningUsed) { realDmg += 50; logMsg += "⚡ +Молния! "; mana -= 20; if(mana<0)mana=0;}
         // делим урон между щитом и хп
         let half = Math.floor(realDmg/2);
         if(enemyShield>=half){enemyShield-=half;enemyHp-=(realDmg-half);}
@@ -227,9 +251,7 @@
         shield+=def; if(shield>100)shield=100;
         hp+=heal; if(hp>200)hp=200;
         if(enemyHp<0)enemyHp=0;
-        battleLog.innerHTML = cs.count
-          ? `<span style="color:#66ff66;">Комбо ×${cs.count}, Урон: ${dmg}, Лечение: ${heal}, Щит: ${def}, Мана: ${manaGain}</span>`
-          : "<span style='color:#fff;'>Нет комбо!</span>";
+        logMsg += `<span style="color:#66ff66;">Комбо ×${totalCombos}, Урон: ${realDmg}, Лечение: ${heal}, Щит: ${def}, Мана: ${manaGain}</span>`;
       } else {
         enemyMana += manaGain; if(enemyMana>100)enemyMana=100;
         let realDmg = dmg;
@@ -239,14 +261,20 @@
         enemyShield+=def; if(enemyShield>100)enemyShield=100;
         enemyHp+=heal; if(enemyHp>100)enemyHp=100;
         if(hp<0)hp=0;
-        battleLog.innerHTML = cs.count
-          ? `<span style="color:#ff3333;">Комбо ×${cs.count}, Урон: ${dmg}, Лечение: ${heal}, Щит: ${def}, Мана: ${manaGain}</span>`
-          : "<span style='color:#fff;'>Нет комбо!</span>";
+        logMsg += `<span style="color:#ff3333;">Комбо ×${totalCombos}, Урон: ${realDmg}, Лечение: ${heal}, Щит: ${def}, Мана: ${manaGain}</span>`;
       }
+      battleLog.innerHTML = logMsg;
       updateStats();
-      checkEnd();
-      if (hp<=0||enemyHp<=0) return;
-      isPlayerTurn ? setTimeout(monsterTurn, 800) : setTimeout(startTurn, 900);
+      if (checkEnd()) return;
+      isPlayerTurn ? setTimeout(monsterTurn, 850) : setTimeout(startTurn, 900);
+    }
+
+    function useLightning() {
+      if (mana>=20 && isPlayerTurn && !lightningUsed) {
+        lightningUsed = true;
+        updateStats();
+        lightningBtn.style.display = "none";
+      }
     }
 
     // === Победа/Поражение ===
@@ -265,73 +293,3 @@
     }
 
     // === Движение и сбор ===
-    function dropDown() {
-      for (let c=0;c<6;c++){
-        for(let r=5;r>0;r--){
-          let i=r*6+c;
-          if(!getColor(grid[i])){
-            for(let k=r-1;k>=0;k--){
-              let up=k*6+c;
-              if(getColor(grid[up])){
-                grid[i].className = grid[up].className;
-                grid[up].className="cell";
-                break;
-              }
-            }
-          }
-        }
-        for(let r=0;r<6;r++){
-          let i=r*6+c;
-          if(!getColor(grid[i])){
-            const cls = colors[Math.floor(Math.random()*colors.length)];
-            grid[i].className = "cell "+cls;
-          }
-        }
-      }
-    }
-    function checkMatches() {
-      const matches=[];
-      for(let r=0;r<6;r++){
-        for(let c=0;c<4;c++){
-          let i=r*6+c;
-          let a=grid[i],b=grid[i+1],c_=grid[i+2];
-          if(getColor(a)&&getColor(a)===getColor(b)&&getColor(b)===getColor(c_))
-            matches.push([i,i+1,i+2]);
-        }
-      }
-      for(let c=0;c<6;c++){
-        for(let r=0;r<4;r++){
-          let i=r*6+c;
-          let a=grid[i],b=grid[i+6],c_=grid[i+12];
-          if(getColor(a)&&getColor(a)===getColor(b)&&getColor(b)===getColor(c_))
-            matches.push([i,i+6,i+12]);
-        }
-      }
-      return matches;
-    }
-    function getColor(el) {return colors.find(c=>el.classList.contains(c));}
-
-    // === Перетаскивание на мобилках ===
-    board.addEventListener("touchstart", e=>{
-      const t=e.touches[0],el=document.elementFromPoint(t.clientX,t.clientY);
-      if(el&&el.classList.contains("cell")) dragging=el;
-    });
-    board.addEventListener("touchmove", e=>{
-      if(!dragging)return;
-      const t=e.touches[0],el=document.elementFromPoint(t.clientX,t.clientY);
-      if(el&&el.classList.contains("cell")&&el!==dragging){
-        [dragging.className,el.className]=[el.className,dragging.className];
-        dragging=el;
-      }
-    });
-    board.addEventListener("touchend", ()=>{
-      dragging=null; clearTimeout(turnTimer); board.style.pointerEvents="none"; resolveCascade();
-    });
-
-    // === Кнопка "В меню" ===
-    backToMenuBtn.onclick = function() {
-      endScreen.style.display = "none";
-      overlay.style.display = "flex";
-    }
-  </script>
-</body
