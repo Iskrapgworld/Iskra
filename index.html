@@ -206,13 +206,13 @@
       if (nick && pass) {
         document.getElementById('loginBox').style.display = "none";
         document.getElementById('gameArea').style.display = "block";
+        startGame(); // <--- тут!
       } else {
         alert('Введите ник и пароль!');
       }
     };
 
     // --- ИГРОВАЯ ЛОГИКА ---
-    // Элементы
     const board = document.getElementById("board");
     const hpEl = document.getElementById("hp");
     const shieldEl = document.getElementById("shield");
@@ -229,14 +229,12 @@
     const battleLog = document.getElementById("battleLog");
     const lightningBtn = document.getElementById("lightningButton");
 
-    // Игровые параметры
     let hp = 200, shield = 100, mana = 0;
     let enemyHp = 100, enemyShield = 100, enemyMana = 0;
-    let isPlayerTurn = true, lightningUsed = false, turnTimer = null;
+    let isPlayerTurn = true, lightningUsed = false;
     let grid = [], dragging = null, comboAccumulator = {};
     const colors = ['red', 'green', 'blue', 'purple', 'orange'];
 
-    // Старт игры
     function startGame() {
       hp = 200; shield = 100; mana = 0;
       enemyHp = 100; enemyShield = 100; enemyMana = 0;
@@ -248,10 +246,7 @@
       lightningBtn.style.display = "none";
       startTurn();
     }
-    // Сразу после логина — запускаем игру
-    document.getElementById('loginBtn').addEventListener('click', startGame);
 
-    // Обновление статусов
     function updateStats() {
       hpEl.textContent = hp;
       shieldEl.textContent = shield;
@@ -267,7 +262,6 @@
       enemyManaBar.style.width = (enemyMana/100*100)+"%";
     }
 
-    // Поле 6x6 без стартовых комбо
     function createGrid() {
       do {
         board.innerHTML = "";
@@ -281,11 +275,9 @@
       } while (checkMatches().length > 0);
     }
 
-    // Индекс в массиве по рядам/колонкам
     function index(r, c) { return r*6+c; }
     function getColor(el) { return colors.find(c=>el.classList.contains(c)); }
 
-    // Ход игрока/бота
     function startTurn() {
       isPlayerTurn = true;
       lightningUsed = false;
@@ -322,7 +314,6 @@
       },1100);
     }
 
-    // Подсчёт и применение урона, щита, маны и пр.
     function applyEffects() {
       const {red,green,blue,orange,purple,count}=comboAccumulator;
       let dmg = red>=5?20:red>=3?10:0;
@@ -371,7 +362,6 @@
       checkEnd();
     }
 
-    // Эффект +хп/щит
     function showFloat(val, color, target) {
       if (!val) return;
       const box = document.createElement("div");
@@ -385,7 +375,6 @@
       setTimeout(()=>box.remove(),1150);
     }
 
-    // Проверка конца боя
     function checkEnd() {
       if (hp<=0) {
         battleLog.innerHTML = '<span style="color:#f55;font-weight:bold">Поражение…</span>';
@@ -394,4 +383,18 @@
         return true;
       }
       if (enemyHp<=0) {
-        battleLog.innerHTML = '<span style="color:#7fff
+        battleLog.innerHTML = '<span style="color:#7fff63;font-weight:bold">Победа!</span>';
+        board.style.pointerEvents = "none";
+        setTimeout(startGame, 2400);
+        return true;
+      }
+      return false;
+    }
+
+    function dropDown() {
+      for (let c = 0; c < 6; c++) {
+        for (let r = 5; r > 0; r--) {
+          let i = index(r,c);
+          if (!getColor(grid[i])) {
+            for (let k=r-1;k>=0;k--) {
+              let up=index(k,c);
