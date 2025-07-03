@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ИСКРА: Битва v1.5</title>
+  <title>ИСКРА: Битва v1.5-PvP-Lobby</title>
   <style>
     body { margin: 0; background: #111; color: #fff; font-family: sans-serif; text-align: center; touch-action: manipulation;}
     h1 { color: #ffa500; margin: 16px 0 10px 0; font-size: 2rem;}
@@ -29,10 +29,16 @@
     #lightningButton { margin: 12px auto 0 auto; display: none; background: #ffcc00; color: #000; font-weight: bold;}
     .floatText { position: absolute; font-size: 15px; font-weight: bold; pointer-events: none; animation: floatUp 1s ease forwards; z-index: 1000;}
     @keyframes floatUp { from { opacity: 1; transform: translateY(0);} to { opacity: 0; transform: translateY(-30px); } }
+    /* --- PvP lobby --- */
+    #lobbyList { min-width:260px; margin:18px auto 8px auto; text-align:left; background:#212040; padding:14px; border-radius:12px; }
+    .lobby-player { padding:8px 0; border-bottom:1px solid #29294c; }
+    .lobby-player:last-child { border-bottom: none; }
+    .invite-btn { padding: 6px 18px; margin-left:10px; border-radius: 8px; border:none; background:#222; color:#ffa500; font-size:1rem; cursor:pointer; }
+    .invite-btn:hover { background: #ffa500; color:#111; }
   </style>
 </head>
 <body>
-  <h1>🔥 ИСКРА: Битва v1.5 🔥</h1>
+  <h1>🔥 ИСКРА: Битва v1.5 PvP 🔥</h1>
   <div id="topBar">
     <div>Вы:<br>❤️ <span id="hp">200</span> <span id="healText"></span><br>🛡 <span id="shield">100</span> <span id="defText"></span><br>🔮 <span id="mana">0</span></div>
     <div id="timerBarContainer"><div id="timerBar"></div></div>
@@ -42,11 +48,11 @@
   <div id="board"></div>
   <button id="lightningButton" onclick="useLightning()">⚡ Молния (20 маны)</button>
 
-  <!-- Стартовое меню -->
+  <!-- Главное меню -->
   <div id="menuScreen" class="screen active">
     <h2>Главное меню</h2>
     <button class="menu-btn" onclick="showScreen('battle')">PVE: Бой с монстром</button>
-    <button class="menu-btn" onclick="showScreen('pvp')">PVP: Дуэль (скоро)</button>
+    <button class="menu-btn" onclick="showScreen('pvp')">PVP: Дуэль (бета)</button>
     <button class="menu-btn" onclick="showScreen('char')">Параметры героя</button>
   </div>
   <!-- Экран персонажа -->
@@ -60,10 +66,10 @@
     <div>Удача: <span id="luck">1</span> <button class="skill-btn" onclick="upgrade('luck')">+</button></div>
     <button class="menu-btn" onclick="showScreen('menu')">Назад</button>
   </div>
-  <!-- Экран PVP (заглушка) -->
+  <!-- Экран PVP: Лобби -->
   <div id="pvpScreen" class="screen">
-    <h2>PVP: Дуэль</h2>
-    <p>Скоро тут будет дуэль с друзьями!</p>
+    <h2>Арена PvP</h2>
+    <div id="lobbyList"></div>
     <button class="menu-btn" onclick="showScreen('menu')">Назад</button>
   </div>
   <!-- Экран окончания боя -->
@@ -71,73 +77,69 @@
     <h2 id="endMessage">Победа!</h2>
     <button class="menu-btn" onclick="showScreen('menu')">В меню</button>
   </div>
-
   <script>
-    // ==== Основная переменная для управления экранами ====
-function showScreen(screen) {
-  // Скрыть все
-  document.querySelectorAll('.screen').forEach(div => div.classList.remove('active'));
-  // Показать нужный экран
-  if (screen === 'menu') document.getElementById('menuScreen').classList.add('active');
-  if (screen === 'char') {
-    updateCharacterUI();
-    document.getElementById('charScreen').classList.add('active');
-  }
-  if (screen === 'battle') {
-    // Сброс и старт боя
-    startGame();
-    // Скрыть меню, показать всё для битвы
-  }
-  if (screen === 'pvp') document.getElementById('pvpScreen').classList.add('active');
-  if (screen === 'end') document.getElementById('endScreen').classList.add('active');
-}
+    // === Управление экранами ===
+    function showScreen(screen) {
+      document.querySelectorAll('.screen').forEach(div => div.classList.remove('active'));
+      if (screen === 'menu') document.getElementById('menuScreen').classList.add('active');
+      if (screen === 'char') {
+        updateCharacterUI();
+        document.getElementById('charScreen').classList.add('active');
+      }
+      if (screen === 'battle') startGame();
+      if (screen === 'pvp') {
+        document.getElementById('pvpScreen').classList.add('active');
+        // Показываем лобби
+        renderLobby(window.fakePlayers || [{name:playerName, lvl:Math.floor(xp/20)+1, status:'Готов'}]);
+      }
+      if (screen === 'end') document.getElementById('endScreen').classList.add('active');
+    }
 
-// ======= Твои переменные и логика из оригинального кода =======
-const board = document.getElementById("board");
-const hpEl = document.getElementById("hp");
-const shieldEl = document.getElementById("shield");
-const enemyHpEl = document.getElementById("enemyHp");
-const enemyShieldEl = document.getElementById("enemyShield");
-const timerBar = document.getElementById("timerBar");
-const endScreen = document.getElementById("endScreen");
-const endMessage = document.getElementById("endMessage");
-const battleLog = document.getElementById("battleLog");
-const manaEl = document.getElementById("mana");
-const enemyManaEl = document.getElementById("enemyMana");
-const lightningBtn = document.getElementById("lightningButton");
-const xpEl = document.getElementById("xp");
-const skillPointsEl = document.getElementById("skillPoints");
-const attrEls = {
-  str: document.getElementById("str"),
-  agi: document.getElementById("agi"),
-  int: document.getElementById("int"),
-  vit: document.getElementById("vit"),
-  luck: document.getElementById("luck")
-};
+    // ======= Переменные =======
+    const board = document.getElementById("board");
+    const hpEl = document.getElementById("hp");
+    const shieldEl = document.getElementById("shield");
+    const enemyHpEl = document.getElementById("enemyHp");
+    const enemyShieldEl = document.getElementById("enemyShield");
+    const timerBar = document.getElementById("timerBar");
+    const endScreen = document.getElementById("endScreen");
+    const endMessage = document.getElementById("endMessage");
+    const battleLog = document.getElementById("battleLog");
+    const manaEl = document.getElementById("mana");
+    const enemyManaEl = document.getElementById("enemyMana");
+    const lightningBtn = document.getElementById("lightningButton");
+    const xpEl = document.getElementById("xp");
+    const skillPointsEl = document.getElementById("skillPoints");
+    const attrEls = {
+      str: document.getElementById("str"),
+      agi: document.getElementById("agi"),
+      int: document.getElementById("int"),
+      vit: document.getElementById("vit"),
+      luck: document.getElementById("luck")
+    };
 
-let attributes = { str: 1, agi: 1, int: 1, vit: 1, luck: 1 };
-let xp = 0, skillPoints = 0;
-let mana = 0, enemyMana = 0;
-let lightningUsed = false;
-let grid = [],
-    dragging = null;
-let isPlayerTurn = true;
-let hp = 200, shield = 100, enemyHp = 100, enemyShield = 100;
+    let playerName = "Ладрин"; // Здесь можно брать имя игрока из Telegram
+    let attributes = { str: 1, agi: 1, int: 1, vit: 1, luck: 1 };
+    let xp = 0, skillPoints = 0;
+    let mana = 0, enemyMana = 0;
+    let lightningUsed = false;
+    let grid = [],
+        dragging = null;
+    let isPlayerTurn = true;
+    let hp = 200, shield = 100, enemyHp = 100, enemyShield = 100;
 let turnTimer;
 let comboAccumulator = {};
 
 const colors = ['red', 'green', 'blue', 'purple', 'orange'];
 
-// ===== Стартовый экран сразу при загрузке =====
+// ===== Стартовый экран при загрузке =====
 window.onload = () => {
   showScreen('menu');
   updateCharacterUI();
-  // Сбросить все игровые экраны
   document.body.classList.remove("enemy-turn");
   document.getElementById("board").innerHTML = '';
   battleLog.textContent = "Комбо появится здесь...";
   lightningBtn.style.display = "none";
-  // Сбросить HP/shield/mana на меню
   hpEl.textContent = "200";
   shieldEl.textContent = "100";
   manaEl.textContent = "0";
@@ -146,6 +148,38 @@ window.onload = () => {
   enemyManaEl.textContent = "0";
 };
 
+// ======= Лобби PvP (пока офлайн/заглушка) =======
+function renderLobby(players) {
+  // Пример массива игроков
+  // [{name:'Ладрин', lvl:2, status:'В игре'}, ...]
+  // Тут будет запрос к серверу/Telegram для получения списка игроков
+  const lobby = document.getElementById('lobbyList');
+  // Заглушка: если игроков мало, дорисовать фейковых
+  if (!players || players.length < 2) {
+    players = [
+      { name: playerName, lvl: Math.floor(xp/20)+1, status: "В Лобби" },
+      { name: "Искра", lvl: 5, status: "Готов" },
+      { name: "Друид", lvl: 2, status: "Готов" },
+      { name: "Тестовый", lvl: 1, status: "Готов" }
+    ];
+  }
+  lobby.innerHTML = '';
+  players.forEach(pl => {
+    const you = pl.name === playerName;
+    let html = `<div class="lobby-player"><b>${pl.name}</b> <span style="font-size:0.9em; color:#aaa;">[ур. ${pl.lvl}]</span> — <span style="color:${you ? '#33ff33' : '#ffa500'}">${pl.status}${you?' (Вы)':''}</span>`;
+    if (!you) html += ` <button class="invite-btn" onclick="invitePlayer('${pl.name}')">Пригласить</button>`;
+    html += `</div>`;
+    lobby.innerHTML += html;
+  });
+}
+
+// "Приглашение" игрока (заглушка)
+function invitePlayer(name) {
+  alert(`Вы пригласили ${name} к дуэли! (В онлайн-версии тут отправится запрос на сервер/боту)`);
+  // В будущем: showInviteDialog(name), socket.emit('invite', ...), и т.п.
+}
+
+// ======= Параметры и прокачка =======
 function updateCharacterUI() {
   xpEl.textContent = xp;
   skillPointsEl.textContent = skillPoints;
@@ -160,8 +194,9 @@ function upgrade(attr) {
     updateCharacterUI();
   }
 }
+
+// ======= PVE бой =======
 function startGame() {
-  // Скрыть все экраны кроме поля боя
   document.querySelectorAll('.screen').forEach(div => div.classList.remove('active'));
   hp = 200 + (attributes.vit * 10); 
   shield = 100; 
@@ -464,6 +499,3 @@ board.addEventListener("touchend", () => {
   clearInterval(turnTimer);
   endTurn();
 });
-</script>
-</body>
-</html>
