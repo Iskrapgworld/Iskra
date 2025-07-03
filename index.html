@@ -104,43 +104,46 @@ let playerName = "Игрок", turnTimer;
 let comboAccumulator = {};
 
 const colors = ['red', 'green', 'blue', 'purple', 'orange'];
-    // Показ меню сразу при загрузке
-window.onload = () => { 
-  mainMenu.style.display = "flex";
+    // Helper для скрытия всех окон
+function hideAllMenus() {
+  mainMenu.style.display = "none";
   charMenu.style.display = "none";
   endScreen.style.display = "none";
   pvpMenu.style.display = "none";
+}
+
+// Показ меню сразу при загрузке
+window.onload = () => {
+  hideAllMenus();
+  mainMenu.style.display = "flex";
   updateCharacterUI();
 };
 
 function showMainMenu() {
+  hideAllMenus();
   mainMenu.style.display = "flex";
-  charMenu.style.display = "none";
-  endScreen.style.display = "none";
-  pvpMenu.style.display = "none";
   updateCharacterUI();
 }
 function showCharacterMenu() {
-  mainMenu.style.display = "none";
+  hideAllMenus();
   charMenu.style.display = "flex";
-  pvpMenu.style.display = "none";
   updateCharacterUI();
 }
 function backToMenu() {
-  charMenu.style.display = "none";
+  hideAllMenus();
   mainMenu.style.display = "flex";
-  pvpMenu.style.display = "none";
 }
 function showPVPMenu() {
-  mainMenu.style.display = "none";
-  charMenu.style.display = "none";
+  hideAllMenus();
   pvpMenu.style.display = "flex";
-  endScreen.style.display = "none";
 }
 function closePVPMenu() {
-  pvpMenu.style.display = "none";
+  hideAllMenus();
   mainMenu.style.display = "flex";
 }
+
+// --- (всё остальное без изменений) ---
+
 function updateCharacterUI() {
   xpEl.textContent = xp;
   skillPointsEl.textContent = skillPoints;
@@ -165,10 +168,7 @@ function startGame() {
   lightningUsed = false;
   updateStats();
   createGrid();
-  endScreen.style.display = "none";
-  mainMenu.style.display = "none";
-  charMenu.style.display = "none";
-  pvpMenu.style.display = "none";
+  hideAllMenus();
   document.body.classList.remove("enemy-turn");
   isPlayerTurn = true;
   lightningBtn.style.display = "none";
@@ -323,4 +323,145 @@ function useLightning() {
   }
 }
 function float(text, target, color) {
-  const box = document.create
+  const box = document.createElement("div");
+  box.className = "floatText";
+  box.textContent = text;
+  box.style.color = color;
+  const rect = target.getBoundingClientRect();
+  box.style.left = (rect.left + rect.width / 2) + "px";
+  box.style.top = (rect.top - 10) + "px";
+  document.body.appendChild(box);
+  setTimeout(() => box.remove(), 1500);
+}
+function checkEnd() {
+  if (hp <= 0) {
+    endMessage.textContent = "Поражение...";
+    hideAllMenus();
+    endScreen.style.display = "flex";
+    return true;
+  }
+  if (enemyHp <= 0) {
+    endMessage.textContent = "Победа!";
+    let earnedXp = mana + 20;
+    xp += earnedXp;
+    mana = 0;
+    while (xp >= 100) {
+      xp -= 100;
+      skillPoints += 1;
+    }
+    updateCharacterUI();
+    hideAllMenus();
+    endScreen.style.display = "flex";
+    return true;
+  }
+  return false;
+}
+function dropDown() {
+  for (let c = 0; c < 6; c++) {
+    for (let r = 5; r > 0; r--) {
+      let i = index(r, c);
+      if (!getColor(grid[i])) {
+        for (let k = r - 1; k >= 0; k--) {
+          let up = index(k, c);
+          if (getColor(grid[up])) {
+            grid[i].className = grid[up].className;
+            grid[up].className = "cell";
+            break;
+          }
+        }
+      }
+    }
+    for (let r = 0; r < 6; r++) {
+      let i = index(r, c);
+      if (!getColor(grid[i])) {
+        const cls = colors[Math.floor(Math.random() * colors.length)];
+        grid[i].className = "cell " + cls;
+      }
+    }
+  }
+}
+function checkMatches() {
+  const matches = [];
+  for (let r = 0; r < 6; r++) {
+    for (let c = 0; c < 4; c++) {
+      let i = index(r, c);
+      let a = grid[i], b = grid[i + 1], c_ = grid[i + 2];
+      if (getColor(a) === getColor(b) && getColor(b) === getColor(c_))
+        matches.push([i, i + 1, i + 2]);
+    }
+  }
+  for (let c = 0; c < 6; c++) {
+    for (let r = 0; r < 4; r++) {
+      let i = index(r, c);
+      let a = grid[i], b = grid[i + 6], c_ = grid[i + 12];
+      if (getColor(a) === getColor(b) && getColor(b) === getColor(c_))
+        matches.push([i, i + 6, i + 12]);
+    }
+  }
+  return matches;
+}
+function monsterTurn() {
+  isPlayerTurn = false;
+  document.body.classList.add("enemy-turn");
+  lightningBtn.style.display = "none";
+  
+  setTimeout(() => {
+    let moved = false;
+    const attempts = [];
+    for (let i = 0; i < 36; i++) {
+      for (let j = i + 1; j < 36; j++) {
+        attempts.push([i, j]);
+      }
+    }
+    attempts.sort(() => Math.random() - 0.5);
+    for (let [i, j] of attempts) {
+      [grid[i].className, grid[j].className] = [grid[j].className, grid[i].className];
+      if (checkMatches().length > 0) {
+        moved = true;
+        setTimeout(() => resolveCascade(), 300);
+        break;
+      } else {
+        [grid[j].className, grid[i].className] = [grid[i].className, grid[j].className];
+      }
+    }
+    if (!moved) {
+      setTimeout(startTurn, 1000);
+    }
+  }, 800 + Math.random() * 1000);
+}
+
+// Drag-n-drop (touch)
+let startX, startY;
+board.addEventListener("touchstart", e => {
+  if (!isPlayerTurn) return;
+  const t = e.touches[0];
+  startX = t.clientX;
+  startY = t.clientY;
+  const el = document.elementFromPoint(t.clientX, t.clientY);
+  if (el && el.classList.contains("cell")) dragging = el;
+});
+board.addEventListener("touchmove", e => {
+  if (!dragging || !isPlayerTurn) return;
+  e.preventDefault();
+  const t = e.touches[0];
+  const dx = t.clientX - startX;
+  const dy = t.clientY - startY;
+  if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+    const el = document.elementFromPoint(t.clientX, t.clientY);
+    if (el && el.classList.contains("cell") && el !== dragging) {
+      [dragging.className, el.className] = [el.className, dragging.className];
+      dragging = el;
+      startX = t.clientX;
+      startY = t.clientY;
+    }
+  }
+});
+board.addEventListener("touchend", () => {
+  if (!isPlayerTurn) return;
+  dragging = null;
+  clearInterval(turnTimer);
+  endTurn();
+});
+</script>
+</body>
+</html>
